@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom"
-import { AppSidebar } from "@/components/app-sidebar"
+import { Outlet, useLocation, Link } from "react-router-dom";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,15 +7,48 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import { useSidebar } from "@/hooks/useSidebar";
 
 export function DashboardLayout() {
+  const location = useLocation();
+  const { drawerItems } = useSidebar();
+
+  // Find current page title from sidebar config
+  const getCurrentPageTitle = () => {
+    if (location.pathname === "/dashboard") return "Dashboard";
+
+    for (const item of drawerItems) {
+      const itemUrl = item.getDataUrl?.startsWith("/dashboard")
+        ? item.getDataUrl
+        : `/dashboard${item.getDataUrl || ""}`;
+
+      if (itemUrl === location.pathname) {
+        return item.title;
+      }
+      if (item.subMenuItems) {
+        for (const subItem of item.subMenuItems) {
+          const subItemUrl = subItem.getDataUrl?.startsWith("/dashboard")
+            ? subItem.getDataUrl
+            : `/dashboard${subItem.getDataUrl || ""}`;
+
+          if (subItemUrl === location.pathname) {
+            return subItem.title;
+          }
+        }
+      }
+    }
+    return "Page";
+  };
+
+  const pageTitle = getCurrentPageTitle();
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -30,13 +63,13 @@ export function DashboardLayout() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">
-                    Internal Metrics
+                  <BreadcrumbLink asChild>
+                    <Link to="/dashboard">Internal Metrics</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -47,5 +80,5 @@ export function DashboardLayout() {
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

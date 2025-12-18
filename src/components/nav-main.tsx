@@ -1,11 +1,11 @@
-import { ChevronRight } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { ChevronRight } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,30 +15,40 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
-import { getIcon } from "@/lib/icon-map"
-import type { SidebarItem } from "@/types/sidebar"
+} from "@/components/ui/sidebar";
+import { getIcon } from "@/lib/icon-map";
+import type { DrawerItem } from "@/types/sidebar";
 
 interface NavMainProps {
-  items: SidebarItem[]
-  label?: string
+  items: DrawerItem[];
+  label?: string;
 }
 
 export function NavMain({ items, label = "Platform" }: NavMainProps) {
-  const location = useLocation()
+  const location = useLocation();
 
   const isActive = (url?: string) => {
-    if (!url) return false
-    return location.pathname === url || location.pathname.startsWith(url + "/")
-  }
+    if (!url) return false;
+    // Ensure URL starts with /dashboard
+    const fullUrl = url.startsWith("/dashboard") ? url : `/dashboard${url}`;
+    return (
+      location.pathname === fullUrl ||
+      location.pathname.startsWith(fullUrl + "/")
+    );
+  };
+
+  const getFullUrl = (url?: string) => {
+    if (!url) return "#";
+    return url.startsWith("/dashboard") ? url : `/dashboard${url}`;
+  };
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const Icon = getIcon(item.icon)
-          const hasSubItems = item.subMenuItems && item.subMenuItems.length > 0
+          const Icon = getIcon(item.icon);
+          const hasSubItems = item.subMenuItems && item.subMenuItems.length > 0;
 
           if (!hasSubItems) {
             // Simple link item without sub-menu
@@ -49,13 +59,13 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                   tooltip={item.title}
                   isActive={isActive(item.getDataUrl)}
                 >
-                  <Link to={item.getDataUrl || "#"}>
+                  <Link to={getFullUrl(item.getDataUrl)}>
                     {Icon && <Icon />}
                     <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )
+            );
           }
 
           // Collapsible item with sub-menu
@@ -77,28 +87,26 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.subMenuItems?.map((subItem) => {
-                      const SubIcon = getIcon(subItem.icon)
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
                             isActive={isActive(subItem.getDataUrl)}
                           >
-                            <Link to={subItem.getDataUrl || "#"}>
-                              {SubIcon && <SubIcon className="size-4" />}
+                            <Link to={getFullUrl(subItem.getDataUrl)}>
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
-                      )
+                      );
                     })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
-          )
+          );
         })}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }
