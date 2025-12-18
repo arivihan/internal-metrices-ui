@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "@/components/common/ProtectedRoute";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import Login from "@/pages/Login";
+import DashboardSelect from "@/pages/DashboardSelect";
 import Dashboard from "@/pages/Dashboard";
 import DynamicContent from "@/pages/DynamicContent";
 import { isAuthenticated } from "@/signals/auth";
@@ -17,7 +18,7 @@ function App() {
           path="/"
           element={
             isAuthenticated.value ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/select-dashboard" replace />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -27,20 +28,23 @@ function App() {
           path="/login"
           element={
             isAuthenticated.value ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/select-dashboard" replace />
             ) : (
               <Login />
             )
           }
         />
         <Route element={<ProtectedRoute />}>
+          {/* Dashboard Selection Screen */}
+          <Route path="/select-dashboard" element={<DashboardSelect />} />
+          {/* Internal Metrics Dashboard */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/select-dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

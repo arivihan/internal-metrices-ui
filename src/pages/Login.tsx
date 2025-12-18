@@ -91,7 +91,7 @@ const Login = () => {
           // Continue to dashboard anyway - user info will show as fallback
         }
 
-        navigate("/dashboard");
+        navigate("/select-dashboard");
       } else {
         setLoginError(response.message || "Invalid OTP");
       }
