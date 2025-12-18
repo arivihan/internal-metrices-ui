@@ -1,6 +1,7 @@
 import { accessToken } from '@/signals/auth'
 
-const BASE_URL = 'https://platform-dev.arivihan.com/internal-metrics'
+// Use proxy in development, direct URL in production
+const BASE_URL = '/api'
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string>
@@ -23,13 +24,15 @@ export const apiClient = async <T>(
     ...init.headers,
   }
 
+  // Add token as header for authenticated requests
   if (accessToken.value) {
-    ;(headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken.value}`
+    ;(headers as Record<string, string>)['avToken'] = accessToken.value
   }
 
   const response = await fetch(url, {
     ...init,
     headers,
+    credentials: 'include', // Include cookies in requests
   })
 
   if (!response.ok) {

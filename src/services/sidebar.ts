@@ -1,30 +1,12 @@
 import type { SidebarConfig } from '../types/sidebar'
-
-// Use environment variable for API URL
-const SIDEBAR_API_URL = import.meta.env.VITE_SIDEBAR_API_URL || 'https://master.free.beeceptor.com/get-sidebar-data'
+import { apiClient } from './apiClient'
 
 /**
  * Fetch sidebar configuration data from the API
  */
 export const fetchSidebarData = async (): Promise<SidebarConfig> => {
-  try {
-    const response = await fetch(SIDEBAR_API_URL, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching sidebar data:', error)
-    throw error
-  }
+  // TODO: Update this endpoint to your actual sidebar config endpoint
+  return apiClient<SidebarConfig>('/secure/metrics/sidebar-config')
 }
 
 /**

@@ -5,8 +5,11 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import DynamicContent from "@/pages/DynamicContent";
 import { isAuthenticated } from "@/signals/auth";
+import { useAuthInit } from "@/hooks/useAuthInit";
 
 function App() {
+  // Initialize auth state on app load (fetch user if token exists)
+  useAuthInit();
   return (
     <BrowserRouter>
       <Routes>
