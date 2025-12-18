@@ -27,7 +27,8 @@ internal-metrices-ui/
 │   ├── components/              # React components
 │   │   ├── common/              # Shared/reusable components
 │   │   │   ├── Logo.tsx         # Logo component
-│   │   │   └── ProtectedRoute.tsx  # Route protection wrapper
+│   │   │   ├── ProtectedRoute.tsx  # Route protection wrapper
+│   │   │   └── FormPopup.tsx    # Reusable form dialog component
 │   │   │
 │   │   ├── layout/              # Layout components
 │   │   │   └── DashboardLayout.tsx  # Main dashboard layout
@@ -57,26 +58,33 @@ internal-metrices-ui/
 │   │   └── team-switcher.tsx    # Team switching component
 │   │
 │   ├── hooks/                   # Custom React hooks
-│   │   └── use-mobile.ts        # Hook for mobile detection
+│   │   ├── use-mobile.ts        # Hook for mobile detection
+│   │   └── useSidebar.ts        # Hook for sidebar data consumption
 │   │
 │   ├── lib/                     # Utility libraries
 │   │   ├── icon-map.ts          # Icon mapping utilities
 │   │   └── utils.ts             # General utility functions
 │   │
 │   ├── pages/                   # Page components (Routes)
-│   │   ├── Dashboard.tsx        # Dashboard page
+│   │   ├── Dashboard.tsx        # Dashboard home page
+│   │   ├── DynamicContent.tsx   # Dynamic pages based on sidebar items
 │   │   └── Login.tsx            # Login/authentication page
 │   │
 │   ├── services/                # API and external services
 │   │   ├── apiClient.ts         # API client configuration
-│   │   └── auth.ts              # Authentication services
+│   │   ├── auth.ts              # Authentication services
+│   │   └── sidebar.ts           # Sidebar data API services
 │   │
 │   ├── signals/                 # State management (Preact Signals)
-│   │   └── auth.ts              # Authentication state
+│   │   ├── auth.ts              # Authentication state
+│   │   ├── login.ts             # Login flow state (phone, OTP, loading)
+│   │   ├── sidebar.ts           # Sidebar data state
+│   │   ├── dynamicContent.ts    # Dynamic content page state
+│   │   └── formPopup.ts         # Form popup data state
 │   │
 │   ├── types/                   # TypeScript type definitions
 │   │   ├── auth.ts              # Authentication types
-│   │   └── sidebar.ts           # Sidebar types
+│   │   └── sidebar.ts           # Sidebar config types (DrawerItem, SubMenuItem, Button, etc.)
 │   │
 │   ├── App.tsx                  # Main App component
 │   ├── main.tsx                 # Application entry point
@@ -90,6 +98,8 @@ internal-metrices-ui/
 ├── tsconfig.app.json            # TypeScript app configuration
 ├── tsconfig.node.json           # TypeScript Node configuration
 ├── vite.config.ts               # Vite configuration
+├── .env.development             # Development environment variables
+├── .env.production              # Production environment variables
 └── README.md                    # This file
 ```
 
@@ -105,7 +115,10 @@ Contains static assets like images, SVG components, and other media files.
 
 All React components organized by purpose:
 
-- **common/**: Reusable components used across the application (Logo, ProtectedRoute)
+- **common/**: Reusable components used across the application
+  - `Logo.tsx`: App logo component
+  - `ProtectedRoute.tsx`: Route protection wrapper
+  - `FormPopup.tsx`: Reusable dialog form with dynamic fields (text, select, date)
 - **layout/**: Layout components that define page structure (DashboardLayout)
 - **ui/**: UI component library from shadcn/ui - pre-built, accessible, customizable components
 
@@ -114,6 +127,7 @@ All React components organized by purpose:
 Custom React hooks for shared logic and state management:
 
 - `use-mobile.ts`: Detects mobile devices and screen sizes
+- `useSidebar.ts`: Provides sidebar data from signals with loading/error states
 
 ### `/src/lib/` - Utility Functions
 
@@ -126,29 +140,40 @@ Utility functions and helper libraries:
 
 Page-level components corresponding to different routes in the application:
 
-- **Dashboard.tsx**: Main dashboard page
-- **Login.tsx**: Authentication/login page
+- **Dashboard.tsx**: Main dashboard home page
+- **DynamicContent.tsx**: Dynamic pages rendered based on sidebar item clicks (supports buttons, search, tables)
+- **Login.tsx**: Authentication/login page with phone + OTP verification
 
 ### `/src/services/` - API Layer
 
 **Handles all external API communication:**
 
 - **apiClient.ts**: Axios/fetch configuration, interceptors, base URL, request/response handling
-- **auth.ts**: Authentication API calls (login, logout, token refresh, user data)
+- **auth.ts**: Authentication API calls (sendOtp, verifyOtp, user data)
+- **sidebar.ts**: Sidebar configuration API (fetchSidebarData, fetchDataByUrl, submitFormData)
 
 ### `/src/signals/` - State Management
 
 **Global state using Preact Signals (reactive state management):**
 
 - **auth.ts**: Authentication state (user info, login status, tokens)
-- Lightweight alternative to Redux/Zustand with automatic reactivity
+- **login.ts**: Login flow state (loginStep, phoneNumber, otp, loginLoading, loginError)
+- **sidebar.ts**: Sidebar configuration data with helper functions
+- **dynamicContent.ts**: Dynamic page state (currentContentItem, popupOpen, currentPopupButton)
+- **formPopup.ts**: Form popup data state with update/reset functions
+
+**All components use Preact Signals for state management** - no useState/useReducer
 
 ### `/src/types/` - TypeScript Definitions
 
 **Type safety across the application:**
 
 - **auth.ts**: Authentication-related types (User, LoginCredentials, AuthResponse, etc.)
-- **sidebar.ts**: Sidebar configuration and navigation types
+- **sidebar.ts**: Complete sidebar API types
+  - `DrawerItem`: Main menu items with submenus
+  - `SubMenuItem`: Submenu items with tables/buttons/search
+  - `Button`: Button configurations (action, popup fields)
+  - `TableHeader`, `Search`, `PopupField`, `SelectOption`
 - Interface definitions, type aliases, and enum declarations
 
 ## 🛠️ Available Scripts
@@ -179,27 +204,59 @@ This project uses **shadcn/ui** components built on top of **Radix UI**, providi
 
 ## 🔐 Authentication Flow
 
-Authentication is handled through three layers:
+Authentication is handled through multiple layers:
 
-1. **Services** (`/src/services/auth.ts`): API calls to backend
-2. **State** (`/src/signals/auth.ts`): Global auth state management
+1. **Services** (`/src/services/auth.ts`): API calls to backend (sendOtp, verifyOtp)
+2. **State** (`/src/signals/auth.ts` + `/src/signals/login.ts`): Global auth state management
 3. **Types** (`/src/types/auth.ts`): Type definitions
 4. **Protection** (`/src/components/common/ProtectedRoute.tsx`): Route guards
 
-**Example Flow:**
+**Phone + OTP Flow:**
 
 ```
-Login Page → auth.service.login() → Updates authSignal → Redirects to Dashboard
+Login Page → Enter Phone → sendOtp() → Enter OTP → verifyOtp() → Updates authSignal → Redirects to Dashboard
 Protected Route → Checks authSignal → Allows/Denies access
 ```
+
+## 🎯 Sidebar & Dynamic Content System
+
+**Sidebar data is fetched from external API and drives the entire navigation:**
+
+1. **API** (`/src/services/sidebar.ts`): Fetches sidebar config from `VITE_SIDEBAR_API_URL`
+2. **State** (`/src/signals/sidebar.ts`): Stores sidebar data globally
+3. **Hook** (`/src/hooks/useSidebar.ts`): Provides easy access to sidebar data
+4. **Types** (`/src/types/sidebar.ts`): Complete type definitions for sidebar structure
+5. **Dynamic Pages** (`/src/pages/DynamicContent.tsx`): Renders pages based on sidebar config
+
+**Flow:**
+
+```
+API Response → sidebarData signal → nav-main.tsx renders menu → Click item → /dashboard/* route → DynamicContent page → Renders buttons/search/tables from config
+```
+
+**Each sidebar item can have:**
+- Buttons (with popups, forms, actions)
+- Search functionality
+- Data tables with headers
+- Nested submenus
 
 ## 🚦 Routing Structure
 
 Routes are managed with React Router DOM v7:
 
-- **Public routes**: Login, landing pages
-- **Protected routes**: Dashboard and all authenticated pages
+- **Public routes**: `/login` - Login/authentication page
+- **Protected routes**: 
+  - `/dashboard` - Dashboard home
+  - `/dashboard/*` - Dynamic pages based on sidebar config
 - **Route protection**: Via ProtectedRoute wrapper component
+
+**Dynamic Routing:**
+Sidebar items automatically generate routes like:
+- `/dashboard/lectures`
+- `/dashboard/lectures/video-lectures`
+- `/dashboard/students`
+
+All these routes are handled by `DynamicContent.tsx` which renders based on the clicked sidebar item.
 
 ## 📱 Responsive Design
 
@@ -244,6 +301,27 @@ Routes are managed with React Router DOM v7:
 - **tsconfig.node.json**: TypeScript config for Node.js (Vite config)
 - **vite.config.ts**: Vite bundler and dev server configuration
 
+## 🌍 Environment Variables
+
+The project uses environment-specific variables:
+
+**`.env.development`** (Development mode):
+```env
+VITE_API_BASE_URL=https://platform-dev.arivihan.com/internal-metrics
+VITE_SIDEBAR_API_URL=https://master.free.beeceptor.com/get-sidebar-data
+```
+
+**`.env.production`** (Production mode):
+```env
+VITE_API_BASE_URL=https://platform.arivihan.com/internal-metrics
+VITE_SIDEBAR_API_URL=https://api.arivihan.com/sidebar-data
+```
+
+**Usage in code:**
+```typescript
+const apiUrl = import.meta.env.VITE_SIDEBAR_API_URL
+```
+
 ## 🚀 Getting Started
 
 1. **Install dependencies:**
@@ -252,15 +330,19 @@ Routes are managed with React Router DOM v7:
    npm install
    ```
 
-2. **Start development server:**
+2. **Set up environment variables:**
+   - Ensure `.env.development` exists with correct URLs
+   - For production, create `.env.production`
+
+3. **Start development server:**
 
    ```bash
    npm run dev
    ```
 
-3. **Open browser:**
+4. **Open browser:**
    ```
-   http://localhost:5173
+   http://localhost:3000
    ```
 
 ## 📚 Key Technologies Explained
@@ -269,16 +351,30 @@ Routes are managed with React Router DOM v7:
 
 Lightweight reactive state management. Changes to signals automatically update components.
 
+**All components in this project use Preact Signals (no useState).**
+
 ```typescript
 // Define a signal
+import { signal } from '@preact/signals-react';
 const count = signal(0);
 
 // Update signal
 count.value++;
 
-// Use in component - auto re-renders
-<div>{count.value}</div>;
+// Use in component with useSignals()
+import { useSignals } from '@preact/signals-react/runtime';
+
+function Counter() {
+  useSignals(); // Required for automatic reactivity
+  return <div>{count.value}</div>;
+}
 ```
+
+**Why Signals?**
+- ✅ Auto-reactive (no manual re-renders)
+- ✅ Global state without Context
+- ✅ TypeScript friendly
+- ✅ Smaller bundle size than Redux/Zustand
 
 ### shadcn/ui
 
@@ -299,16 +395,18 @@ import { Home, Settings } from "lucide-react";
 
 ## 📖 Quick Reference
 
-| Need to...           | Go to...                         |
-| -------------------- | -------------------------------- |
-| Add API call         | `/src/services/`                 |
-| Add new page         | `/src/pages/`                    |
-| Add UI component     | `/src/components/` or use shadcn |
-| Define types         | `/src/types/`                    |
-| Add global state     | `/src/signals/`                  |
-| Add utility function | `/src/lib/utils.ts`              |
-| Add custom hook      | `/src/hooks/`                    |
-| Add icons/assets     | `/src/assets/`                   |
+| Need to...                | Go to...                         |
+| ------------------------- | -------------------------------- |
+| Add API call              | `/src/services/`                 |
+| Add new page              | `/src/pages/`                    |
+| Add UI component          | `/src/components/` or use shadcn |
+| Define types              | `/src/types/`                    |
+| Add global state (signal) | `/src/signals/`                  |
+| Add utility function      | `/src/lib/utils.ts`              |
+| Add custom hook           | `/src/hooks/`                    |
+| Add icons/assets          | `/src/assets/`                   |
+| Configure environment     | `.env.development`               |
+| Modify sidebar            | Update API endpoint              |
 
 ## 🤝 Contributing
 
