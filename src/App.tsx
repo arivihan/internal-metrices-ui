@@ -6,7 +6,7 @@ import DashboardSelect from "@/pages/DashboardSelect";
 import Dashboard from "@/pages/Dashboard";
 import DynamicContent from "@/pages/DynamicContent";
 import Users from "@/pages/Users";
-import UserDetail from "@/pages/UserDetail";
+import UserDetail from "@/pages/users/UserDetail";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
