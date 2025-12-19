@@ -1,6 +1,8 @@
 import { signal } from '@preact/signals-react'
 import type { SidebarConfig } from '../types/sidebar'
 import { fetchSidebarData } from '../services/sidebar'
+import { userRoles } from './auth'
+import { filterItemsByRole } from '../hooks/useRole'
 
 // Sidebar state signals
 export const sidebarData = signal<SidebarConfig | null>(null)
@@ -42,10 +44,19 @@ export const resetSidebarState = () => {
 }
 
 /**
- * Get drawer items from sidebar data
+ * Get drawer items from sidebar data (unfiltered)
  */
 export const getDrawerItems = () => {
   return sidebarData.value?.drawerItems ?? []
+}
+
+/**
+ * Get drawer items filtered by user's roles
+ */
+export const getFilteredDrawerItems = () => {
+  const items = sidebarData.value?.drawerItems ?? []
+  const roles = userRoles.value
+  return filterItemsByRole(items, roles)
 }
 
 /**

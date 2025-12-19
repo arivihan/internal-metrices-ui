@@ -4,6 +4,7 @@ import type {
   SendOtpResponse,
   VerifyOtpRequest,
   VerifyOtpResponse,
+  MeResponse,
 } from '@/types/auth'
 
 export const authService = {
@@ -18,6 +19,12 @@ export const authService = {
     return apiClient<VerifyOtpResponse>('/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  },
+
+  getMe: (token: string): Promise<MeResponse> => {
+    return apiClient<MeResponse>('/secure/metrics/users/me', {
+      params: { token },
     })
   },
 }

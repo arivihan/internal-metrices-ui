@@ -7,6 +7,7 @@ import {
   loadSidebarData,
   refreshSidebarData,
   getDrawerItems,
+  getFilteredDrawerItems,
   getDrawerItemByTitle,
 } from '@/signals/sidebar'
 
@@ -28,7 +29,10 @@ export const useSidebar = (autoLoad = true) => {
     loading: sidebarLoading.value,
     error: sidebarError.value,
     refresh: refreshSidebarData,
-    drawerItems: getDrawerItems(),
+    // Filtered by user's roles
+    drawerItems: getFilteredDrawerItems(),
+    // Unfiltered (for admin use cases)
+    allDrawerItems: getDrawerItems(),
     getItemByTitle: getDrawerItemByTitle,
   }
 }

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -8,19 +9,37 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
+import { userDisplay, userLoading } from "@/signals/auth";
 
-// Placeholder user - will be replaced with actual user data from API
-const user = {
-  name: "User",
-  email: "user@arivihan.com",
-  avatar: "/arivihan.jpeg",
-};
+function NavUserSkeleton() {
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton size="lg" className="cursor-default">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <div className="grid flex-1 gap-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  useSignals();
   const { drawerItems, loading, error } = useSidebar();
+
+  const user = userDisplay.value;
+  const isUserLoading = userLoading.value || !user;
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -41,7 +60,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        {isUserLoading ? <NavUserSkeleton /> : <NavUser user={user} />}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

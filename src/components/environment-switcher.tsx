@@ -37,8 +37,9 @@ const environments = [
 ]
 
 export function EnvironmentSwitcher() {
-  const { isMobile } = useSidebar()
+  const { isMobile, state } = useSidebar()
   const [activeEnv, setActiveEnv] = React.useState(environments[0])
+  const isCollapsed = state === "collapsed"
 
   return (
     <SidebarMenu>
@@ -49,16 +50,20 @@ export function EnvironmentSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <img src="/arivihan.jpeg" alt="Arivihan" className="size-6 rounded" />
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden">
+                <img src="/arivihan.jpeg" alt="Arivihan" className="size-8 object-cover" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Internal Metrics</span>
-                <span className={`truncate text-xs ${activeEnv.color}`}>
-                  {activeEnv.name}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto" />
+              {!isCollapsed && (
+                <>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">Internal Metrics</span>
+                    <span className={`truncate text-xs ${activeEnv.color}`}>
+                      {activeEnv.name}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </>
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

@@ -11,13 +11,33 @@ export interface AuthTokenData {
   tokenType: string
 }
 
+export interface RoleDto {
+  roleName: string
+}
+
 export interface User {
-  id: string
+  userId: string
+  username: string
+  email: string
+  firstname: string
+  lastname: string
+  phoneNumber: number
+  parentNumber: number | null
+  disabled: boolean
+  role: string[]
+  actions: string[]
+  roleDto: RoleDto
+  roleName: string | null
+  createdon: string | null
+  edit: boolean
+}
+
+// Computed user display data for UI components
+export interface UserDisplay {
   name: string
   email: string
-  phoneNumber: string
-  role: string
-  avatar?: string
+  avatar: string
+  roles: string[]
 }
 
 export interface SendOtpRequest {
@@ -31,4 +51,6 @@ export interface VerifyOtpRequest {
 
 export type SendOtpResponse = ApiResponse<null>
 export type VerifyOtpResponse = ApiResponse<AuthTokenData>
-export type UserResponse = ApiResponse<User>
+
+// /me endpoint returns User directly, not wrapped in ApiResponse
+export type MeResponse = User

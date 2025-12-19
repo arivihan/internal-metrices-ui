@@ -21,7 +21,7 @@ import {
 import Logo from "@/components/common/Logo";
 import AuthBackgroundShape from "@/assets/svg/auth-background-shape";
 import { authService } from "@/services/auth";
-import { setAuth } from "@/signals/auth";
+import { setAuth, setUser } from "@/signals/auth";
 import {
   loginStep,
   phoneNumber,
@@ -79,8 +79,19 @@ const Login = () => {
         otp: otp.value,
       });
       if (response.success && response.data) {
-        setAuth(response.data.accessToken, response.admin);
-        navigate("/dashboard");
+        const token = response.data.accessToken;
+        setAuth(token);
+
+        // Try to fetch user details, but don't block login if it fails
+        try {
+          const user = await authService.getMe(token);
+          setUser(user);
+        } catch (e) {
+          console.warn("Failed to fetch user details:", e);
+          // Continue to dashboard anyway - user info will show as fallback
+        }
+
+        navigate("/select-dashboard");
       } else {
         setLoginError(response.message || "Invalid OTP");
       }
@@ -227,7 +238,7 @@ const Login = () => {
                   type="button"
                   onClick={handleSendOtp}
                   className="text-primary hover:underline"
-                  disabled={isLoading}
+                  disabled={loginLoading.value}
                 >
                   Resend OTP
                 </button>
