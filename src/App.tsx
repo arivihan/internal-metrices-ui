@@ -5,6 +5,8 @@ import Login from "@/pages/Login";
 import DashboardSelect from "@/pages/DashboardSelect";
 import Dashboard from "@/pages/Dashboard";
 import DynamicContent from "@/pages/DynamicContent";
+import Users from "@/pages/Users";
+import UserDetail from "@/pages/UserDetail";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 
@@ -40,6 +42,9 @@ function App() {
           {/* Internal Metrics Dashboard */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            {/* Static routes for specific pages */}
+            <Route path="/dashboard/users" element={<Users />} />
+            <Route path="/dashboard/users/detail/:userId" element={<UserDetail />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>

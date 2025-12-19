@@ -17,6 +17,18 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
 import { userDisplay, userLoading } from "@/signals/auth";
+import type { DrawerItem } from "@/types/sidebar";
+
+// Static navigation items (hardcoded, not from API)
+const staticNavItems: DrawerItem[] = [
+  {
+    title: "Users",
+    type: "getData",
+    getDataUrl: "/users",
+    icon: "Users",
+    accessibleToRoles: ["ADMIN"],
+  },
+];
 
 function NavUserSkeleton() {
   return (
@@ -47,6 +59,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <EnvironmentSwitcher />
       </SidebarHeader>
       <SidebarContent>
+        {/* Static navigation items */}
+        <NavMain items={staticNavItems} label="Management" />
+
+        {/* Dynamic navigation items from API */}
         {loading && (
           <div className="p-4 text-sm text-muted-foreground">
             Loading sidebar...
@@ -55,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {error && (
           <div className="p-4 text-sm text-destructive">Error: {error}</div>
         )}
-        {!loading && !error && (
+        {!loading && !error && drawerItems.length > 0 && (
           <NavMain items={drawerItems} label="Navigation" />
         )}
       </SidebarContent>

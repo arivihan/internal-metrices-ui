@@ -16,21 +16,45 @@ import {
 } from "@/components/ui/sidebar";
 import { useSidebar } from "@/hooks/useSidebar";
 
+interface BreadcrumbSegment {
+  label: string;
+  path?: string; // If undefined, it's the current page (no link)
+}
+
 export function DashboardLayout() {
   const location = useLocation();
   const { drawerItems } = useSidebar();
 
-  // Find current page title from sidebar config
-  const getCurrentPageTitle = () => {
-    if (location.pathname === "/dashboard") return "Dashboard";
+  // Build breadcrumb segments based on current path
+  const getBreadcrumbs = (): BreadcrumbSegment[] => {
+    const pathname = location.pathname;
 
+    // Dashboard root
+    if (pathname === "/dashboard") {
+      return [{ label: "Dashboard" }];
+    }
+
+    // Users detail page
+    if (pathname.startsWith("/dashboard/users/detail/")) {
+      return [
+        { label: "Users", path: "/dashboard/users" },
+        { label: "Details" },
+      ];
+    }
+
+    // Users list page
+    if (pathname === "/dashboard/users") {
+      return [{ label: "Users" }];
+    }
+
+    // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")
         ? item.getDataUrl
         : `/dashboard${item.getDataUrl || ""}`;
 
-      if (itemUrl === location.pathname) {
-        return item.title;
+      if (itemUrl === pathname) {
+        return [{ label: item.title }];
       }
       if (item.subMenuItems) {
         for (const subItem of item.subMenuItems) {
@@ -38,16 +62,17 @@ export function DashboardLayout() {
             ? subItem.getDataUrl
             : `/dashboard${subItem.getDataUrl || ""}`;
 
-          if (subItemUrl === location.pathname) {
-            return subItem.title;
+          if (subItemUrl === pathname) {
+            return [{ label: subItem.title }];
           }
         }
       }
     }
-    return "Page";
+
+    return [{ label: "Page" }];
   };
 
-  const pageTitle = getCurrentPageTitle();
+  const breadcrumbs = getBreadcrumbs();
 
   return (
     <SidebarProvider>
@@ -67,10 +92,20 @@ export function DashboardLayout() {
                     <Link to="/dashboard">Internal Metrics</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-                </BreadcrumbItem>
+                {breadcrumbs.map((segment, index) => (
+                  <span key={index} className="contents">
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      {segment.path ? (
+                        <BreadcrumbLink asChild>
+                          <Link to={segment.path}>{segment.label}</Link>
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage>{segment.label}</BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                  </span>
+                ))}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
