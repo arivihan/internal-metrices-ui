@@ -185,6 +185,8 @@ export default function UserDetail() {
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
 
+  const [testLoading, setTestLoading] = useState(false)
+
   useEffect(() => {
     const loadUserData = async () => {
       if (!userId) return
@@ -193,17 +195,20 @@ export default function UserDetail() {
         setLoading(true)
         setError(null)
 
-        // First load user details
+        // First load user details and populate immediately
         const userResponse = await fetchUserById(userId)
         setUser(userResponse)
+        setLoading(false)
 
-        // Then load test activity
+        // Then load test activity separately
+        setTestLoading(true)
         const testResponse = await fetchUserTests(userId)
         setTestActivity(testResponse)
+        setTestLoading(false)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load user details')
-      } finally {
         setLoading(false)
+        setTestLoading(false)
       }
     }
 
@@ -809,13 +814,19 @@ export default function UserDetail() {
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium">
                 {testActivity?.title || 'Test Series Activity'}
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({testActivity?.data.length ?? 0} tests)
-                </span>
+                {!testLoading && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({testActivity?.data.length ?? 0} tests)
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-hidden">
-              {testActivity?.data.length === 0 ? (
+              {testLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : testActivity?.data.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   No test activity found
                 </p>
