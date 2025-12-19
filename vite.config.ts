@@ -19,6 +19,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/internal-metrics'),
       },
+      '/analytics-api': {
+        target: 'https://analytics.arivihan.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/analytics-api/, ''),
+      },
     },
   },
 })

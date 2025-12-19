@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, Plus, FileText, ExternalLink, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, Plus, FileText, ExternalLink, Trash2, CreditCard, History, UserCircle, Gift, BookOpen, Activity } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -62,6 +62,9 @@ import {
   addSubscriptionToUser,
   deleteSubscriptionFromUser,
   initiatePaymentForUser,
+  fetchMicrolectureEvents,
+  fetchMicrolectureDoubtEvents,
+  fetchInteractivityEvents,
   type UpdateUserPayload,
 } from '@/services/users'
 import type {
@@ -74,6 +77,9 @@ import type {
   PlanDuration,
   SubscriptionPlan,
   SubscriptionHistoryItem,
+  MicrolectureEvent,
+  MicrolectureDoubtEvent,
+  InteractivityEvent,
 } from '@/types/user'
 
 export default function UserDetail() {
@@ -162,6 +168,18 @@ export default function UserDetail() {
     callbacks: { id: string; status: string; createdAt: number }[]
   } | null>(null)
 
+  // App Events state
+  const [eventsSubTab, setEventsSubTab] = useState('microlecture')
+  const [microlectureLoaded, setMicrolectureLoaded] = useState(false)
+  const [microlectureLoading, setMicrolectureLoading] = useState(false)
+  const [microlectureEvents, setMicrolectureEvents] = useState<MicrolectureEvent[]>([])
+  const [doubtLoaded, setDoubtLoaded] = useState(false)
+  const [doubtLoading, setDoubtLoading] = useState(false)
+  const [doubtEvents, setDoubtEvents] = useState<MicrolectureDoubtEvent[]>([])
+  const [interactivityLoaded, setInteractivityLoaded] = useState(false)
+  const [interactivityLoading, setInteractivityLoading] = useState(false)
+  const [interactivityEvents, setInteractivityEvents] = useState<InteractivityEvent[]>([])
+
   // Delete confirmation dialog state
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -247,6 +265,66 @@ export default function UserDetail() {
       loadSubscriptionData()
     }
   }, [activeTab, subscriptionLoaded, userId, dateRange])
+
+  // Load microlecture events when sub-tab is selected
+  useEffect(() => {
+    if (activeTab === 'events' && eventsSubTab === 'microlecture' && !microlectureLoaded && user?.phoneNumber) {
+      const loadData = async () => {
+        try {
+          setMicrolectureLoading(true)
+          const data = await fetchMicrolectureEvents(user.phoneNumber.toString())
+          setMicrolectureEvents(data)
+          setMicrolectureLoaded(true)
+        } catch (err) {
+          console.error('Failed to load microlecture events:', err)
+          toast.error('Failed to load microlecture events')
+        } finally {
+          setMicrolectureLoading(false)
+        }
+      }
+      loadData()
+    }
+  }, [activeTab, eventsSubTab, microlectureLoaded, user?.phoneNumber])
+
+  // Load doubt events when sub-tab is selected
+  useEffect(() => {
+    if (activeTab === 'events' && eventsSubTab === 'doubt' && !doubtLoaded && user?.phoneNumber) {
+      const loadData = async () => {
+        try {
+          setDoubtLoading(true)
+          const data = await fetchMicrolectureDoubtEvents(user.phoneNumber.toString())
+          setDoubtEvents(data)
+          setDoubtLoaded(true)
+        } catch (err) {
+          console.error('Failed to load doubt events:', err)
+          toast.error('Failed to load doubt events')
+        } finally {
+          setDoubtLoading(false)
+        }
+      }
+      loadData()
+    }
+  }, [activeTab, eventsSubTab, doubtLoaded, user?.phoneNumber])
+
+  // Load interactivity events when sub-tab is selected
+  useEffect(() => {
+    if (activeTab === 'events' && eventsSubTab === 'interactivity' && !interactivityLoaded && user?.phoneNumber) {
+      const loadData = async () => {
+        try {
+          setInteractivityLoading(true)
+          const data = await fetchInteractivityEvents(user.phoneNumber.toString())
+          setInteractivityEvents(data)
+          setInteractivityLoaded(true)
+        } catch (err) {
+          console.error('Failed to load interactivity events:', err)
+          toast.error('Failed to load interactivity events')
+        } finally {
+          setInteractivityLoading(false)
+        }
+      }
+      loadData()
+    }
+  }, [activeTab, eventsSubTab, interactivityLoaded, user?.phoneNumber])
 
   const handleBack = () => {
     navigate('/dashboard/users')
@@ -644,19 +722,73 @@ export default function UserDetail() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="size-10" />
-          <div>
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="mt-1 h-4 w-32" />
+      <div className="min-w-0 space-y-6">
+        {/* Back Button Skeleton */}
+        <Skeleton className="h-8 w-32" />
+
+        {/* User Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="size-14 rounded-full" />
+            <div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+              <Skeleton className="mt-1 h-4 w-28" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-8 w-24" />
           </div>
         </div>
+
+        {/* Tabs Skeleton */}
+        <Skeleton className="h-10 w-full" />
+
+        {/* Info Cards Skeleton */}
         <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
+          <div className="rounded-lg border p-6">
+            <Skeleton className="mb-4 h-5 w-40" />
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex justify-between">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border p-6">
+            <Skeleton className="mb-4 h-5 w-36" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <Skeleton className="h-48" />
+
+        {/* Subjects Skeleton */}
+        <div className="rounded-lg border p-6">
+          <Skeleton className="mb-4 h-5 w-36" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
+
+        {/* Test Activity Skeleton */}
+        <div className="rounded-lg border p-6">
+          <Skeleton className="mb-4 h-5 w-44" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </div>
     )
   }
@@ -738,7 +870,10 @@ export default function UserDetail() {
             {/* Basic Info Card */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Basic Information</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <UserCircle className="size-5 text-muted-foreground" />
+                  Basic Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="flex items-center justify-between">
@@ -771,7 +906,10 @@ export default function UserDetail() {
             {/* Rewards Card */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Rewards & Referral</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Gift className="size-5 text-muted-foreground" />
+                  Rewards & Referral
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="flex items-center justify-between">
@@ -796,9 +934,10 @@ export default function UserDetail() {
           {user.subjects && user.subjects.length > 0 && (
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <BookOpen className="size-5 text-muted-foreground" />
                   Enrolled Subjects
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  <span className="text-sm font-normal text-muted-foreground">
                     ({user.subjects.length})
                   </span>
                 </CardTitle>
@@ -821,10 +960,11 @@ export default function UserDetail() {
           {/* Test Activity */}
           <Card className="min-w-0 overflow-hidden">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base font-medium">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Activity className="size-5 text-muted-foreground" />
                 {testActivity?.title || 'Test Series Activity'}
                 {!testLoading && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  <span className="text-sm font-normal text-muted-foreground">
                     ({testActivity?.data.length ?? 0} tests)
                   </span>
                 )}
@@ -899,146 +1039,387 @@ export default function UserDetail() {
         </TabsContent>
 
         {/* Subscription Tab */}
-        <TabsContent value="subscription" className="mt-6 space-y-4">
-          {/* Header with title and actions */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Active Subscriptions
-              {subscriptionHistory.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({subscriptionHistory.length})
-                </span>
-              )}
-            </h2>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleOpenSearchLogs}>
-                Show Logs
-              </Button>
-              <Button variant="outline" onClick={handleOpenInitiatePayment}>
-                Initiate Payment
-              </Button>
-              <Button onClick={handleOpenAddSubscription}>
-                <Plus className="mr-1.5 size-4" />
-                Add New Subscription
-              </Button>
-            </div>
+        <TabsContent value="subscription" className="mt-6 space-y-6">
+          {/* Quick Actions Section */}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Card
+              className="cursor-pointer transition-colors hover:bg-muted/50"
+              onClick={handleOpenAddSubscription}
+            >
+              <CardContent className="flex items-center gap-4 px-5 py-2.5">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Plus className="size-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Add New Subscription</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Add a new subscription plan for this user
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-muted/50"
+              onClick={handleOpenInitiatePayment}
+            >
+              <CardContent className="flex items-center gap-4 px-5 py-2.5">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                  <CreditCard className="size-5 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Initiate Payment</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Send payment request notification to user
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Active Subscriptions Table */}
-          {subscriptionLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          {/* Active Subscriptions Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">
+                Active Subscriptions
+                {subscriptionHistory.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({subscriptionHistory.length})
+                  </span>
+                )}
+              </h3>
+              <Button variant="secondary" size="sm" onClick={handleOpenSearchLogs}>
+                <History className="mr-1.5 size-4" />
+                View Logs
+              </Button>
             </div>
-          ) : subscriptionHistory.length === 0 ? (
-            <div className="rounded-lg border py-12 text-center text-sm text-muted-foreground">
-              No active subscriptions found
-            </div>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Plan</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Validity</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Received By</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subscriptionHistory.map((sub) => (
-                    <TableRow key={sub.id}>
-                      <TableCell>
-                        <div className="max-w-[200px]">
-                          <p className="font-medium leading-tight">
-                            {sub.subscriptionPlan?.planName || 'Unknown Plan'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            via {sub.paymentMode === 'online' ? 'INTERNAL_METRICS' : sub.paymentMode?.toUpperCase()}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {sub.subscriptionPlan?.subscriptionPlanLevel || '—'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={sub.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                          {sub.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{formatDate(sub.validFrom)}</p>
-                          <p className="text-muted-foreground">to {formatDate(sub.validTo)}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p className="font-medium">₹{sub.invoices?.[0]?.amountPaid || 0}</p>
-                          <p className="text-xs text-muted-foreground">of ₹{sub.totalAmount}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{sub.paymentReceivedBy || '—'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {sub.invoices?.[0]?.pdfUrl && (
+
+            {subscriptionLoading ? (
+              <div className="flex items-center justify-center rounded-lg border py-12">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : subscriptionHistory.length === 0 ? (
+              <div className="rounded-lg border py-12 text-center">
+                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+                  <CreditCard className="size-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium">No active subscriptions</p>
+                <p className="text-sm text-muted-foreground">
+                  Add a subscription to get started
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Validity</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Received By</TableHead>
+                      <TableHead className="w-28 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscriptionHistory.map((sub) => (
+                      <TableRow key={sub.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {sub.subscriptionPlan?.planName || 'Unknown Plan'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              via {sub.paymentMode === 'online' ? 'Internal Metrics' : sub.paymentMode?.toUpperCase()}
+                              {sub.subscriptionPlan?.subscriptionPlanLevel && (
+                                <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5">
+                                  {sub.subscriptionPlan.subscriptionPlanLevel}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={sub.status === 'ACTIVE' ? 'default' : 'secondary'}
+                            className={sub.status === 'ACTIVE' ? 'bg-green-500/15 text-green-500 hover:bg-green-500/20' : ''}
+                          >
+                            {sub.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <p>{formatDate(sub.validFrom)}</p>
+                            <p className="text-muted-foreground">to {formatDate(sub.validTo)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <p className="font-medium">₹{sub.invoices?.[0]?.amountPaid?.toLocaleString() || 0}</p>
+                            <p className="text-xs text-muted-foreground">of ₹{sub.totalAmount?.toLocaleString()}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{sub.paymentReceivedBy || '—'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            {sub.invoices?.[0]?.pdfUrl && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                onClick={() => window.open(sub.invoices[0].pdfUrl, '_blank')}
+                                title="View Invoice"
+                              >
+                                <FileText className="size-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleDeleteClick(sub)}
+                              title="Delete Subscription"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="size-8"
-                              onClick={() => window.open(sub.invoices[0].pdfUrl, '_blank')}
-                              title="View Invoice"
+                              onClick={() => handleShowLogs(sub)}
+                              title="View Details"
                             >
-                              <FileText className="size-4" />
+                              <ExternalLink className="size-4" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => handleDeleteClick(sub)}
-                            title="Delete Subscription"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => handleShowLogs(sub)}
-                            title="View Details"
-                          >
-                            <ExternalLink className="size-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* User App Events Tab */}
-        <TabsContent value="events" className="mt-6">
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-medium">App Events</CardTitle>
-              <CardDescription>User activity and app events log</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                App events information coming soon
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="events" className="mt-6 min-w-0 overflow-hidden">
+          <Tabs value={eventsSubTab} onValueChange={setEventsSubTab} className="min-w-0 w-full">
+            <TabsList>
+              <TabsTrigger value="microlecture">
+                Microlecture
+                {microlectureLoaded && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    ({microlectureEvents.length})
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="doubt">
+                Microlecture Doubt
+                {doubtLoaded && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    ({doubtEvents.length})
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="interactivity">
+                Interactivity Attempt
+                {interactivityLoaded && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    ({interactivityEvents.length})
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Microlecture Tab */}
+            <TabsContent value="microlecture" className="mt-4 min-w-0 overflow-hidden">
+              {microlectureLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : microlectureEvents.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No microlecture events found
+                </p>
+              ) : (
+                <div className="w-full overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Chapter_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Subject_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Phone_Number</TableHead>
+                        <TableHead className="whitespace-nowrap">event_date</TableHead>
+                        <TableHead className="whitespace-nowrap">Event_Type</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Class</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">userId</TableHead>
+                        <TableHead className="whitespace-nowrap">Language</TableHead>
+                        <TableHead className="whitespace-nowrap">Completed</TableHead>
+                        <TableHead className="whitespace-nowrap">Environment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {microlectureEvents.map((event, index) => (
+                        <TableRow key={`${event.Micro_Lecture_ID}-${index}`}>
+                          <TableCell className="whitespace-nowrap">{event.Chapter_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Subject_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Micro_Lecture_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Micro_Lecture_ID || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Phone_Number}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.event_date}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Event_Type}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_Name}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Class}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_ID}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.userId}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Language}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Completed}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Environment}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Microlecture Doubt Tab */}
+            <TabsContent value="doubt" className="mt-4 min-w-0 overflow-hidden">
+              {doubtLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : doubtEvents.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No doubt events found
+                </p>
+              ) : (
+                <div className="w-full overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">UserName</TableHead>
+                        <TableHead className="whitespace-nowrap">Chapter_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">ASUserDoubt</TableHead>
+                        <TableHead className="whitespace-nowrap">Subject_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Chapter_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Phone_Number</TableHead>
+                        <TableHead className="whitespace-nowrap">event_date</TableHead>
+                        <TableHead className="whitespace-nowrap">Event_Type</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Class</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">userId</TableHead>
+                        <TableHead className="whitespace-nowrap">Language</TableHead>
+                        <TableHead className="whitespace-nowrap">Environment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {doubtEvents.map((event, index) => (
+                        <TableRow key={`${event.Micro_Lecture_ID}-${index}`}>
+                          <TableCell className="whitespace-nowrap">{event.UserName}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Chapter_Name || '—'}</TableCell>
+                          <TableCell className="max-w-[300px]">
+                            <p className="truncate" title={event.ASUserDoubt}>
+                              {event.ASUserDoubt}
+                            </p>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Subject_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Chapter_ID || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Micro_Lecture_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Micro_Lecture_ID || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Phone_Number}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.event_date}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Event_Type}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_Name}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Class}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_ID}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.userId}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Language}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Environment}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Interactivity Attempt Tab */}
+            <TabsContent value="interactivity" className="mt-4 min-w-0 overflow-hidden">
+              {interactivityLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : interactivityEvents.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No interactivity events found
+                </p>
+              ) : (
+                <div className="w-full overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">UserName</TableHead>
+                        <TableHead className="whitespace-nowrap">Chapter_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">User_Answer</TableHead>
+                        <TableHead className="whitespace-nowrap">Question_Id</TableHead>
+                        <TableHead className="whitespace-nowrap">SubjectName</TableHead>
+                        <TableHead className="whitespace-nowrap">Chapter_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Micro_Lecture_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Phone_Number</TableHead>
+                        <TableHead className="whitespace-nowrap">event_date</TableHead>
+                        <TableHead className="whitespace-nowrap">Event_Type</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_Name</TableHead>
+                        <TableHead className="whitespace-nowrap">Class</TableHead>
+                        <TableHead className="whitespace-nowrap">Course_ID</TableHead>
+                        <TableHead className="whitespace-nowrap">userId</TableHead>
+                        <TableHead className="whitespace-nowrap">Language</TableHead>
+                        <TableHead className="whitespace-nowrap">Environment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {interactivityEvents.map((event, index) => (
+                        <TableRow key={`${event.Question_Id}-${index}`}>
+                          <TableCell className="whitespace-nowrap">{event.UserName}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Chapter_Name || '—'}</TableCell>
+                          <TableCell className="max-w-[300px]">
+                            <p className="truncate" title={event.User_Answer}>
+                              {event.User_Answer}
+                            </p>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Question_Id}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.SubjectName || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Chapter_ID || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Micro_Lecture_Name || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.Micro_Lecture_ID || '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Phone_Number}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.event_date}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Event_Type}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_Name}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Class}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Course_ID}</TableCell>
+                          <TableCell className="whitespace-nowrap font-mono text-xs">{event.userId}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Language}</TableCell>
+                          <TableCell className="whitespace-nowrap">{event.Environment}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
@@ -1843,3 +2224,4 @@ export default function UserDetail() {
     </div>
   )
 }
+

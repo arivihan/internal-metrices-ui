@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient'
+import { apiClient, analyticsClient } from './apiClient'
 import type {
   UserListItem,
   UserDetail,
@@ -13,6 +13,9 @@ import type {
   SubscriptionPlan,
   SubscriptionHistoryResponse,
   ApiResponse,
+  MicrolectureEvent,
+  MicrolectureDoubtEvent,
+  InteractivityEvent,
 } from '@/types/user'
 
 export interface UserFilters {
@@ -254,6 +257,50 @@ export const initiatePaymentForUser = async (
     '/secure/app/subscription-plan/raise-subscription-to-user',
     {
       params: queryParams,
+    }
+  )
+}
+
+// ============= App Events APIs (Analytics) =============
+
+/**
+ * Fetch user microlecture completion events
+ */
+export const fetchMicrolectureEvents = async (
+  phoneNumber: string
+): Promise<MicrolectureEvent[]> => {
+  return analyticsClient<MicrolectureEvent[]>(
+    '/user-detail/get-user-microlecture-completion',
+    {
+      params: { phone_number: phoneNumber },
+    }
+  )
+}
+
+/**
+ * Fetch user microlecture doubt events
+ */
+export const fetchMicrolectureDoubtEvents = async (
+  phoneNumber: string
+): Promise<MicrolectureDoubtEvent[]> => {
+  return analyticsClient<MicrolectureDoubtEvent[]>(
+    '/user-detail/get-user-asked-doubt-in-microlecture',
+    {
+      params: { phone_number: phoneNumber },
+    }
+  )
+}
+
+/**
+ * Fetch user interactivity attempt events
+ */
+export const fetchInteractivityEvents = async (
+  phoneNumber: string
+): Promise<InteractivityEvent[]> => {
+  return analyticsClient<InteractivityEvent[]>(
+    '/user-detail/get-user-inteactivity-attempts',
+    {
+      params: { phone_number: phoneNumber },
     }
   )
 }

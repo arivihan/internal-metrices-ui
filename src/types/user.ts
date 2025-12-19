@@ -293,3 +293,64 @@ export interface ApiResponse<T> {
   success: boolean
   data: T
 }
+
+// ============= App Events Types (Analytics API) =============
+
+// Microlecture completion event
+export interface MicrolectureEvent {
+  Chapter_Name: string | null
+  Subject_Name: string | null
+  Micro_Lecture_Name: string | null
+  Micro_Lecture_ID: string | null
+  Phone_Number: string
+  event_date: string // MM-DD-YYYY format
+  Event_Type: string
+  Course_Name: string
+  Class: string
+  Course_ID: string
+  userId: string
+  Language: string
+  Completed: string
+  Environment: string
+}
+
+// Microlecture doubt event
+export interface MicrolectureDoubtEvent {
+  UserName: string
+  Chapter_Name: string | null
+  ASUserDoubt: string
+  Subject_Name: string | null
+  Chapter_ID: string | null
+  Micro_Lecture_Name: string | null
+  Micro_Lecture_ID: string | null
+  Phone_Number: string
+  event_date: string // MM-DD-YYYY format
+  Event_Type: string
+  Course_Name: string
+  Class: string
+  Course_ID: string
+  userId: string
+  Language: string
+  Environment: string
+}
+
+// Interactivity attempt event
+export interface InteractivityEvent {
+  UserName: string
+  Chapter_Name: string | null
+  User_Answer: string
+  Question_Id: string
+  SubjectName: string | null
+  Chapter_ID: string | null
+  Micro_Lecture_Name: string | null
+  Micro_Lecture_ID: string | null
+  Phone_Number: string
+  event_date: string // MM-DD-YYYY format
+  Event_Type: string
+  Course_Name: string
+  Class: string
+  Course_ID: string
+  userId: string
+  Language: string
+  Environment: string
+}
