@@ -9,6 +9,10 @@ import type {
   CourseOption,
   BoardOption,
   SubjectOption,
+  PlanDuration,
+  SubscriptionPlan,
+  SubscriptionHistoryResponse,
+  ApiResponse,
 } from '@/types/user'
 
 export interface UserFilters {
@@ -119,4 +123,137 @@ export const updateUser = async (payload: UpdateUserPayload): Promise<{ msg: str
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+// ============= Subscription APIs =============
+
+/**
+ * Fetch plan durations for dropdown
+ */
+export const fetchPlanDurations = async (): Promise<PlanDuration[]> => {
+  return apiClient<PlanDuration[]>('/secure/app/subscription-plan/plan-durations')
+}
+
+export interface SubscriptionHistoryFilters {
+  userId: string
+  date: string // Format: YYYY_MM_DD
+  endDate: string // Format: YYYY_MM_DD
+}
+
+/**
+ * Fetch user's subscription history
+ */
+export const fetchSubscriptionHistory = async (
+  filters: SubscriptionHistoryFilters
+): Promise<SubscriptionHistoryResponse> => {
+  return apiClient<SubscriptionHistoryResponse>(
+    '/secure/app/subscription-plan/user-subscription-history',
+    {
+      params: {
+        userId: filters.userId,
+        date: filters.date,
+        endDate: filters.endDate,
+      },
+    }
+  )
+}
+
+export interface SearchPlansFilters {
+  isCombo: boolean
+  courseId: string
+  classId: string
+  durationId: string
+}
+
+/**
+ * Search subscription plans
+ */
+export const searchSubscriptionPlans = async (
+  filters: SearchPlansFilters
+): Promise<SubscriptionPlan[]> => {
+  return apiClient<SubscriptionPlan[]>('/secure/app/subscription-plan/search', {
+    params: {
+      isCombo: filters.isCombo.toString(),
+      courseId: filters.courseId,
+      classId: filters.classId,
+      durationId: filters.durationId,
+    },
+  })
+}
+
+export interface AddSubscriptionParams {
+  userId: string
+  planId: string
+  amount: number
+  receivedBy: string
+  paymentMode: 'cash' | 'online' | 'upi' | 'card'
+  paymentType: 'FULL_PAYMENT' | 'EMI'
+}
+
+/**
+ * Add subscription to a user
+ */
+export const addSubscriptionToUser = async (
+  params: AddSubscriptionParams
+): Promise<ApiResponse<string>> => {
+  return apiClient<ApiResponse<string>>(
+    '/secure/app/subscription-plan/add-subscription-to-user',
+    {
+      params: {
+        userId: params.userId,
+        planId: params.planId,
+        amount: params.amount.toString(),
+        receivedBy: params.receivedBy,
+        paymentMode: params.paymentMode,
+        paymentType: params.paymentType,
+      },
+    }
+  )
+}
+
+/**
+ * Delete a subscription from a user
+ */
+export const deleteSubscriptionFromUser = async (
+  userId: string,
+  subscriptionId: string
+): Promise<ApiResponse<unknown>> => {
+  return apiClient<ApiResponse<unknown>>(
+    '/secure/app/subscription-plan/delete-subscription-plan-of-user',
+    {
+      params: {
+        userId,
+        subscriptionId,
+      },
+    }
+  )
+}
+
+export interface InitiatePaymentParams {
+  userId: string
+  planId: string
+  amount: number
+  couponCode?: string
+}
+
+/**
+ * Initiate payment request for a user (sends notification to user)
+ */
+export const initiatePaymentForUser = async (
+  params: InitiatePaymentParams
+): Promise<ApiResponse<unknown>> => {
+  const queryParams: Record<string, string> = {
+    userId: params.userId,
+    planId: params.planId,
+    amount: params.amount.toString(),
+  }
+  if (params.couponCode) {
+    queryParams.couponCode = params.couponCode
+  }
+  return apiClient<ApiResponse<unknown>>(
+    '/secure/app/subscription-plan/raise-subscription-to-user',
+    {
+      params: queryParams,
+    }
+  )
 }

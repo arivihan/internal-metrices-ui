@@ -161,3 +161,135 @@ export interface UserComment {
   createdAt: string
   createdBy: string
 }
+
+// Subscription types
+
+// Plan duration from /secure/app/subscription-plan/plan-durations
+export interface PlanDuration {
+  id: string
+  value?: number
+  durationUnit?: 'DAY' | 'MONTH' | 'YEAR'
+  durationApplicable: boolean
+  createdAt: number
+  modifiedAt: number
+}
+
+// Subscription plan (used in history and search)
+export interface SubscriptionPlan {
+  id: string
+  planName: string
+  description: string | null
+  planDescription: {
+    id: string
+    features: string
+    description: string | null
+  } | null
+  courseId: string | null
+  classId: string | null
+  subjectId: string | null
+  chapterId: string | null
+  testSeriesId: string | null
+  duration: PlanDuration | null
+  coupon: SubscriptionCoupon | null
+  subscriptionPlanLevel: string | null
+  price: number | null
+  perMonthPrice: number | null
+  language: string
+  newPlan: boolean
+  combo: boolean
+  createdAt: number | null
+  modifiedAt: number | null
+}
+
+// Coupon attached to subscription plan
+export interface SubscriptionCoupon {
+  id: string
+  code: string
+  description: string | null
+  discountAmount: number | null
+  maxDiscountAmount: number | null
+  discountPercentage: number | null
+  validFrom: number
+  validTo: number
+  active: boolean
+  couponLevel: string
+  couponDiscountType: string
+  validFromInString: string
+  validToInString: string
+}
+
+// Invoice for a subscription
+export interface SubscriptionInvoice {
+  id: string
+  amountPaid: number
+  totalAmount: number
+  discountApplied: number
+  internalDiscount: number
+  pdfUrl: string
+  paymentStatus: string
+  orderId: string
+  subscriptionId: string
+  createdAt: number
+  modifiedAt: number
+}
+
+// Subscription history item
+export interface SubscriptionHistoryItem {
+  id: string
+  user: unknown | null
+  subscriptionPlan: SubscriptionPlan
+  invoices: SubscriptionInvoice[]
+  validFrom: number
+  validTo: number
+  currentValidFrom: number | null
+  currentValidTo: number | null
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED'
+  paymentStatus: string
+  purchasedOn: number
+  totalAmount: number
+  emiAmount: number | null
+  numberOfEmis: number | null
+  totalEmisPaid: number | null
+  paymentMode: string
+  paymentAmount: number
+  paymentReceivedBy: string
+  paymentReceivedByMetricsUserId: string
+  createdAt: number
+  modifiedAt: number
+}
+
+// Payment transaction from history
+export interface PaymentTransaction {
+  id: string
+  amount: number
+  status: string
+  orderId: string
+  createdAt: number
+}
+
+// Callback from history
+export interface CallbackItem {
+  id: string
+  status: string
+  createdAt: number
+}
+
+// User subscription history response
+export interface SubscriptionHistoryResponse {
+  code: string | null
+  message: string | null
+  success: boolean
+  data: {
+    callback_list: CallbackItem[]
+    payment_transactions: PaymentTransaction[]
+    subscription_history: SubscriptionHistoryItem[]
+  }
+}
+
+// Generic API response wrapper
+export interface ApiResponse<T> {
+  code: string | null
+  message: string | null
+  success: boolean
+  data: T
+}

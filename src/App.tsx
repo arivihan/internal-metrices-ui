@@ -9,12 +9,14 @@ import Users from "@/pages/Users";
 import UserDetail from "@/pages/UserDetail";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
+import { Toaster } from "@/components/ui/sonner";
 
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
   useAuthInit();
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
       <Routes>
         <Route
           path="/"
