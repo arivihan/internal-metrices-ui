@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, Plus, FileText, ExternalLink, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -79,6 +79,7 @@ import type {
 export default function UserDetail() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -183,7 +184,15 @@ export default function UserDetail() {
 
   // Track if subscription data has been loaded
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false)
-  const [activeTab, setActiveTab] = useState('details')
+
+  // Get active tab from URL or default to 'details'
+  const validTabs = ['details', 'subscription', 'events']
+  const tabFromUrl = searchParams.get('tab')
+  const activeTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl! : 'details'
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab })
+  }
 
   const [testLoading, setTestLoading] = useState(false)
 
