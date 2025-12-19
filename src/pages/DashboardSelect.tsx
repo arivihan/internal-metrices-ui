@@ -1,47 +1,129 @@
 import { useNavigate } from "react-router-dom"
 import { useSignals } from "@preact/signals-react/runtime"
-import { ArrowRight } from "lucide-react"
+import {
+  BarChart3,
+  FileText,
+  CircleDollarSign,
+  Building2,
+  FolderKanban,
+  ShoppingCart,
+  Factory,
+  Target,
+  UsersRound,
+  Building,
+  Home,
+  Settings,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { userDisplay } from "@/signals/auth"
 
-// Hardcoded dashboard options (will come from API later)
-const dashboards = [
+interface Dashboard {
+  id: string
+  title: string
+  route: string
+  icon: LucideIcon
+  bgColor: string
+  iconColor: string
+}
+
+// Dashboard apps configuration
+const dashboards: Dashboard[] = [
   {
     id: "internal-metrics",
     title: "Internal Metrics",
-    description: "Analytics and metrics for internal operations",
     route: "/dashboard",
-    color: "from-blue-500/20 to-indigo-500/20",
+    icon: BarChart3,
+    bgColor: "bg-purple-100 dark:bg-purple-950",
+    iconColor: "text-purple-500 dark:text-purple-400",
   },
   {
-    id: "sme-dashboard",
-    title: "SME Dashboard",
-    description: "Subject Matter Expert performance tracking",
-    route: "/sme-dashboard",
-    color: "from-emerald-500/20 to-teal-500/20",
+    id: "documents",
+    title: "Documents",
+    route: "/documents",
+    icon: FileText,
+    bgColor: "bg-orange-100 dark:bg-orange-950",
+    iconColor: "text-orange-500 dark:text-orange-400",
   },
   {
-    id: "live-dashboard",
-    title: "Live Dashboard",
-    description: "Real-time live session monitoring",
-    route: "/live-dashboard",
-    color: "from-orange-500/20 to-amber-500/20",
+    id: "accounting",
+    title: "Accounting",
+    route: "/accounting",
+    icon: CircleDollarSign,
+    bgColor: "bg-green-100 dark:bg-green-950",
+    iconColor: "text-green-500 dark:text-green-400",
   },
   {
-    id: "pdf-circle",
-    title: "PDF Circle Dashboard",
-    description: "PDF resources and circle analytics",
-    route: "/pdf-circle-dashboard",
-    color: "from-purple-500/20 to-pink-500/20",
+    id: "inventory",
+    title: "Inventory",
+    route: "/inventory",
+    icon: Building2,
+    bgColor: "bg-blue-100 dark:bg-blue-950",
+    iconColor: "text-blue-500 dark:text-blue-400",
   },
   {
-    id: "neet-dashboard",
-    title: "NEET Dashboard",
-    description: "NEET exam preparation metrics",
-    route: "/neet-dashboard",
-    color: "from-rose-500/20 to-red-500/20",
+    id: "project",
+    title: "Project",
+    route: "/project",
+    icon: FolderKanban,
+    bgColor: "bg-violet-100 dark:bg-violet-950",
+    iconColor: "text-violet-500 dark:text-violet-400",
+  },
+  {
+    id: "procurement",
+    title: "Procurement",
+    route: "/procurement",
+    icon: ShoppingCart,
+    bgColor: "bg-pink-100 dark:bg-pink-950",
+    iconColor: "text-pink-500 dark:text-pink-400",
+  },
+  {
+    id: "manufacturing",
+    title: "Manufacturing",
+    route: "/manufacturing",
+    icon: Factory,
+    bgColor: "bg-amber-100 dark:bg-amber-950",
+    iconColor: "text-amber-700 dark:text-amber-400",
+  },
+  {
+    id: "crm",
+    title: "CRM",
+    route: "/crm",
+    icon: Target,
+    bgColor: "bg-indigo-100 dark:bg-indigo-950",
+    iconColor: "text-indigo-500 dark:text-indigo-400",
+  },
+  {
+    id: "hrms",
+    title: "HRMS",
+    route: "/hrms",
+    icon: UsersRound,
+    bgColor: "bg-cyan-100 dark:bg-cyan-950",
+    iconColor: "text-cyan-500 dark:text-cyan-400",
+  },
+  {
+    id: "office",
+    title: "Office",
+    route: "/office",
+    icon: Building,
+    bgColor: "bg-emerald-100 dark:bg-emerald-950",
+    iconColor: "text-emerald-500 dark:text-emerald-400",
+  },
+  {
+    id: "rental",
+    title: "Rental",
+    route: "/rental",
+    icon: Home,
+    bgColor: "bg-teal-100 dark:bg-teal-950",
+    iconColor: "text-teal-500 dark:text-teal-400",
+  },
+  {
+    id: "settings",
+    title: "Settings",
+    route: "/settings",
+    icon: Settings,
+    bgColor: "bg-slate-100 dark:bg-slate-800",
+    iconColor: "text-slate-500 dark:text-slate-400",
   },
 ]
 
@@ -54,81 +136,77 @@ const DashboardSelect = () => {
     navigate(route)
   }
 
+  // Get user initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <img
-              src="/arivihan.jpeg"
-              alt="Arivihan"
-              className="h-8 w-8 rounded-lg object-cover"
-            />
-            <span className="text-lg font-semibold">Arivihan</span>
-          </div>
-          {user && (
-            <div className="text-sm text-muted-foreground">
-              Welcome, <span className="font-medium text-foreground">{user.name}</span>
+        <div className="mx-auto flex h-16 items-center justify-between px-6 lg:px-10">
+          {/* Logo */}
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center">
+              <img
+                src="/arivihan.jpeg"
+                alt="Arivihan"
+                className="h-8 w-8 rounded-lg object-cover"
+              />
             </div>
-          )}
+            <span className="text-lg font-semibold text-foreground">Arivihan</span>
+          </div>
+
+          {/* Right side - User */}
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-sm font-medium text-white">
+                  {getInitials(user.name)}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium text-foreground">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.roles?.[0] || "Admin"}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Select a Dashboard
-            </h1>
-          </div>
-
-          {/* Dashboard Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {dashboards.map((dashboard) => (
-              <Card
-                key={dashboard.id}
-                className="group cursor-pointer overflow-hidden transition-colors duration-300 ease-in-out hover:border-primary/50"
-                onClick={() => handleSelect(dashboard.route)}
-              >
-                <CardContent className="p-0">
-                  {/* Thumbnail Skeleton */}
+      <main className="flex flex-1 items-center justify-center px-6 py-10 lg:px-10">
+        <div className="w-full max-w-6xl">
+          {/* Apps Grid */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {dashboards.map((dashboard) => {
+              const Icon = dashboard.icon
+              return (
+                <button
+                  key={dashboard.id}
+                  onClick={() => handleSelect(dashboard.route)}
+                  className="group flex flex-col items-center gap-3 text-center"
+                >
                   <div
-                    className={`relative h-24 bg-gradient-to-br ${dashboard.color}`}
+                    className={`flex h-20 w-20 items-center justify-center rounded-2xl ${dashboard.bgColor} transition-transform duration-200 group-hover:scale-105`}
                   >
-                    <Skeleton className="absolute inset-3 rounded-md opacity-50" />
+                    <Icon className={`h-9 w-9 ${dashboard.iconColor}`} strokeWidth={1.5} />
                   </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm truncate">
-                          {dashboard.title}
-                        </h3>
-                        <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                          {dashboard.description}
-                        </p>
-                      </div>
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted transition-colors duration-300 ease-in-out group-hover:bg-primary group-hover:text-primary-foreground">
-                        <ArrowRight className="h-3 w-3" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                    {dashboard.title}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t py-4">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground sm:px-6 lg:px-8">
-          Arivihan Internal Tools
-        </div>
-      </footer>
     </div>
   )
 }
