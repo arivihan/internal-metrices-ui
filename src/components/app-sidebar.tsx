@@ -28,6 +28,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "Users",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "Notifications",
+    type: "getData",
+    getDataUrl: "/notifications",
+    icon: "Bell",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {

@@ -47,6 +47,11 @@ export function DashboardLayout() {
       return [{ label: "Users" }];
     }
 
+    // Notifications page
+    if (pathname === "/dashboard/notifications") {
+      return [{ label: "Notifications" }];
+    }
+
     // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")
