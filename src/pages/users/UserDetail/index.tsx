@@ -73,9 +73,9 @@ import type {
   InteractivityEvent,
 } from '@/types/user'
 
-import { UserDetailsTab } from './UserDetailsTab'
-import { SubscriptionTab } from './SubscriptionTab'
-import { AppEventsTab } from './AppEventsTab'
+import { UserDetailsTab } from './UserDetailsTab/index'
+import { SubscriptionTab } from './SubscriptionTab/index'
+import { AppEventsTab } from './AppEventsTab/index'
 
 export default function UserDetail() {
   const { userId } = useParams<{ userId: string }>()
