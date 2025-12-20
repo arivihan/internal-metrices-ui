@@ -5,9 +5,10 @@ import Login from "@/pages/Login";
 import DashboardSelect from "@/pages/DashboardSelect";
 import Dashboard from "@/pages/Dashboard";
 import DynamicContent from "@/pages/DynamicContent";
-import Users from "@/pages/Users";
+import Users from "@/pages/users";
 import UserDetail from "@/pages/users/UserDetail";
 import Notifications from "@/pages/Notifications";
+import ASATScorecards from "@/pages/asat";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
@@ -49,6 +50,7 @@ function App() {
             <Route path="/dashboard/users" element={<Users />} />
             <Route path="/dashboard/users/detail/:userId" element={<UserDetail />} />
             <Route path="/dashboard/notifications" element={<Notifications />} />
+            <Route path="/dashboard/asat-scorecards" element={<ASATScorecards />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>

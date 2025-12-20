@@ -35,6 +35,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "Bell",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "ASAT Scorecards",
+    type: "getData",
+    getDataUrl: "/asat-scorecards",
+    icon: "FileCheck",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {

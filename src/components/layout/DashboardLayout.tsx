@@ -52,6 +52,11 @@ export function DashboardLayout() {
       return [{ label: "Notifications" }];
     }
 
+    // ASAT Scorecards page
+    if (pathname === "/dashboard/asat-scorecards") {
+      return [{ label: "ASAT Scorecards" }];
+    }
+
     // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")

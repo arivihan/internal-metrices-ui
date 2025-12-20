@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   FileText,
+  FileCheck,
   BarChart,
   Calendar,
   MessageSquare,
@@ -35,6 +36,7 @@ const iconMap: Record<string, LucideIcon> = {
 
   // Files & Documents
   FileText,
+  FileCheck,
   Document: FileText,
   Folder,
 
