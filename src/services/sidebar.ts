@@ -48,6 +48,9 @@ export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
     }
 
     const data = await response.json()
+    console.log("---------------------")
+    console.log(data)
+    console.log("---------------------")
     console.log(`[fetchDataByUrl] Success:`, data);
     return data
   } catch (error) {

@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/sidebar";
 import { getIcon } from "@/lib/icon-map";
 import type { DrawerItem } from "@/types/sidebar";
+import {
+  fetchLayoutData,
+  setCurrentContentItem,
+} from "@/signals/dynamicContent";
 
 interface NavMainProps {
   items: DrawerItem[];
@@ -41,24 +45,6 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
     const expectedPath = `/dashboard/${slug}`;
     return location.pathname === expectedPath;
   };
-const fetchspecificDataByUrl = async <T = any,>(url: string): Promise<T> => {
-  if (!url) {
-    throw new Error("API URL is empty");
-  }
-
-  const response = await fetch(url);
-
-  const contentType = response.headers.get("content-type");
-
-  if (!contentType?.includes("application/json")) {
-    const text = await response.text();
-    console.error("Non-JSON response:", text);
-    throw new Error("Response is not JSON");
-  }
-
-  return response.json();
-};
-
 
   const getNavigationPath = (item: DrawerItem | any) => {
     if (!item || !item.title) return "#";
@@ -86,16 +72,19 @@ const fetchspecificDataByUrl = async <T = any,>(url: string): Promise<T> => {
                   <Link
                     to={getNavigationPath(item)}
                     onClick={() => {
+                      console.log(`📍 Clicked: ${item.title}`);
+                      setCurrentContentItem(item);
+
                       if (!item.getLayoutDataUrl) {
-                        console.warn("No API URL for:", item.title);
+                        console.warn("❌ No API URL for:", item.title);
                         return;
                       }
 
-                      fetchspecificDataByUrl(item.getLayoutDataUrl)
-                        .then((data) => {
-                          console.log("API DATA:", data);
-                        })
-                        .catch((err) => console.error(err));
+                      console.log(
+                        `📡 Fetching layout for ${item.title} from:`,
+                        item.getLayoutDataUrl
+                      );
+                      fetchLayoutData(item.getLayoutDataUrl);
                     }}
                   >
                     {Icon && <Icon />}
@@ -133,9 +122,26 @@ const fetchspecificDataByUrl = async <T = any,>(url: string): Promise<T> => {
                           >
                             <Link
                               to={getNavigationPath(subItem)}
-                              onClick={() =>
-                                console.log(`click ${subItem.title}`)
-                              }
+                              onClick={() => {
+                                console.log(
+                                  `📍 Clicked sub-item: ${subItem.title}`
+                                );
+                                setCurrentContentItem(subItem);
+
+                                if (subItem?.getLayoutDataUrl) {
+                                  console.log(
+                                    `📡 Fetching layout for ${subItem.title} from:`,
+                                    subItem.getLayoutDataUrl
+                                  );
+                                  fetchLayoutData(subItem.getLayoutDataUrl);
+                                } else if (subItem?.getDataUrl) {
+                                  console.log(
+                                    `📡 Fetching data for ${subItem.title} from:`,
+                                    subItem.getDataUrl
+                                  );
+                                  fetchLayoutData(subItem.getDataUrl);
+                                }
+                              }}
                             >
                               <span>{subItem.title}</span>
                             </Link>

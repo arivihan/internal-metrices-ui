@@ -43,17 +43,28 @@ export const fetchTableData = async (url: string) => {
     // Build full URL if it's a relative path
     let fullUrl = url
     if (!url.startsWith('http')) {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
-      fullUrl = `${apiBaseUrl}${url}`
+      // For relative URLs like /secure/coupon/all?..., prepend /api so it goes through proxy
+      fullUrl = `/api${url}`
     }
     
     console.log(`[fetchTableData] 📡 Fetching from: ${fullUrl}`)
     const response = await fetchDataByUrl(fullUrl)
     console.log(`[fetchTableData] ✅ Received response:`, response)
     
-    // Handle both direct array response and wrapped response
-    const data = Array.isArray(response) ? response : response.data || response
-    tableData.value = Array.isArray(data) ? data : []
+    // Handle different response formats:
+    // 1. Direct array response
+    // 2. { data: [...] } format
+    // 3. { content: [...] } format (Spring/Java pagination)
+    let data: any[] = []
+    if (Array.isArray(response)) {
+      data = response
+    } else if (response?.content && Array.isArray(response.content)) {
+      data = response.content
+    } else if (response?.data && Array.isArray(response.data)) {
+      data = response.data
+    }
+    
+    tableData.value = data
     console.log(`[fetchTableData] 📊 Table data set to:`, tableData.value)
     tableDataError.value = null
   } catch (error) {
