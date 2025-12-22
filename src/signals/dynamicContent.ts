@@ -36,6 +36,9 @@ const extractArrayData = (response: any): any[] => {
   // Spring / Java pagination
   if (Array.isArray(response.content)) return response.content
 
+
+  if (Array.isArray(response.contents)) return response.contents
+
   // Body as array
   if (Array.isArray(response.body)) return response.body
 
