@@ -173,19 +173,20 @@ export default function DynamicContent() {
     <div className="flex flex-col h-full">
       {/* Form Popup Dialog */}
       <Dialog open={popupOpen.value} onOpenChange={closePopup}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl h-[80vh] p-0 flex flex-col">
+          <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4">
             <DialogTitle>
               {currentPopupButton.value?.popupTitle || "Form"}
             </DialogTitle>
             <DialogDescription>Fill in the details below</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {currentPopupButton.value?.popupFields?.map(
-              (field: any, index: number) => (
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="grid gap-4">
+              {currentPopupButton.value?.popupFields?.map((field, index) => (
                 <div key={index} className="grid gap-2">
                   <Label htmlFor={field.value}>{field.label}</Label>
+
                   {field.type === "select" ? (
                     <Select
                       value={formData[field.value] || ""}
@@ -197,13 +198,11 @@ export default function DynamicContent() {
                         <SelectValue placeholder={field.placeholder} />
                       </SelectTrigger>
                       <SelectContent>
-                        {field.selectOptions?.map(
-                          (option: any, idx: number) => (
-                            <SelectItem key={idx} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          )
-                        )}
+                        {field.selectOptions?.map((option, idx) => (
+                          <SelectItem key={idx} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   ) : (
@@ -221,8 +220,8 @@ export default function DynamicContent() {
                     />
                   )}
                 </div>
-              )
-            )}
+              ))}
+            </div>
           </div>
 
           <DialogFooter>
@@ -237,8 +236,8 @@ export default function DynamicContent() {
       </Dialog>
 
       {/* Header Section */}
-      <div className="flex items-center justify-between border-b px-6 py-4 bg-background">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between border-b  py-4 bg-background">
+        {/* <div className="flex items-center gap-3">
           {Icon && <Icon className="h-8 w-8 text-primary" />}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -248,12 +247,12 @@ export default function DynamicContent() {
               Manage and view {currentContentItem.value.title.toLowerCase()}
             </p>
           </div>
-        </div>
+        </div> */}
         {layout?.searchable && layout?.search && (
           <CardContent>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 ">
               {layout.search.fields.map((field: any, index: number) => (
-                <div key={index} className="flex-1 min-w-[200px]">
+                <div key={index} className="flex-1 ">
                   {field.type === "select" ? (
                     <Select
                       value={searchData[field.value] || ""}
@@ -318,7 +317,7 @@ export default function DynamicContent() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto w-full space-y-6">
         {/* Search Section */}
 
         {/* Error Display */}
