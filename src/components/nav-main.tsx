@@ -41,6 +41,8 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
 
   const isActive = (item: DrawerItem | any) => {
     if (!item || !item.title) return false;
+    // Dashboard is active at /dashboard
+    if (item.title === "Dashboard") return location.pathname === "/dashboard";
     const slug = slugify(item.title);
     const expectedPath = `/dashboard/${slug}`;
     return location.pathname === expectedPath;
@@ -48,6 +50,8 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
 
   const getNavigationPath = (item: DrawerItem | any) => {
     if (!item || !item.title) return "#";
+    // Dashboard links to /dashboard directly
+    if (item.title === "Dashboard") return "/dashboard";
     const slug = slugify(item.title);
     return `/dashboard/${slug}`;
   };
@@ -90,7 +94,7 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                     {item.icon && (
                       <DynamicIcon
                         name={item.icon}
-                        className="h-5 w-5 text-muted-foreground"
+                        className={`h-5 w-5 ${isActive(item) ? "text-brand-300" : "text-muted-foreground"}`}
                       />
                     )}
                     <span>{item.title}</span>
