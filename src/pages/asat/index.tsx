@@ -6,7 +6,7 @@ import {
   Download,
   Search,
   X,
-  ExternalLink,
+  ImageOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -593,6 +593,28 @@ export default function ASATScorecards() {
 
           {selectedScorecard && (
             <div className="space-y-4">
+              {/* Scorecard Image */}
+              <div className="rounded-lg border overflow-hidden">
+                {selectedScorecard.resultInfo.imageUrl ? (
+                  <a
+                    href={selectedScorecard.resultInfo.imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={selectedScorecard.resultInfo.imageUrl}
+                      alt="Scorecard"
+                      className="w-full h-auto max-h-75 object-contain bg-muted"
+                    />
+                  </a>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-40 bg-muted text-muted-foreground">
+                    <ImageOff className="size-12 mb-2" />
+                    <span className="text-sm">No scorecard image recieved</span>
+                  </div>
+                )}
+              </div>
+
               <Card>
                 <CardContent className="grid gap-3 p-4">
                   {/* User Info */}
@@ -602,21 +624,6 @@ export default function ASATScorecards() {
                       {selectedScorecard.userId}
                     </span>
                   </div>
-
-                  {/* Scorecard Image */}
-                  {selectedScorecard.marksheetInfo.url && (
-                    <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                      <span className="text-muted-foreground">Scorecard:</span>
-                      <a
-                        href={selectedScorecard.marksheetInfo.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        View Image <ExternalLink className="size-3" />
-                      </a>
-                    </div>
-                  )}
 
                   <Separator />
 
