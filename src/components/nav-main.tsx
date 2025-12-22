@@ -41,6 +41,8 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
 
   const isActive = (item: DrawerItem | any) => {
     if (!item || !item.title) return false;
+    // Dashboard is active at /dashboard
+    if (item.title === "Dashboard") return location.pathname === "/dashboard";
     const slug = slugify(item.title);
     const expectedPath = `/dashboard/${slug}`;
     return location.pathname === expectedPath;
@@ -48,6 +50,8 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
 
   const getNavigationPath = (item: DrawerItem | any) => {
     if (!item || !item.title) return "#";
+    // Dashboard links to /dashboard directly
+    if (item.title === "Dashboard") return "/dashboard";
     const slug = slugify(item.title);
     return `/dashboard/${slug}`;
   };

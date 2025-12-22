@@ -19,6 +19,17 @@ import { useSidebar } from "@/hooks/useSidebar";
 import { userDisplay, userLoading } from "@/signals/auth";
 import type { DrawerItem } from "@/types/sidebar";
 
+// Dashboard item (top of sidebar)
+const dashboardItem: DrawerItem[] = [
+  {
+    title: "Dashboard",
+    type: "getData",
+    getDataUrl: "",
+    icon: "LayoutDashboard",
+    accessibleToRoles: ["ADMIN", "MANAGER"],
+  },
+];
+
 // Static navigation items (hardcoded, not from API)
 const staticNavItems: DrawerItem[] = [
   {
@@ -73,6 +84,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <EnvironmentSwitcher />
       </SidebarHeader>
       <SidebarContent>
+        {/* Dashboard */}
+        <NavMain items={dashboardItem} label="Home" />
+
         {/* Static navigation items */}
         <NavMain items={staticNavItems} label="Management" />
 
