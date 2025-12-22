@@ -94,7 +94,7 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                     {item.icon && (
                       <DynamicIcon
                         name={item.icon}
-                        className="h-5 w-5 text-muted-foreground"
+                        className={`h-5 w-5 ${isActive(item) ? "text-brand-300" : "text-muted-foreground"}`}
                       />
                     )}
                     <span>{item.title}</span>
