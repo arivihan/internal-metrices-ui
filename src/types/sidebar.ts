@@ -30,7 +30,7 @@ export interface Action {
 export interface TableHeader {
   Header: string
   accessor: string
-  type: 'link' | 'image' | 'text'
+  type: 'link' | 'image' | 'text' | 'actions'
   order?: number
   actions?: Action[]
 }

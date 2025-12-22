@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
-// import { getIcon } from "@/lib/icon-map";
+import { DynamicIcon } from "@/lib/icon-map";
 import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
@@ -49,12 +49,8 @@ import {
   closePopup,
 } from "@/signals/dynamicContent";
 
-// /**
-//  * Dynamic content page that renders based on sidebar item clicked
-//  * Fetches layout data and displays forms, search, and tables
-//  *
+const BASE_URL = "/api";
 
-// Helper function to render cell content based on type
 // Helper function to render cell content based on type
 const renderCellContent = (header: any, value: any) => {
   if (value === undefined || value === null) return "-";
@@ -124,15 +120,31 @@ const renderCellContent = (header: any, value: any) => {
       return <span className="line-clamp-2">{String(value)}</span>;
   }
 };
+
 export default function DynamicContent() {
   useSignals();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchData, setSearchData] = useState<Record<string, any>>({});
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(10); // Fixed page size for now
+  const [pageSize] = useState(10);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
 
-  // No useEffect needed - currentContentItem is set directly from sidebar click handler
-  // Just render whatever is in the signal
+  // Reset search and pagination when content item changes
+  useEffect(() => {
+    setSearchData({});
+    setSearchResults(null);
+    setCurrentPage(0);
+  }, [currentContentItem.value?.title]);
+
+  // Reset to page 0 when search changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchData]);
+
+  // Determine which data to display
+  const displayData =
+    searchResults !== null ? searchResults : tableData.value || [];
 
   const handleButtonClick = (button: any) => {
     if (button.type === "SHOW_POPUP" && button.popupFields) {
@@ -176,22 +188,106 @@ export default function DynamicContent() {
     setFormData({});
   };
 
-  const handleSearch = () => {
-    console.log("Search data:", searchData);
-
-    // Rebuild URL with search params
-    if (layout?.search?.searchActionUrl) {
-      const url = new URL(
-        layout.search.searchActionUrl,
-        window.location.origin
-      );
-      Object.entries(searchData).forEach(([key, value]) => {
-        if (value) {
-          url.searchParams.set(key, String(value));
-        }
-      });
-      fetchLayoutData(url.toString());
+  const handleSearch = async () => {
+    const layout = layoutData.value;
+    if (!layout?.search?.searchActionUrl) {
+      console.log("❌ No search action URL configured");
+      return;
     }
+
+    // Build query parameters from search data
+    const params = new URLSearchParams();
+
+    // Add level and pagination params (required by API)
+    params.append("level", "SYSTEM");
+    params.append("pageNo", "0");
+    params.append("pageSize", "10");
+
+    // Add ALL search fields from the layout configuration, even if empty
+    // This ensures the API receives all expected parameters
+    if (layout.search.fields) {
+      layout.search.fields.forEach((field: any) => {
+        const value = searchData[field.value];
+        // Always append the field, even if empty
+        params.append(field.value, value || "");
+      });
+    }
+
+    const searchUrl = `${BASE_URL}${
+      layout.search.searchActionUrl
+    }/all?${params.toString()}`;
+
+    console.log("🔍 Searching with URL:", searchUrl);
+    console.log("📝 Search params:", Object.fromEntries(params));
+
+    setIsSearching(true);
+
+    try {
+      const response = await fetch(searchUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies for authentication
+      });
+
+      console.log("📡 Response status:", response.status);
+      console.log(
+        "📡 Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Error response body:", errorText);
+        throw new Error(
+          `Search failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ Search results:", data);
+
+      // Handle different response structures
+      let results = [];
+      if (Array.isArray(data)) {
+        results = data;
+      } else if (data.content && Array.isArray(data.content)) {
+        results = data.content;
+      } else if (data.data && Array.isArray(data.data)) {
+        results = data.data;
+      } else if (data.results && Array.isArray(data.results)) {
+        results = data.results;
+      }
+
+      setSearchResults(results);
+      setCurrentPage(0);
+      console.log(`✅ Found ${results.length} results`);
+    } catch (error) {
+      console.error("❌ Search error:", error);
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        url: searchUrl,
+        params: Object.fromEntries(params),
+      });
+      setSearchResults([]);
+      // Show error to user
+      alert(
+        `Search failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }. Check console for details.`
+      );
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    console.log("🧹 Clearing search");
+    setSearchData({});
+    setSearchResults(null);
+    setCurrentPage(0);
   };
 
   if (layoutLoading.value || tableDataLoading.value) {
@@ -235,6 +331,16 @@ export default function DynamicContent() {
       </div>
     );
   }
+
+  const totalPages = Math.ceil(displayData.length / pageSize);
+  const paginatedData = displayData.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize
+  );
+
+  const hasSearchCriteria = Object.values(searchData).some(
+    (val) => val !== "" && val !== null && val !== undefined
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -303,29 +409,23 @@ export default function DynamicContent() {
       </Dialog>
 
       {/* Header Section */}
-      <div className="flex items-center justify-between border-b  py-4 bg-background">
-        {/* <div className="flex items-center gap-3">
-          {Icon && <Icon className="h-8 w-8 text-primary" />}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {currentContentItem.value.title}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage and view {currentContentItem.value.title.toLowerCase()}
-            </p>
-          </div>
-        </div> */}
+      <div className="flex items-center justify-between border-b py-4 bg-background">
+        {/* Search Section */}
         {layout?.searchable && layout?.search && (
           <CardContent>
-            <div className="flex gap-2 ">
+            <div className="flex gap-2">
               {layout.search.fields.map((field: any, index: number) => (
-                <div key={index} className="flex-1   ">
+                <div key={index} className="flex-1">
                   {field.type === "select" ? (
                     <Select
                       value={searchData[field.value] || ""}
-                      onValueChange={(value) =>
-                        setSearchData({ ...searchData, [field.value]: value })
-                      }
+                      onValueChange={(value) => {
+                        console.log(
+                          `📝 Select field "${field.value}" changed to:`,
+                          value
+                        );
+                        setSearchData({ ...searchData, [field.value]: value });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={field.placeholder} />
@@ -345,26 +445,37 @@ export default function DynamicContent() {
                       type={field.type}
                       placeholder={field.placeholder}
                       value={searchData[field.value] || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        console.log(
+                          `📝 Input field "${field.value}" changed to:`,
+                          e.target.value
+                        );
                         setSearchData({
                           ...searchData,
                           [field.value]: e.target.value,
-                        })
-                      }
+                        });
+                      }}
                     />
                   )}
                 </div>
               ))}
-              <Button onClick={handleSearch}>
-                {layout.search.searchBtnText}
+              <Button onClick={handleSearch} disabled={isSearching}>
+                {isSearching
+                  ? "Searching..."
+                  : layout.search.searchBtnText || "Search"}
               </Button>
+              {hasSearchCriteria && (
+                <Button variant="outline" onClick={clearSearch}>
+                  Clear
+                </Button>
+              )}
             </div>
           </CardContent>
         )}
 
         {/* Buttons from layout config */}
         {layout?.buttons && layout.buttons.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 px-6">
             {layout.buttons.map((button: any, index: number) => (
               <Button
                 key={index}
@@ -380,7 +491,6 @@ export default function DynamicContent() {
                     }`}
                   />
                 )}
-
                 {button.type !== "icon" && button.title}
               </Button>
             ))}
@@ -390,11 +500,9 @@ export default function DynamicContent() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto w-full space-y-6">
-        {/* Search Section */}
-
         {/* Error Display */}
         {layoutError.value && (
-          <Card>
+          <Card className="m-6">
             <CardHeader>
               <CardTitle>Error</CardTitle>
             </CardHeader>
@@ -406,15 +514,15 @@ export default function DynamicContent() {
 
         {/* Table Section */}
         {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
-          <Card>
+          <Card className="m-6">
             <CardHeader>
               {/* <CardTitle>Data Table</CardTitle>
               <CardDescription>View and manage records</CardDescription> */}
             </CardHeader>
             <CardContent>
-              <div className=" border">
+              <div className="border">
                 <table className="w-full text-sm">
-                  <thead className="border-b  bg-muted/50">
+                  <thead className="border-b bg-muted/50">
                     <tr>
                       {layout.tableHeaders
                         .sort(
@@ -432,7 +540,16 @@ export default function DynamicContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableDataLoading.value ? (
+                    {isSearching ? (
+                      <tr>
+                        <td
+                          colSpan={layout.tableHeaders.length}
+                          className="p-8 text-center"
+                        >
+                          <p className="text-muted-foreground">Searching...</p>
+                        </td>
+                      </tr>
+                    ) : tableDataLoading.value ? (
                       <tr>
                         <td
                           colSpan={layout.tableHeaders.length}
@@ -452,81 +569,74 @@ export default function DynamicContent() {
                           <p>{tableDataError.value}</p>
                         </td>
                       </tr>
-                    ) : tableData.value && tableData.value.length > 0 ? (
-                      tableData.value
-                        .slice(
-                          currentPage * pageSize,
-                          (currentPage + 1) * pageSize
-                        )
-                        .map((row: any, rowIndex: number) => (
-                          <tr
-                            key={rowIndex}
-                            className="border-b hover:bg-muted/50"
-                          >
-                            {layout.tableHeaders
-                              .sort(
-                                (a: any, b: any) =>
-                                  (a.order || 999) - (b.order || 999)
-                              )
-                              .map((header: any, colIndex: number) => {
-                                // Handle action columns
-                                if (
-                                  header.type === "actions" &&
-                                  header.actions
-                                ) {
-                                  return (
-                                    <td key={colIndex} className="px-4 py-3">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0"
-                                          >
-                                            <MoreVertical className="h-4 w-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          {header.actions.map(
-                                            (
-                                              action: any,
-                                              actionIndex: number
-                                            ) => (
-                                              <DropdownMenuItem
-                                                key={actionIndex}
-                                                onClick={() =>
-                                                  handleRowAction(action, row)
-                                                }
-                                              >
-                                                {action.title}
-                                              </DropdownMenuItem>
-                                            )
-                                          )}
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </td>
-                                  );
-                                }
-                                // Regular data columns
+                    ) : paginatedData && paginatedData.length > 0 ? (
+                      paginatedData.map((row: any, rowIndex: number) => (
+                        <tr
+                          key={rowIndex}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          {layout.tableHeaders
+                            .sort(
+                              (a: any, b: any) =>
+                                (a.order || 999) - (b.order || 999)
+                            )
+                            .map((header: any, colIndex: number) => {
+                              // Handle action columns
+                              if (header.type === "actions" && header.actions) {
                                 return (
                                   <td key={colIndex} className="px-4 py-3">
-                                    {renderCellContent(
-                                      header,
-                                      row[header.accessor]
-                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        {header.actions.map(
+                                          (
+                                            action: any,
+                                            actionIndex: number
+                                          ) => (
+                                            <DropdownMenuItem
+                                              key={actionIndex}
+                                              onClick={() =>
+                                                handleRowAction(action, row)
+                                              }
+                                            >
+                                              {action.title}
+                                            </DropdownMenuItem>
+                                          )
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </td>
                                 );
-                              })}
-                          </tr>
-                        ))
+                              }
+                              // Regular data columns
+                              return (
+                                <td key={colIndex} className="px-4 py-3">
+                                  {renderCellContent(
+                                    header,
+                                    row[header.accessor]
+                                  )}
+                                </td>
+                              );
+                            })}
+                        </tr>
+                      ))
                     ) : (
                       <tr>
                         <td
                           colSpan={layout.tableHeaders.length}
                           className="p-8 text-center text-muted-foreground"
                         >
-                          No data available. Click "Add" button to create new
-                          records.
+                          {hasSearchCriteria || searchResults !== null
+                            ? "No results found. Try different search criteria."
+                            : "No data available. Click 'Add' button to create new records."}
                         </td>
                       </tr>
                     )}
@@ -535,16 +645,21 @@ export default function DynamicContent() {
               </div>
 
               {/* Pagination */}
-              {tableData.value && tableData.value.length > 0 && (
+              {displayData && displayData.length > 0 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <p className="text-sm text-muted-foreground">
-                    {tableData.value.length} records
+                    Showing {paginatedData.length} of {displayData.length}{" "}
+                    results
+                    {searchResults !== null && (
+                      <span className="ml-1 text-blue-600">
+                        (search results)
+                      </span>
+                    )}
                   </p>
-                  {Math.ceil(tableData.value.length / pageSize) > 1 && (
+                  {totalPages > 1 && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">
-                        Page {currentPage + 1} of{" "}
-                        {Math.ceil(tableData.value.length / pageSize)}
+                        Page {currentPage + 1} of {totalPages}
                       </span>
                       <div className="flex items-center gap-1">
                         <Button
@@ -563,10 +678,7 @@ export default function DynamicContent() {
                           size="icon"
                           className="size-8"
                           onClick={() => setCurrentPage((p) => p + 1)}
-                          disabled={
-                            currentPage >=
-                            Math.ceil(tableData.value.length / pageSize) - 1
-                          }
+                          disabled={currentPage >= totalPages - 1}
                         >
                           <ChevronRight className="size-4" />
                         </Button>
@@ -581,7 +693,7 @@ export default function DynamicContent() {
 
         {/* Empty state */}
         {!layout && !layoutLoading.value && !layoutError.value && (
-          <Card>
+          <Card className="m-6">
             <CardContent className="flex min-h-[200px] items-center justify-center">
               <div className="text-center">
                 <p className="text-lg font-medium text-muted-foreground">
@@ -594,8 +706,6 @@ export default function DynamicContent() {
             </CardContent>
           </Card>
         )}
-
-        {/* Bottom Pagination */}
       </div>
     </div>
   );
