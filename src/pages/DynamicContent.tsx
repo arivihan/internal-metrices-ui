@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,85 +9,85 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FormPopup } from "@/components/common/FormPopup";
-import { useSidebar } from "@/hooks/useSidebar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { MoreVertical } from "lucide-react";
 import { getIcon } from "@/lib/icon-map";
-import type {
-  DrawerItem,
-  SubMenuItem,
-  Button as ButtonType,
-} from "@/types/sidebar";
+import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
+  layoutData,
+  layoutLoading,
+  layoutError,
+  tableData,
+  tableDataLoading,
+  tableDataError,
+  fetchLayoutData,
+  setCurrentContentItem,
   popupOpen,
   currentPopupButton,
   openPopup,
   closePopup,
-  setCurrentContentItem,
 } from "@/signals/dynamicContent";
-import { useSignals } from "@preact/signals-react/runtime";
 
 /**
  * Dynamic content page that renders based on sidebar item clicked
- * Displays buttons, search, and table headers from sidebar config
+ * Fetches layout data and displays forms, search, and tables
  */
 export default function DynamicContent() {
   useSignals();
-  const location = useLocation();
-  const { drawerItems, loading: sidebarLoading } = useSidebar();
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [searchData, setSearchData] = useState<Record<string, any>>({});
 
-  useEffect(() => {
-    // Find matching sidebar item based on current route
-    const findItem = () => {
-      for (const item of drawerItems) {
-        // Normalize URLs to include /dashboard prefix
-        const itemUrl = item.getDataUrl?.startsWith("/dashboard")
-          ? item.getDataUrl
-          : `/dashboard${item.getDataUrl || ""}`;
+  // No useEffect needed - currentContentItem is set directly from sidebar click handler
+  // Just render whatever is in the signal
 
-        // Check if main item matches
-        if (itemUrl === location.pathname) {
-          return item;
-        }
-
-        // Check subMenuItems
-        if (item.subMenuItems) {
-          for (const subItem of item.subMenuItems) {
-            const subItemUrl = subItem.getDataUrl?.startsWith("/dashboard")
-              ? subItem.getDataUrl
-              : `/dashboard${subItem.getDataUrl || ""}`;
-
-            if (subItemUrl === location.pathname) {
-              return subItem;
-            }
-          }
-        }
-      }
-      return null;
-    };
-
-    const item = findItem();
-    setCurrentContentItem(item);
-
-    // TODO: Fetch table data if getDataUrl exists
-    // if (item?.getDataUrl) {
-    //   fetchTableData(item.getDataUrl)
-    // }
-  }, [location.pathname, drawerItems]);
-
-  const handleButtonClick = (button: ButtonType) => {
-    if (button.action === "showpopup" && button.popupFields) {
+  const handleButtonClick = (button: any) => {
+    if (button.type === "SHOW_POPUP" && button.popupFields) {
       openPopup(button);
+      setFormData({});
     } else if (button.action === "link") {
-      // Navigate to link
       console.log("Navigate to:", button.actionUrl);
     } else if (button.action === "download") {
-      // Handle download
       console.log("Download from:", button.actionUrl);
     }
   };
 
-  const handlePopupSubmit = async (formData: Record<string, any>) => {
+  const handleRowAction = (action: any, rowData: any) => {
+    if (action.type === "SHOW_POPUP" && action.popupFields) {
+      openPopup(action);
+      // Pre-populate form with row data
+      const initialData: Record<string, any> = {};
+      action.popupFields.forEach((field: any) => {
+        if (rowData[field.value]) {
+          initialData[field.value] = rowData[field.value];
+        }
+      });
+      setFormData(initialData);
+    }
+  };
+
+  const handlePopupSubmit = async () => {
     if (!currentPopupButton.value) return;
 
     console.log("Form submitted:", {
@@ -98,13 +97,35 @@ export default function DynamicContent() {
       data: formData,
     });
 
-    // TODO: Call submitFormData API
-    // await submitFormData(currentPopupButton.popupSubmitUrl!, formData)
+    // TODO: Call API to submit form data
+    // await submitFormData(currentPopupButton.value.popupSubmitUrl!, formData)
+
+    closePopup();
+    setFormData({});
   };
 
-  if (sidebarLoading) {
+  const handleSearch = () => {
+    console.log("Search data:", searchData);
+
+    // Rebuild URL with search params
+    if (layout?.search?.searchActionUrl) {
+      const url = new URL(
+        layout.search.searchActionUrl,
+        window.location.origin
+      );
+      Object.entries(searchData).forEach(([key, value]) => {
+        if (value) {
+          url.searchParams.set(key, String(value));
+        }
+      });
+      fetchLayoutData(url.toString());
+    }
+  };
+
+  if (layoutLoading.value || tableDataLoading.value) {
+    console.log("⏳ Loading data...");
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-6">
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -112,43 +133,113 @@ export default function DynamicContent() {
   }
 
   if (!currentContentItem.value) {
+    console.log("⏳ Waiting for sidebar click...", {
+      currentContentItem: currentContentItem.value,
+    });
     return (
-      <Card>
+      <Card className="m-6">
         <CardHeader>
-          <CardTitle>Page Not Found</CardTitle>
+          <CardTitle>Select an Item</CardTitle>
           <CardDescription>
-            The requested page could not be found
+            Please select an item from the sidebar to view its details
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
+  console.log("✅ Rendering content for:", currentContentItem.value.title);
+  console.log("📋 layoutData:", layoutData.value);
+  console.log("📊 tableData:", tableData.value);
+
   const Icon =
     "icon" in currentContentItem.value
       ? getIcon(currentContentItem.value.icon)
       : null;
 
+  const layout = layoutData.value;
+
+  if (!layout) {
+    console.log("⏳ Waiting for layout data...");
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Form Popup */}
-      {currentPopupButton.value && currentPopupButton.value.popupFields && (
-        <FormPopup
-          open={popupOpen.value}
-          onOpenChange={(open) => {
-            popupOpen.value = open;
-          }}
-          title={currentPopupButton.value.popupTitle || "Form"}
-          submitText={currentPopupButton.value.popupSubmitText || "Submit"}
-          fields={currentPopupButton.value.popupFields}
-          onSubmit={handlePopupSubmit}
-        />
-      )}
+    <div className="flex flex-col h-full">
+      {/* Form Popup Dialog */}
+      <Dialog open={popupOpen.value} onOpenChange={closePopup}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {currentPopupButton.value?.popupTitle || "Form"}
+            </DialogTitle>
+            <DialogDescription>Fill in the details below</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {currentPopupButton.value?.popupFields?.map(
+              (field: any, index: number) => (
+                <div key={index} className="grid gap-2">
+                  <Label htmlFor={field.value}>{field.label}</Label>
+                  {field.type === "select" ? (
+                    <Select
+                      value={formData[field.value] || ""}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, [field.value]: value })
+                      }
+                    >
+                      <SelectTrigger id={field.value}>
+                        <SelectValue placeholder={field.placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.selectOptions?.map(
+                          (option: any, idx: number) => (
+                            <SelectItem key={idx} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={field.value}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={formData[field.value] || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [field.value]: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              )
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closePopup}>
+              Cancel
+            </Button>
+            <Button onClick={handlePopupSubmit}>
+              {currentPopupButton.value?.popupSubmitText || "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Header Section */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b px-6 py-4 bg-background">
         <div className="flex items-center gap-3">
-          {Icon && <Icon className="size-8 text-primary" />}
+          {Icon && <Icon className="h-8 w-8 text-primary" />}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {currentContentItem.value.title}
@@ -158,80 +249,108 @@ export default function DynamicContent() {
             </p>
           </div>
         </div>
-
-        {/* Buttons from sidebar config */}
-        {currentContentItem.value.buttons &&
-          currentContentItem.value.buttons.length > 0 && (
-            <div className="flex gap-2">
-              {currentContentItem.value.buttons.map((button, index) => {
-                const ButtonIcon = getIcon(button.icon);
-                return (
-                  <Button
-                    key={index}
-                    variant={button.type === "icon" ? "outline" : "default"}
-                    size={button.type === "icon" ? "icon" : "default"}
-                    onClick={() => handleButtonClick(button)}
-                  >
-                    {ButtonIcon && <ButtonIcon className="size-4" />}
-                    {button.type !== "icon" && (
-                      <span className="ml-2">{button.title}</span>
-                    )}
-                  </Button>
-                );
-              })}
+        {layout?.searchable && layout?.search && (
+          <CardContent>
+            <div className="flex gap-2 flex-wrap">
+              {layout.search.fields.map((field: any, index: number) => (
+                <div key={index} className="flex-1 min-w-[200px]">
+                  {field.type === "select" ? (
+                    <Select
+                      value={searchData[field.value] || ""}
+                      onValueChange={(value) =>
+                        setSearchData({ ...searchData, [field.value]: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={field.placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.selectOptions?.map(
+                          (option: any, idx: number) => (
+                            <SelectItem key={idx} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={searchData[field.value] || ""}
+                      onChange={(e) =>
+                        setSearchData({
+                          ...searchData,
+                          [field.value]: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+              <Button onClick={handleSearch}>
+                {layout.search.searchBtnText}
+              </Button>
             </div>
-          )}
+          </CardContent>
+        )}
+
+        {/* Buttons from layout config */}
+        {layout?.buttons && layout.buttons.length > 0 && (
+          <div className="flex gap-2">
+            {layout.buttons.map((button: any, index: number) => {
+              const ButtonIcon = button.icon ? getIcon(button.icon) : null;
+              return (
+                <Button
+                  key={index}
+                  variant={button.type === "icon" ? "outline" : "default"}
+                  size={button.type === "icon" ? "icon" : "default"}
+                  onClick={() => handleButtonClick(button)}
+                >
+                  {ButtonIcon && <ButtonIcon className="h-4 w-4 mr-2" />}
+                  {button.type !== "icon" && button.title}
+                </Button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Search Section */}
-      {currentContentItem.value.searchable &&
-        currentContentItem.value.search && (
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Search Section */}
+
+        {/* Error Display */}
+        {layoutError.value && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Search</CardTitle>
+              <CardTitle>Error</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                {currentContentItem.value.search.fields.map((field, index) => (
-                  <Input
-                    key={index}
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    className="flex-1"
-                  />
-                ))}
-                <Button
-                  onClick={() => {
-                    console.log(
-                      "Search clicked:",
-                      currentContentItem.value.search?.searchActionUrl
-                    );
-                    // TODO: Handle search
-                  }}
-                >
-                  {currentContentItem.value.search.searchBtnText}
-                </Button>
-              </div>
+              <p className="text-destructive">{layoutError.value}</p>
             </CardContent>
           </Card>
         )}
 
-      {/* Table Section */}
-      {currentContentItem.value.tableHeaders &&
-        currentContentItem.value.tableHeaders.length > 0 && (
+        {/* Table Section */}
+        {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Data Table</CardTitle>
               <CardDescription>View and manage records</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className=" border">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/50">
+                  <thead className="border-b  bg-muted/50">
                     <tr>
-                      {currentContentItem.value.tableHeaders
-                        .sort((a, b) => (a.order || 999) - (b.order || 999))
-                        .map((header, index) => (
+                      {layout.tableHeaders
+                        .sort(
+                          (a: any, b: any) =>
+                            (a.order || 999) - (b.order || 999)
+                        )
+                        .map((header: any, index: number) => (
                           <th
                             key={index}
                             className="px-4 py-3 text-left font-medium"
@@ -242,15 +361,96 @@ export default function DynamicContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td
-                        colSpan={currentContentItem.value.tableHeaders.length}
-                        className="p-8 text-center text-muted-foreground"
-                      >
-                        No data available. Click "Add" button to create new
-                        records.
-                      </td>
-                    </tr>
+                    {tableDataLoading.value ? (
+                      <tr>
+                        <td
+                          colSpan={layout.tableHeaders.length}
+                          className="p-8 text-center"
+                        >
+                          <p className="text-muted-foreground">
+                            Loading table data...
+                          </p>
+                        </td>
+                      </tr>
+                    ) : tableDataError.value ? (
+                      <tr>
+                        <td
+                          colSpan={layout.tableHeaders.length}
+                          className="p-8 text-center text-destructive"
+                        >
+                          <p>{tableDataError.value}</p>
+                        </td>
+                      </tr>
+                    ) : tableData.value && tableData.value.length > 0 ? (
+                      tableData.value.map((row: any, rowIndex: number) => (
+                        <tr
+                          key={rowIndex}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          {layout.tableHeaders
+                            .sort(
+                              (a: any, b: any) =>
+                                (a.order || 999) - (b.order || 999)
+                            )
+                            .map((header: any, colIndex: number) => {
+                              // Handle action columns
+                              if (header.type === "actions" && header.actions) {
+                                return (
+                                  <td key={colIndex} className="px-4 py-3">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        {header.actions.map(
+                                          (
+                                            action: any,
+                                            actionIndex: number
+                                          ) => (
+                                            <DropdownMenuItem
+                                              key={actionIndex}
+                                              onClick={() =>
+                                                handleRowAction(action, row)
+                                              }
+                                            >
+                                              {action.title}
+                                            </DropdownMenuItem>
+                                          )
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                );
+                              }
+                              // Regular data columns
+                              return (
+                                <td key={colIndex} className="px-4 py-3">
+                                  {row[header.accessor] !== undefined &&
+                                  row[header.accessor] !== null
+                                    ? String(row[header.accessor])
+                                    : "-"}
+                                </td>
+                              );
+                            })}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={layout.tableHeaders.length}
+                          className="p-8 text-center text-muted-foreground"
+                        >
+                          No data available. Click "Add" button to create new
+                          records.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -258,21 +458,22 @@ export default function DynamicContent() {
           </Card>
         )}
 
-      {/* Empty state if no table headers */}
-      {!currentContentItem.value.tableHeaders && (
-        <Card>
-          <CardContent className="flex min-h-100 items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-medium text-muted-foreground">
-                Content will be displayed here
-              </p>
-              <p className="text-sm text-muted-foreground">
-                This section is ready for dynamic content
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Empty state */}
+        {!layout && !layoutLoading.value && !layoutError.value && (
+          <Card>
+            <CardContent className="flex min-h-[200px] items-center justify-center">
+              <div className="text-center">
+                <p className="text-lg font-medium text-muted-foreground">
+                  Content will be displayed here
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This section is ready for dynamic content
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

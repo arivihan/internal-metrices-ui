@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/sidebar";
 import { getIcon } from "@/lib/icon-map";
 import type { DrawerItem } from "@/types/sidebar";
+import {
+  fetchLayoutData,
+  setCurrentContentItem,
+} from "@/signals/dynamicContent";
 
 interface NavMainProps {
   items: DrawerItem[];
@@ -27,19 +31,25 @@ interface NavMainProps {
 export function NavMain({ items, label = "Platform" }: NavMainProps) {
   const location = useLocation();
 
-  const isActive = (url?: string) => {
-    if (!url) return false;
-    // Ensure URL starts with /dashboard
-    const fullUrl = url.startsWith("/dashboard") ? url : `/dashboard${url}`;
-    return (
-      location.pathname === fullUrl ||
-      location.pathname.startsWith(fullUrl + "/")
-    );
+  // Convert title to URL-friendly slug (e.g., "All Coupons" -> "all-coupons")
+  const slugify = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]/g, "");
   };
 
-  const getFullUrl = (url?: string) => {
-    if (!url) return "#";
-    return url.startsWith("/dashboard") ? url : `/dashboard${url}`;
+  const isActive = (item: DrawerItem | any) => {
+    if (!item || !item.title) return false;
+    const slug = slugify(item.title);
+    const expectedPath = `/dashboard/${slug}`;
+    return location.pathname === expectedPath;
+  };
+
+  const getNavigationPath = (item: DrawerItem | any) => {
+    if (!item || !item.title) return "#";
+    const slug = slugify(item.title);
+    return `/dashboard/${slug}`;
   };
 
   return (
@@ -57,9 +67,26 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                 <SidebarMenuButton
                   asChild
                   tooltip={item.title}
-                  isActive={isActive(item.getDataUrl)}
+                  isActive={isActive(item)}
                 >
-                  <Link to={getFullUrl(item.getDataUrl)}>
+                  <Link
+                    to={getNavigationPath(item)}
+                    onClick={() => {
+                      console.log(`📍 Clicked: ${item.title}`);
+                      setCurrentContentItem(item);
+
+                      if (!item.getLayoutDataUrl) {
+                        console.warn("❌ No API URL for:", item.title);
+                        return;
+                      }
+
+                      console.log(
+                        `📡 Fetching layout for ${item.title} from:`,
+                        item.getLayoutDataUrl
+                      );
+                      fetchLayoutData(item.getLayoutDataUrl);
+                    }}
+                  >
                     {Icon && <Icon />}
                     <span>{item.title}</span>
                   </Link>
@@ -73,7 +100,7 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
             <Collapsible
               key={item.title}
               asChild
-              defaultOpen={isActive(item.getDataUrl)}
+              defaultOpen={isActive(item)}
               className="group/collapsible"
             >
               <SidebarMenuItem>
@@ -91,9 +118,31 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild
-                            isActive={isActive(subItem.getDataUrl)}
+                            isActive={isActive(subItem)}
                           >
-                            <Link to={getFullUrl(subItem.getDataUrl)}>
+                            <Link
+                              to={getNavigationPath(subItem)}
+                              onClick={() => {
+                                console.log(
+                                  `📍 Clicked sub-item: ${subItem.title}`
+                                );
+                                setCurrentContentItem(subItem);
+
+                                if (subItem?.getLayoutDataUrl) {
+                                  console.log(
+                                    `📡 Fetching layout for ${subItem.title} from:`,
+                                    subItem.getLayoutDataUrl
+                                  );
+                                  fetchLayoutData(subItem.getLayoutDataUrl);
+                                } else if (subItem?.getDataUrl) {
+                                  console.log(
+                                    `📡 Fetching data for ${subItem.title} from:`,
+                                    subItem.getDataUrl
+                                  );
+                                  fetchLayoutData(subItem.getDataUrl);
+                                }
+                              }}
+                            >
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>

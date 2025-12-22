@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle } from "lucide-react"
-import { isAdmin } from "@/signals/auth"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle } from "lucide-react";
+import { isAdmin } from "@/signals/auth";
 
 const Dashboard = () => {
   return (
@@ -30,7 +30,7 @@ const Dashboard = () => {
       </div>
       <div className="bg-muted/50 min-h-[50vh] flex-1 rounded-xl md:min-h-min" />
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

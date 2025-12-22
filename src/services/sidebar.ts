@@ -21,6 +21,9 @@ export const fetchSidebarData = async (): Promise<SidebarConfig> => {
 
     const data = await response.json()
     return data
+    console.log("========================================")
+    console.log(data)
+    console.log("========================================")
   } catch (error) {
     console.error('Error fetching sidebar data:', error)
     throw error
@@ -32,6 +35,7 @@ export const fetchSidebarData = async (): Promise<SidebarConfig> => {
  */
 export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
   try {
+    console.log(`[fetchDataByUrl] Fetching from: ${url}`);
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -43,9 +47,14 @@ export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    return response.json()
+    const data = await response.json()
+    console.log("---------------------")
+    console.log(data)
+    console.log("---------------------")
+    console.log(`[fetchDataByUrl] Success:`, data);
+    return data
   } catch (error) {
-    console.error(`Error fetching data from ${url}:`, error)
+    console.error(`[fetchDataByUrl] Error fetching data from ${url}:`, error)
     throw error
   }
 }
