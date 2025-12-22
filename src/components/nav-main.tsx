@@ -16,7 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { getIcon } from "@/lib/icon-map";
+import { DynamicIcon } from "@/lib/icon-map";
 import type { DrawerItem } from "@/types/sidebar";
 import {
   fetchLayoutData,
@@ -57,7 +57,7 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const Icon = getIcon(item.icon);
+          
           const hasSubItems = item.subMenuItems && item.subMenuItems.length > 0;
 
           if (!hasSubItems) {
@@ -87,7 +87,12 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                       fetchLayoutData(item.getLayoutDataUrl);
                     }}
                   >
-                    {Icon && <Icon />}
+                    {item.icon && (
+                      <DynamicIcon
+                        name={item.icon}
+                        className="h-5 w-5 text-muted-foreground"
+                      />
+                    )}
                     <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -106,7 +111,10 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton tooltip={item.title}>
-                    {Icon && <Icon />}
+                    <DynamicIcon
+                      name={item.icon}
+                      className="h-5 w-5 text-muted-foreground"
+                    />
                     <span>{item.title}</span>
                     <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>

@@ -23,6 +23,37 @@ export const openPopup = (button: Button) => {
   popupOpen.value = true
 }
 
+// Normalize different API response formats into array
+const extractArrayData = (response: any): any[] => {
+  if (!response) return []
+
+  // Direct array
+  if (Array.isArray(response)) return response
+
+  // Standard REST
+  if (Array.isArray(response.data)) return response.data
+
+  // Spring / Java pagination
+  if (Array.isArray(response.content)) return response.content
+
+  // Body as array
+  if (Array.isArray(response.body)) return response.body
+
+  // Body → content
+  if (Array.isArray(response.body?.content)) {
+    return response.body.content
+  }
+
+  // Body → data
+  if (Array.isArray(response.body?.data)) {
+    return response.body.data
+  }
+
+  console.warn("⚠️ Unknown API response format:", response)
+  return []
+}
+
+
 // Close popup
 export const closePopup = () => {
   popupOpen.value = false
@@ -39,43 +70,31 @@ export const fetchTableData = async (url: string) => {
   try {
     tableDataLoading.value = true
     tableDataError.value = null
-    
-    // Build full URL if it's a relative path
+
     let fullUrl = url
-    if (!url.startsWith('http')) {
-      // For relative URLs like /secure/coupon/all?..., prepend /api so it goes through proxy
+    if (!url.startsWith("http")) {
       fullUrl = `/api${url}`
     }
-    
+
     console.log(`[fetchTableData] 📡 Fetching from: ${fullUrl}`)
     const response = await fetchDataByUrl(fullUrl)
-    console.log(`[fetchTableData] ✅ Received response:`, response)
-    
-    // Handle different response formats:
-    // 1. Direct array response
-    // 2. { data: [...] } format
-    // 3. { content: [...] } format (Spring/Java pagination)
-    let data: any[] = []
-    if (Array.isArray(response)) {
-      data = response
-    } else if (response?.content && Array.isArray(response.content)) {
-      data = response.content
-    } else if (response?.data && Array.isArray(response.data)) {
-      data = response.data
-    }
-    
+
+    const data = extractArrayData(response)
+
     tableData.value = data
-    console.log(`[fetchTableData] 📊 Table data set to:`, tableData.value)
-    tableDataError.value = null
+    console.log(`[fetchTableData] 📊 Table data set to:`, data)
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Failed to fetch table data'
+    const errorMsg =
+      error instanceof Error ? error.message : "Failed to fetch table data"
     console.error(`[fetchTableData] ❌ Error:`, errorMsg)
+
     tableDataError.value = errorMsg
     tableData.value = []
   } finally {
     tableDataLoading.value = false
   }
 }
+
 
 // Fetch layout data from URL (and then fetch table data if getDataUrl is provided)
 export const fetchLayoutData = async (url: string) => {

@@ -31,8 +31,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { MoreVertical } from "lucide-react";
-import { getIcon } from "@/lib/icon-map";
+import { MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+// import { getIcon } from "@/lib/icon-map";
 import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
@@ -43,21 +43,93 @@ import {
   tableDataLoading,
   tableDataError,
   fetchLayoutData,
-  setCurrentContentItem,
   popupOpen,
   currentPopupButton,
   openPopup,
   closePopup,
 } from "@/signals/dynamicContent";
 
-/**
- * Dynamic content page that renders based on sidebar item clicked
- * Fetches layout data and displays forms, search, and tables
- */
+// /**
+//  * Dynamic content page that renders based on sidebar item clicked
+//  * Fetches layout data and displays forms, search, and tables
+//  *
+
+// Helper function to render cell content based on type
+// Helper function to render cell content based on type
+const renderCellContent = (header: any, value: any) => {
+  if (value === undefined || value === null) return "-";
+
+  switch (header.type) {
+    case "image":
+      return (
+        <div className="flex h-[10vh] w-[10vw] overflow-hidden items-center justify-center ">
+          <img
+            src={value}
+            alt="Image"
+            className="w-full h-full object-cover border shadow-sm"
+            onError={(e) => {
+              e.currentTarget.src =
+                "https://via.placeholder.com/64?text=No+Image";
+            }}
+          />
+        </div>
+      );
+
+    case "text":
+      // Special handling for ID column based on Header name
+      if (header.Header === "Id") {
+        const idValue = String(value);
+        // Wrap ID if longer than 5 characters
+        if (idValue.length > 5) {
+          return (
+            <div className="max-w-[100px] break-all text-xs font-mono font-semibold text-primary">
+              {idValue}
+            </div>
+          );
+        }
+        return (
+          <span className="font-mono text-sm font-semibold text-primary">
+            {idValue}
+          </span>
+        );
+      }
+
+      // Check if the value looks like JSON
+      if (
+        typeof value === "string" &&
+        (value.startsWith("{") || value.startsWith("["))
+      ) {
+        try {
+          const parsed = JSON.parse(value);
+          return (
+            <div className="max-w-xs">
+              <details className="cursor-pointer">
+                <summary className="text-xs text-cyan-600 hover:text-cyan-800">
+                  View JSON
+                </summary>
+                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
+                  {JSON.stringify(parsed, null, 2)}
+                </pre>
+              </details>
+            </div>
+          );
+        } catch {
+          // Not valid JSON, show as text
+          return <span className="line-clamp-2">{String(value)}</span>;
+        }
+      }
+      return <span className="line-clamp-2">{String(value)}</span>;
+
+    default:
+      return <span className="line-clamp-2">{String(value)}</span>;
+  }
+};
 export default function DynamicContent() {
   useSignals();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [searchData, setSearchData] = useState<Record<string, any>>({});
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10); // Fixed page size for now
 
   // No useEffect needed - currentContentItem is set directly from sidebar click handler
   // Just render whatever is in the signal
@@ -151,11 +223,6 @@ export default function DynamicContent() {
   console.log("✅ Rendering content for:", currentContentItem.value.title);
   console.log("📋 layoutData:", layoutData.value);
   console.log("📊 tableData:", tableData.value);
-
-  const Icon =
-    "icon" in currentContentItem.value
-      ? getIcon(currentContentItem.value.icon)
-      : null;
 
   const layout = layoutData.value;
 
@@ -252,7 +319,7 @@ export default function DynamicContent() {
           <CardContent>
             <div className="flex gap-2 ">
               {layout.search.fields.map((field: any, index: number) => (
-                <div key={index} className="flex-1 ">
+                <div key={index} className="flex-1   ">
                   {field.type === "select" ? (
                     <Select
                       value={searchData[field.value] || ""}
@@ -298,20 +365,25 @@ export default function DynamicContent() {
         {/* Buttons from layout config */}
         {layout?.buttons && layout.buttons.length > 0 && (
           <div className="flex gap-2">
-            {layout.buttons.map((button: any, index: number) => {
-              const ButtonIcon = button.icon ? getIcon(button.icon) : null;
-              return (
-                <Button
-                  key={index}
-                  variant={button.type === "icon" ? "outline" : "default"}
-                  size={button.type === "icon" ? "icon" : "default"}
-                  onClick={() => handleButtonClick(button)}
-                >
-                  {ButtonIcon && <ButtonIcon className="h-4 w-4 mr-2" />}
-                  {button.type !== "icon" && button.title}
-                </Button>
-              );
-            })}
+            {layout.buttons.map((button: any, index: number) => (
+              <Button
+                key={index}
+                variant={button.type === "icon" ? "outline" : "default"}
+                size={button.type === "icon" ? "icon" : "default"}
+                onClick={() => handleButtonClick(button)}
+              >
+                {button.icon && (
+                  <DynamicIcon
+                    name={button.icon}
+                    className={`h-4 w-4 ${
+                      button.type !== "icon" ? "mr-2" : ""
+                    }`}
+                  />
+                )}
+
+                {button.type !== "icon" && button.title}
+              </Button>
+            ))}
           </div>
         )}
       </div>
@@ -336,8 +408,8 @@ export default function DynamicContent() {
         {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Data Table</CardTitle>
-              <CardDescription>View and manage records</CardDescription>
+              {/* <CardTitle>Data Table</CardTitle>
+              <CardDescription>View and manage records</CardDescription> */}
             </CardHeader>
             <CardContent>
               <div className=" border">
@@ -381,64 +453,72 @@ export default function DynamicContent() {
                         </td>
                       </tr>
                     ) : tableData.value && tableData.value.length > 0 ? (
-                      tableData.value.map((row: any, rowIndex: number) => (
-                        <tr
-                          key={rowIndex}
-                          className="border-b hover:bg-muted/50"
-                        >
-                          {layout.tableHeaders
-                            .sort(
-                              (a: any, b: any) =>
-                                (a.order || 999) - (b.order || 999)
-                            )
-                            .map((header: any, colIndex: number) => {
-                              // Handle action columns
-                              if (header.type === "actions" && header.actions) {
+                      tableData.value
+                        .slice(
+                          currentPage * pageSize,
+                          (currentPage + 1) * pageSize
+                        )
+                        .map((row: any, rowIndex: number) => (
+                          <tr
+                            key={rowIndex}
+                            className="border-b hover:bg-muted/50"
+                          >
+                            {layout.tableHeaders
+                              .sort(
+                                (a: any, b: any) =>
+                                  (a.order || 999) - (b.order || 999)
+                              )
+                              .map((header: any, colIndex: number) => {
+                                // Handle action columns
+                                if (
+                                  header.type === "actions" &&
+                                  header.actions
+                                ) {
+                                  return (
+                                    <td key={colIndex} className="px-4 py-3">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <MoreVertical className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          {header.actions.map(
+                                            (
+                                              action: any,
+                                              actionIndex: number
+                                            ) => (
+                                              <DropdownMenuItem
+                                                key={actionIndex}
+                                                onClick={() =>
+                                                  handleRowAction(action, row)
+                                                }
+                                              >
+                                                {action.title}
+                                              </DropdownMenuItem>
+                                            )
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </td>
+                                  );
+                                }
+                                // Regular data columns
                                 return (
                                   <td key={colIndex} className="px-4 py-3">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 w-8 p-0"
-                                        >
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        {header.actions.map(
-                                          (
-                                            action: any,
-                                            actionIndex: number
-                                          ) => (
-                                            <DropdownMenuItem
-                                              key={actionIndex}
-                                              onClick={() =>
-                                                handleRowAction(action, row)
-                                              }
-                                            >
-                                              {action.title}
-                                            </DropdownMenuItem>
-                                          )
-                                        )}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    {renderCellContent(
+                                      header,
+                                      row[header.accessor]
+                                    )}
                                   </td>
                                 );
-                              }
-                              // Regular data columns
-                              return (
-                                <td key={colIndex} className="px-4 py-3">
-                                  {row[header.accessor] !== undefined &&
-                                  row[header.accessor] !== null
-                                    ? String(row[header.accessor])
-                                    : "-"}
-                                </td>
-                              );
-                            })}
-                        </tr>
-                      ))
+                              })}
+                          </tr>
+                        ))
                     ) : (
                       <tr>
                         <td
@@ -453,6 +533,48 @@ export default function DynamicContent() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {tableData.value && tableData.value.length > 0 && (
+                <div className="flex items-center justify-between border-t px-4 py-3">
+                  <p className="text-sm text-muted-foreground">
+                    {tableData.value.length} records
+                  </p>
+                  {Math.ceil(tableData.value.length / pageSize) > 1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage + 1} of{" "}
+                        {Math.ceil(tableData.value.length / pageSize)}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(0, p - 1))
+                          }
+                          disabled={currentPage === 0}
+                        >
+                          <ChevronLeft className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => setCurrentPage((p) => p + 1)}
+                          disabled={
+                            currentPage >=
+                            Math.ceil(tableData.value.length / pageSize) - 1
+                          }
+                        >
+                          <ChevronRight className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -472,6 +594,8 @@ export default function DynamicContent() {
             </CardContent>
           </Card>
         )}
+
+        {/* Bottom Pagination */}
       </div>
     </div>
   );
