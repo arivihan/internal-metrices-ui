@@ -53,6 +53,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "FileCheck",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "SQL Playground",
+    type: "getData",
+    getDataUrl: "/sql-playground",
+    icon: "Database",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {
