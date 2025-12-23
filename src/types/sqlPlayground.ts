@@ -44,3 +44,20 @@ export interface QueryListFilters {
   pageNumber: number
   pageSize: number
 }
+
+// Request payload for creating a new query
+export interface CreateQueryRequest {
+  name: string
+  description: string
+  sqlQuery: string
+  paramSchema: ParamSchema
+  isActive: boolean
+}
+
+// API response for create query
+export interface CreateQueryResponse {
+  code: string
+  message: string | null
+  success: boolean
+  data: SavedQuery
+}

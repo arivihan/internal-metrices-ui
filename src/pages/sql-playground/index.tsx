@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useSignals } from '@preact/signals-react/runtime'
 import { format } from 'date-fns'
 import {
   Database,
@@ -6,13 +8,13 @@ import {
   Download,
   CalendarIcon,
   Loader2,
-  Code2,
+  DatabaseZap,
   Terminal,
   FileText,
   CheckCircle2,
   XCircle,
   TableIcon,
-  X,
+  Plus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -51,8 +53,12 @@ import type {
   QueryResultRow,
 } from '@/types/sqlPlayground'
 import { cn } from '@/lib/utils'
+import { isAdmin } from '@/signals/auth'
 
 export default function SqlPlayground() {
+  useSignals()
+  const navigate = useNavigate()
+
   // Query list state
   const [queries, setQueries] = useState<SavedQuery[]>([])
   const [loadingQueries, setLoadingQueries] = useState(true)
@@ -246,14 +252,24 @@ export default function SqlPlayground() {
   return (
     <div className="h-full">
       {/* Header */}
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">SQL Playground</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">SQL Playground</h1>
+        {isAdmin.value && (
+          <Button
+            onClick={() => navigate('/dashboard/sql-playground/create')}
+            className="gap-2"
+          >
+            <Plus className="size-4" />
+            Create Query
+          </Button>
+        )}
+      </div>
 
       {/* Main Layout */}
       <div className="grid h-[calc(100vh-180px)] gap-6 lg:grid-cols-[320px_1fr]">
         {/* Left Sidebar - Query List */}
         <div className="flex flex-col rounded-xl border bg-card/50 backdrop-blur-sm">
           <div className="flex items-center gap-2 border-b px-4 py-3">
-            <FileText className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">Saved Queries</span>
             <Badge variant="secondary" className="ml-auto text-xs">
               {queries.length}
@@ -291,7 +307,7 @@ export default function SqlPlayground() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Code2 className="size-3.5 shrink-0 text-muted-foreground" />
+                          <DatabaseZap className="size-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate text-sm font-medium">{query.name}</span>
                         </div>
                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground pl-5.5">
@@ -331,7 +347,7 @@ export default function SqlPlayground() {
                 <div className="flex items-center justify-between border-b px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                      <Code2 className="size-4 text-primary" />
+                      <DatabaseZap className="size-4 text-primary" />
                     </div>
                     <div>
                       <h2 className="font-semibold">{selectedQuery.name}</h2>

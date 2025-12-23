@@ -57,7 +57,7 @@ const staticNavItems: DrawerItem[] = [
     title: "SQL Playground",
     type: "getData",
     getDataUrl: "/sql-playground",
-    icon: "Database",
+    icon: "DatabaseZap",
     accessibleToRoles: ["ADMIN"],
   },
 ];

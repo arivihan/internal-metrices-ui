@@ -4,6 +4,8 @@ import type {
   QueryListFilters,
   QueryParams,
   QueryResultRow,
+  CreateQueryRequest,
+  CreateQueryResponse,
 } from '@/types/sqlPlayground'
 
 /**
@@ -36,6 +38,21 @@ export const executeQuery = async (
       method: 'POST',
       params: { queryId: String(queryId) },
       body: JSON.stringify(requestParams),
+    }
+  )
+}
+
+/**
+ * Create a new SQL query (Admin only)
+ */
+export const createQuery = async (
+  query: CreateQueryRequest
+): Promise<CreateQueryResponse> => {
+  return apiClient<CreateQueryResponse>(
+    '/secure/sql-data-read-query/add-query',
+    {
+      method: 'POST',
+      body: JSON.stringify(query),
     }
   )
 }
