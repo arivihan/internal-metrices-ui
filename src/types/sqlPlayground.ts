@@ -45,8 +45,10 @@ export interface QueryListFilters {
   pageSize: number
 }
 
-// Request payload for creating a new query
+// Request payload for creating/updating a query
+// Include id for updates, omit for new queries
 export interface CreateQueryRequest {
+  id?: number
   name: string
   description: string
   sqlQuery: string

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft,
   Plus,
@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select'
 
 import { createQuery } from '@/services/sqlPlayground'
-import type { ParamSchema, ParamType } from '@/types/sqlPlayground'
+import type { ParamSchema, ParamType, SavedQuery } from '@/types/sqlPlayground'
 
 interface ParamEntry {
   id: string
@@ -35,8 +35,18 @@ interface ParamEntry {
   type: ParamType
 }
 
+interface LocationState {
+  query?: SavedQuery
+}
+
 export default function CreateQuery() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const state = location.state as LocationState | null
+  const editingQuery = state?.query
+
+  // Edit mode
+  const isEditMode = !!editingQuery
 
   // Form state
   const [name, setName] = useState('')
@@ -49,6 +59,26 @@ export default function CreateQuery() {
 
   // Submission state
   const [submitting, setSubmitting] = useState(false)
+
+  // Prefill form when editing
+  useEffect(() => {
+    if (editingQuery) {
+      setName(editingQuery.name)
+      setDescription(editingQuery.description)
+      setSqlQuery(editingQuery.sqlQuery)
+      setIsActive(editingQuery.isActive)
+
+      // Convert paramSchema object to array
+      const paramEntries: ParamEntry[] = Object.entries(editingQuery.paramSchema || {}).map(
+        ([key, type]) => ({
+          id: crypto.randomUUID(),
+          key,
+          type: type as ParamType,
+        })
+      )
+      setParams(paramEntries.length > 0 ? paramEntries : [{ id: crypto.randomUUID(), key: '', type: 'text' }])
+    }
+  }, [editingQuery])
 
   // Add new parameter entry
   const handleAddParam = () => {
@@ -110,23 +140,26 @@ export default function CreateQuery() {
 
     setSubmitting(true)
     try {
-      const response = await createQuery({
+      const payload = {
+        ...(isEditMode && editingQuery ? { id: editingQuery.id } : {}),
         name: name.trim(),
         description: description.trim(),
         sqlQuery: sqlQuery.trim(),
         paramSchema: buildParamSchema(),
         isActive,
-      })
+      }
+
+      const response = await createQuery(payload)
 
       if (response.success) {
-        toast.success('Query created successfully')
+        toast.success(isEditMode ? 'Query updated successfully' : 'Query created successfully')
         navigate('/dashboard/sql-playground')
       } else {
-        toast.error(response.message || 'Failed to create query')
+        toast.error(response.message || `Failed to ${isEditMode ? 'update' : 'create'} query`)
       }
     } catch (error) {
-      console.error('Failed to create query:', error)
-      toast.error('Failed to create query')
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} query:`, error)
+      toast.error(`Failed to ${isEditMode ? 'update' : 'create'} query`)
     } finally {
       setSubmitting(false)
     }
@@ -144,7 +177,7 @@ export default function CreateQuery() {
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Create Query</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{isEditMode ? 'Edit Query' : 'Create Query'}</h1>
         </div>
         <Button
           onClick={handleSubmit}
@@ -154,12 +187,12 @@ export default function CreateQuery() {
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              Creating...
+              {isEditMode ? 'Updating...' : 'Creating...'}
             </>
           ) : (
             <>
               <Save className="size-4" />
-              Save Query
+              {isEditMode ? 'Update Query' : 'Save Query'}
             </>
           )}
         </Button>

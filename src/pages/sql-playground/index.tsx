@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useSignals } from '@preact/signals-react/runtime'
 import { format } from 'date-fns'
 import {
@@ -15,6 +15,7 @@ import {
   XCircle,
   TableIcon,
   Plus,
+  Pencil,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -58,6 +59,7 @@ import { isAdmin } from '@/signals/auth'
 export default function SqlPlayground() {
   useSignals()
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Query list state
   const [queries, setQueries] = useState<SavedQuery[]>([])
@@ -75,7 +77,7 @@ export default function SqlPlayground() {
   const [resultColumns, setResultColumns] = useState<string[]>([])
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false)
 
-  // Fetch queries on mount
+  // Fetch queries on mount and when navigating back
   useEffect(() => {
     const loadQueries = async () => {
       setLoadingQueries(true)
@@ -94,7 +96,7 @@ export default function SqlPlayground() {
       }
     }
     loadQueries()
-  }, [])
+  }, [location.key])
 
   // Handle query selection
   const handleSelectQuery = (query: SavedQuery) => {
@@ -249,6 +251,9 @@ export default function SqlPlayground() {
 
   const hasParams = selectedQuery && Object.keys(selectedQuery.paramSchema || {}).length > 0
 
+  // Filter queries based on role - admins see all, others see only active
+  const visibleQueries = isAdmin.value ? queries : queries.filter((q) => q.isActive)
+
   return (
     <div className="h-full">
       {/* Header */}
@@ -272,7 +277,7 @@ export default function SqlPlayground() {
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <span className="text-sm font-medium">Saved Queries</span>
             <Badge variant="secondary" className="ml-auto text-xs">
-              {queries.length}
+              {visibleQueries.length}
             </Badge>
           </div>
 
@@ -285,7 +290,7 @@ export default function SqlPlayground() {
                     <Skeleton className="h-3 w-full" />
                   </div>
                 ))
-              ) : queries.length === 0 ? (
+              ) : visibleQueries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="rounded-full bg-muted p-3 mb-3">
                     <Database className="size-6 text-muted-foreground" />
@@ -293,7 +298,7 @@ export default function SqlPlayground() {
                   <p className="text-sm text-muted-foreground">No saved queries</p>
                 </div>
               ) : (
-                queries.map((query) => (
+                visibleQueries.map((query) => (
                   <button
                     key={query.id}
                     onClick={() => handleSelectQuery(query)}
@@ -365,6 +370,17 @@ export default function SqlPlayground() {
                         <XCircle className="mr-1 size-3" />
                         Inactive
                       </Badge>
+                    )}
+                    {isAdmin.value && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate('/dashboard/sql-playground/create', { state: { query: selectedQuery } })}
+                        className="gap-1.5"
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </Button>
                     )}
                   </div>
                 </div>
