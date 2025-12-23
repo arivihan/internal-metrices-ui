@@ -261,8 +261,9 @@ export default function SqlPlayground() {
         <h1 className="text-2xl font-semibold tracking-tight">SQL Playground</h1>
         {isAdmin.value && (
           <Button
+            variant="outline"
             onClick={() => navigate('/dashboard/sql-playground/create')}
-            className="gap-2"
+            className="gap-2 border-[var(--color-brand)]/50 text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10"
           >
             <Plus className="size-4" />
             Create Query
@@ -292,8 +293,8 @@ export default function SqlPlayground() {
                 ))
               ) : visibleQueries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="rounded-full bg-muted p-3 mb-3">
-                    <Database className="size-6 text-muted-foreground" />
+                  <div className="rounded-full bg-[var(--color-brand)]/10 p-3 mb-3">
+                    <Database className="size-6 text-[var(--color-brand)]" />
                   </div>
                   <p className="text-sm text-muted-foreground">No saved queries</p>
                 </div>
@@ -305,14 +306,14 @@ export default function SqlPlayground() {
                     className={cn(
                       'w-full rounded-lg border p-3 text-left transition-all hover:bg-accent/50',
                       selectedQuery?.id === query.id
-                        ? 'border-primary bg-primary/5 shadow-sm'
+                        ? 'border-[var(--color-brand)]/50 bg-[var(--color-brand)]/5 shadow-sm'
                         : 'border-transparent bg-background/50 hover:border-border/50'
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <DatabaseZap className="size-3.5 shrink-0 text-muted-foreground" />
+                          <DatabaseZap className={cn("size-3.5 shrink-0", selectedQuery?.id === query.id ? "text-[var(--color-brand)]" : "text-muted-foreground")} />
                           <span className="truncate text-sm font-medium">{query.name}</span>
                         </div>
                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground pl-5.5">
@@ -336,8 +337,8 @@ export default function SqlPlayground() {
         <div className="flex flex-col gap-4 overflow-hidden">
           {!selectedQuery ? (
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Database className="size-8 text-muted-foreground" />
+              <div className="rounded-full bg-[var(--color-brand)]/10 p-4 mb-4">
+                <Database className="size-8 text-[var(--color-brand)]" />
               </div>
               <h3 className="text-lg font-medium">No Query Selected</h3>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -351,8 +352,8 @@ export default function SqlPlayground() {
                 {/* Query Header */}
                 <div className="flex items-center justify-between border-b px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                      <DatabaseZap className="size-4 text-primary" />
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-[var(--color-brand)]/10">
+                      <DatabaseZap className="size-4 text-[var(--color-brand)]" />
                     </div>
                     <div>
                       <h2 className="font-semibold">{selectedQuery.name}</h2>
@@ -376,7 +377,7 @@ export default function SqlPlayground() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate('/dashboard/sql-playground/create', { state: { query: selectedQuery } })}
-                        className="gap-1.5"
+                        className="gap-1.5 border-[var(--color-brand)]/50 text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10"
                       >
                         <Pencil className="size-3.5" />
                         Edit
@@ -406,7 +407,7 @@ export default function SqlPlayground() {
                     onClick={handleExecute}
                     disabled={executing}
                     size="lg"
-                    className="gap-2 shadow-sm"
+                    className="gap-2 shadow-sm bg-[var(--color-brand)] hover:bg-[var(--color-brand-600)] text-white"
                   >
                     {executing ? (
                       <>
@@ -434,8 +435,8 @@ export default function SqlPlayground() {
           <DialogHeader className="px-6 py-4 border-b bg-muted/30 pr-14">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                  <TableIcon className="size-4 text-primary" />
+                <div className="flex size-9 items-center justify-center rounded-lg bg-[var(--color-brand)]/10">
+                  <TableIcon className="size-4 text-[var(--color-brand)]" />
                 </div>
                 <div>
                   <DialogTitle className="text-lg">Query Results</DialogTitle>
@@ -450,7 +451,7 @@ export default function SqlPlayground() {
                 </div>
               </div>
               {results && results.length > 0 && (
-                <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2 border-[var(--color-brand)]/50 text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10">
                   <Download className="size-4" />
                   Export CSV
                 </Button>
@@ -461,8 +462,8 @@ export default function SqlPlayground() {
           <div className="flex-1 overflow-hidden p-4">
             {results && results.length === 0 ? (
               <div className="flex h-64 flex-col items-center justify-center">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                  <TableIcon className="size-8 text-muted-foreground" />
+                <div className="rounded-full bg-[var(--color-brand)]/10 p-4 mb-4">
+                  <TableIcon className="size-8 text-[var(--color-brand)]" />
                 </div>
                 <h3 className="text-lg font-medium">No Results</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -487,7 +488,7 @@ export default function SqlPlayground() {
                   <tbody>
                     {results.map((row, rowIndex) => (
                       <tr key={rowIndex} className="border-b hover:bg-muted/30 transition-colors">
-                        <td className="p-2 w-12 text-center text-xs text-muted-foreground font-mono sticky left-0 bg-background">
+                        <td className="p-2 w-12 text-center text-xs text-[var(--color-brand-600)] dark:text-[var(--color-brand-400)] font-mono sticky left-0 bg-background">
                           {rowIndex + 1}
                         </td>
                         {resultColumns.map((col) => (

@@ -182,7 +182,8 @@ export default function CreateQuery() {
         <Button
           onClick={handleSubmit}
           disabled={submitting}
-          className="gap-2"
+          variant="outline"
+          className="gap-2 border-[var(--color-brand)]/50 text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10"
         >
           {submitting ? (
             <>
@@ -203,7 +204,7 @@ export default function CreateQuery() {
         {/* Left - SQL Editor */}
         <div className="flex flex-col rounded-xl border bg-card/50 backdrop-blur-sm">
           <div className="flex items-center gap-2 border-b px-4 py-3">
-            <DatabaseZap className="size-4 text-muted-foreground" />
+            <DatabaseZap className="size-4 text-[var(--color-brand)]" />
             <span className="text-sm font-medium">SQL Query</span>
           </div>
           <div className="flex-1 p-4">
@@ -221,7 +222,7 @@ export default function CreateQuery() {
           {/* Query Details */}
           <div className="rounded-xl border bg-card/50 backdrop-blur-sm">
             <div className="flex items-center gap-2 border-b px-4 py-3">
-              <FileText className="size-4 text-muted-foreground" />
+              <FileText className="size-4 text-[var(--color-brand)]" />
               <span className="text-sm font-medium">Query Details</span>
             </div>
             <div className="space-y-4 p-4">
@@ -271,14 +272,14 @@ export default function CreateQuery() {
           <div className="flex-1 rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2">
-                <Settings className="size-4 text-muted-foreground" />
+                <Settings className="size-4 text-[var(--color-brand)]" />
                 <span className="text-sm font-medium">Parameters</span>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleAddParam}
-                className="h-7 gap-1 text-xs"
+                className="h-7 gap-1 text-xs text-[var(--color-brand)] hover:text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10"
               >
                 <Plus className="size-3" />
                 Add
@@ -288,15 +289,15 @@ export default function CreateQuery() {
               <div className="space-y-3">
                 {params.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="rounded-full bg-muted p-3 mb-3">
-                      <Database className="size-5 text-muted-foreground" />
+                    <div className="rounded-full bg-[var(--color-brand)]/10 p-3 mb-3">
+                      <Database className="size-5 text-[var(--color-brand)]" />
                     </div>
                     <p className="text-sm text-muted-foreground">No parameters defined</p>
                     <Button
                       variant="link"
                       size="sm"
                       onClick={handleAddParam}
-                      className="mt-1 h-auto p-0 text-xs"
+                      className="mt-1 h-auto p-0 text-xs text-[var(--color-brand)] hover:text-[var(--color-brand-600)]"
                     >
                       Add a parameter
                     </Button>
@@ -307,7 +308,7 @@ export default function CreateQuery() {
                       key={param.id}
                       className="flex items-center gap-2 rounded-lg border p-3 bg-background/50"
                     >
-                      <div className="flex size-6 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
+                      <div className="flex size-6 items-center justify-center rounded bg-[var(--color-brand)]/10 text-xs font-medium text-[var(--color-brand-700)] dark:text-[var(--color-brand-300)]">
                         {index + 1}
                       </div>
                       <Input
