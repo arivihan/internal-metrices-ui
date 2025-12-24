@@ -9,6 +9,8 @@ import Users from "@/pages/users";
 import UserDetail from "@/pages/users/UserDetail";
 import Notifications from "@/pages/Notifications";
 import ASATScorecards from "@/pages/asat";
+import SqlPlayground from "@/pages/sql-playground";
+import CreateQuery from "@/pages/sql-playground/create";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
@@ -51,6 +53,8 @@ function App() {
             <Route path="/dashboard/users/detail/:userId" element={<UserDetail />} />
             <Route path="/dashboard/notifications" element={<Notifications />} />
             <Route path="/dashboard/asat-scorecards" element={<ASATScorecards />} />
+            <Route path="/dashboard/sql-playground" element={<SqlPlayground />} />
+            <Route path="/dashboard/sql-playground/create" element={<CreateQuery />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>

@@ -1,3 +1,5 @@
+import { apiClient } from './apiClient'
+
 // Types for dashboard select API
 export interface DashboardService {
   name: string
@@ -6,36 +8,31 @@ export interface DashboardService {
   accessibleToRoles: string[]
 }
 
-export interface DashboardServicesResponse {
+export interface DashboardServicesData {
   inHouseServices: DashboardService[]
   externalServices: DashboardService[]
 }
 
-// Use environment variable for API URL, fallback to mock
-const DASHBOARD_SERVICES_API_URL =
-  import.meta.env.VITE_DASHBOARD_SERVICES_API_URL ||
-  "https://63580e52-8ff3-408f-88fe-80266a4b946c.mock.pstmn.io/dashboard-services"
+interface DashboardServicesApiResponse {
+  code: string
+  message: string | null
+  success: boolean
+  data: DashboardServicesData
+  size: number | null
+  page: number | null
+}
 
 /**
  * Fetch dashboard services (in-house and external) from the API
  */
-export const fetchDashboardServices = async (): Promise<DashboardServicesResponse> => {
+export const fetchDashboardServices = async (): Promise<DashboardServicesData> => {
   try {
-    const response = await fetch(DASHBOARD_SERVICES_API_URL, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data: DashboardServicesResponse = await response.json()
+    const response = await apiClient<DashboardServicesApiResponse>(
+      '/secure/ui/fetch-component-configs/dashboard-services'
+    )
     return {
-      inHouseServices: data.inHouseServices || [],
-      externalServices: data.externalServices || [],
+      inHouseServices: response.data?.inHouseServices || [],
+      externalServices: response.data?.externalServices || [],
     }
   } catch (error) {
     console.error("Error fetching dashboard services:", error)

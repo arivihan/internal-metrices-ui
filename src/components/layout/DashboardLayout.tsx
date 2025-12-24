@@ -65,6 +65,19 @@ export function DashboardLayout() {
       return [{ label: "ASAT Scorecards" }];
     }
 
+    // SQL Playground create/edit page
+    if (pathname === "/dashboard/sql-playground/create") {
+      return [
+        { label: "SQL Playground", path: "/dashboard/sql-playground" },
+        { label: "Create Query" },
+      ];
+    }
+
+    // SQL Playground page
+    if (pathname === "/dashboard/sql-playground") {
+      return [{ label: "SQL Playground" }];
+    }
+
     // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")
