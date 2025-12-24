@@ -74,15 +74,17 @@ export const fetchTableData = async (url: string) => {
     tableDataLoading.value = true
     tableDataError.value = null
 
-    let fullUrl = url
-    if (!url.startsWith("http")) {
-      fullUrl = `/api${url}`
+    console.log(`[fetchTableData] 📡 Fetching from: ${url}`)
+    const response = await fetchDataByUrl(url)
+    
+    // Handle wrapped API response
+    let responseData = response;
+    if (response?.data && typeof response.data === 'object') {
+      // If response has a data field, extract it
+      responseData = response.data;
     }
 
-    console.log(`[fetchTableData] 📡 Fetching from: ${fullUrl}`)
-    const response = await fetchDataByUrl(fullUrl)
-
-    const data = extractArrayData(response)
+    const data = extractArrayData(responseData)
 
     tableData.value = data
     console.log(`[fetchTableData] 📊 Table data set to:`, data)
@@ -98,6 +100,12 @@ export const fetchTableData = async (url: string) => {
   }
 }
 
+// Update table data directly (used after form submission)
+export const updateTableData = (newData: any[]) => {
+  tableData.value = newData
+  console.log(`[updateTableData] 📊 Table data updated:`, newData)
+}
+
 
 // Fetch layout data from URL (and then fetch table data if getDataUrl is provided)
 export const fetchLayoutData = async (url: string) => {
@@ -105,15 +113,23 @@ export const fetchLayoutData = async (url: string) => {
     layoutLoading.value = true
     layoutError.value = null
     console.log(`[fetchLayoutData] 📡 Starting fetch from: ${url}`)
-    const data = await fetchDataByUrl(url)
-    console.log(`[fetchLayoutData] ✅ Received layout data:`, data)
-    layoutData.value = data
+    const response = await fetchDataByUrl(url)
+    
+    // Handle wrapped API response (with code, message, success, data, etc.)
+    let layoutContent = response;
+    if (response?.data && typeof response.data === 'object') {
+      // If response has a data field, extract it
+      layoutContent = response.data;
+    }
+    
+    console.log(`[fetchLayoutData] ✅ Received layout data:`, layoutContent)
+    layoutData.value = layoutContent
     layoutError.value = null
     
     // If the layout response includes a getDataUrl, fetch the table data
-    if (data?.getDataUrl) {
-      console.log(`[fetchLayoutData] Found getDataUrl in response: ${data.getDataUrl}, fetching table data`)
-      await fetchTableData(data.getDataUrl)
+    if (layoutContent?.getDataUrl) {
+      console.log(`[fetchLayoutData] Found getDataUrl in response: ${layoutContent.getDataUrl}, fetching table data`)
+      await fetchTableData(layoutContent.getDataUrl)
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Failed to fetch layout data'

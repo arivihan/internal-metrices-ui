@@ -61,7 +61,6 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          
           const hasSubItems = item.subMenuItems && item.subMenuItems.length > 0;
 
           if (!hasSubItems) {
@@ -79,22 +78,29 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                       console.log(`📍 Clicked: ${item.title}`);
                       setCurrentContentItem(item);
 
-                      if (!item.getLayoutDataUrl) {
+                      // Use getLayoutDataUrl if available, otherwise getDataUrl
+                      const urlToFetch =
+                        item.getLayoutDataUrl || item.getDataUrl;
+                      if (!urlToFetch) {
                         console.warn("❌ No API URL for:", item.title);
                         return;
                       }
 
                       console.log(
                         `📡 Fetching layout for ${item.title} from:`,
-                        item.getLayoutDataUrl
+                        urlToFetch
                       );
-                      fetchLayoutData(item.getLayoutDataUrl);
+                      fetchLayoutData(urlToFetch);
                     }}
                   >
                     {item.icon && (
                       <DynamicIcon
                         name={item.icon}
-                        className={`h-5 w-5 ${isActive(item) ? "text-brand-300" : "text-muted-foreground"}`}
+                        className={`h-5 w-5 ${
+                          isActive(item)
+                            ? "text-brand-300"
+                            : "text-muted-foreground"
+                        }`}
                       />
                     )}
                     <span>{item.title}</span>
@@ -140,18 +146,21 @@ export function NavMain({ items, label = "Platform" }: NavMainProps) {
                                 );
                                 setCurrentContentItem(subItem);
 
-                                if (subItem?.getLayoutDataUrl) {
+                                // Use getLayoutDataUrl if available, otherwise getDataUrl
+                                const urlToFetch =
+                                  (subItem as any).getLayoutDataUrl ||
+                                  subItem.getDataUrl;
+                                if (urlToFetch) {
                                   console.log(
                                     `📡 Fetching layout for ${subItem.title} from:`,
-                                    subItem.getLayoutDataUrl
+                                    urlToFetch
                                   );
-                                  fetchLayoutData(subItem.getLayoutDataUrl);
-                                } else if (subItem?.getDataUrl) {
-                                  console.log(
-                                    `📡 Fetching data for ${subItem.title} from:`,
-                                    subItem.getDataUrl
+                                  fetchLayoutData(urlToFetch);
+                                } else {
+                                  console.warn(
+                                    "❌ No API URL for:",
+                                    subItem.title
                                   );
-                                  fetchLayoutData(subItem.getDataUrl);
                                 }
                               }}
                             >

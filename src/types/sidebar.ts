@@ -78,8 +78,9 @@ export interface SubMenuItem {
 // Drawer Item
 export interface DrawerItem {
   title: string
-  type: 'dropdown' | 'getData'
+  type: 'dropdown' | 'getData' | 'getLayout'
   getDataUrl?: string
+  getLayoutDataUrl?: string
   icon?: string
   accessibleToRoles?: string[]
   tableHeaders?: TableHeader[]
