@@ -78,6 +78,11 @@ export function DashboardLayout() {
       return [{ label: "SQL Playground" }];
     }
 
+    // App Configs page
+    if (pathname === "/dashboard/app-configs") {
+      return [{ label: "App Configs" }];
+    }
+
     // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")

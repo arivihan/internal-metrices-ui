@@ -60,6 +60,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "DatabaseZap",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "App Configs",
+    type: "getData",
+    getDataUrl: "/app-configs",
+    icon: "Settings",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {

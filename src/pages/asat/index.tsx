@@ -571,7 +571,7 @@ export default function ASATScorecards() {
 
       {/* Scorecard Detail Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg" showCloseButton={false}>
+        <DialogContent className="max-w-6xl" showCloseButton={false}>
           <DialogHeader className="flex-row items-center justify-between space-y-0">
             <DialogTitle>Update Scorecard Status</DialogTitle>
             {selectedScorecard && (
@@ -592,106 +592,103 @@ export default function ASATScorecards() {
           </DialogHeader>
 
           {selectedScorecard && (
-            <div className="space-y-4">
-              {/* Scorecard Image */}
-              <div className="rounded-lg border overflow-hidden">
-                {selectedScorecard.resultInfo.imageUrl ? (
-                  <a
-                    href={selectedScorecard.resultInfo.imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <img
-                      src={selectedScorecard.resultInfo.imageUrl}
-                      alt="Scorecard"
-                      className="w-full h-auto max-h-75 object-contain bg-muted"
-                    />
-                  </a>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-40 bg-muted text-muted-foreground">
-                    <ImageOff className="size-12 mb-2" />
-                    <span className="text-sm">No scorecard image recieved</span>
-                  </div>
-                )}
+            <div className="grid grid-cols-[2fr_3fr] gap-6">
+              {/* Left: Scorecard Image */}
+              <div>
+                <div className="rounded-lg border overflow-hidden">
+                  {selectedScorecard.resultInfo.imageUrl ? (
+                    <a
+                      href={selectedScorecard.resultInfo.imageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={selectedScorecard.resultInfo.imageUrl}
+                        alt="Scorecard"
+                        className="w-full h-auto object-contain bg-muted"
+                      />
+                    </a>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-muted text-muted-foreground">
+                      <ImageOff className="size-10 mb-2" />
+                      <span className="text-sm">No scorecard image received</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <Card>
-                <CardContent className="grid gap-3 p-4">
-                  {/* User Info */}
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">User ID:</span>
-                    <span className="font-mono text-xs break-all">
-                      {selectedScorecard.userId}
-                    </span>
-                  </div>
+              {/* Right: User & Test Details */}
+              <div>
+                <Card className="h-full">
+                  <CardContent className="grid gap-2.5 p-4 text-sm">
+                    {/* User Info Section */}
+                    <h4 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">User Info</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{selectedScorecard.userName}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span>{selectedScorecard.userPhone || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">User ID:</span>
+                      <span className="font-mono text-xs break-all">{selectedScorecard.userId}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">10th %:</span>
+                      <span>
+                        {selectedScorecard.marksheetInfo.percent !== null
+                          ? `${selectedScorecard.marksheetInfo.percent}%`
+                          : '-'}
+                      </span>
+                    </div>
 
-                  <Separator />
+                    <Separator className="my-1" />
 
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">User Name:</span>
-                    <span className="font-medium">{selectedScorecard.userName}</span>
-                  </div>
+                    {/* Test Info Section */}
+                    <h4 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">Test Info</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Marks:</span>
+                      <span className="font-medium">
+                        {selectedScorecard.testInfo.marks} / {selectedScorecard.testInfo.totalMarks}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Test %:</span>
+                      <span className="font-medium">{selectedScorecard.testInfo.percentage}%</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Attempted:</span>
+                      <span>{formatDate(selectedScorecard.testInfo.date)}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Test ID:</span>
+                      <span className="font-mono text-xs">{selectedScorecard.testInfo.testId}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Group ID:</span>
+                      <span className="font-mono text-xs">{selectedScorecard.testInfo.testGroupId}</span>
+                    </div>
 
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">User Phone:</span>
-                    <span>{selectedScorecard.userPhone || 'N/A'}</span>
-                  </div>
+                    <Separator className="my-1" />
 
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">10th %:</span>
-                    <span>
-                      {selectedScorecard.marksheetInfo.percent !== null
-                        ? `${selectedScorecard.marksheetInfo.percent}%`
-                        : '-'}
-                    </span>
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Created At:</span>
-                    <span>{formatTimestamp(selectedScorecard.resultInfo.createdOn)}</span>
-                  </div>
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Test Attempted:</span>
-                    <span>{formatDate(selectedScorecard.testInfo.date)}</span>
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Marks:</span>
-                    <span className="font-medium">
-                      {selectedScorecard.testInfo.marks} / {selectedScorecard.testInfo.totalMarks}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Test %:</span>
-                    <span className="font-medium">{selectedScorecard.testInfo.percentage}%</span>
-                  </div>
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Test Group ID:</span>
-                    <span className="font-mono text-xs">{selectedScorecard.testInfo.testGroupId}</span>
-                  </div>
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Test ID:</span>
-                    <span className="font-mono text-xs">{selectedScorecard.testInfo.testId}</span>
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                    <span className="text-muted-foreground">Discount %:</span>
-                    <span className="font-semibold text-lg">
-                      {selectedScorecard.resultInfo.percentDiscount}%
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                    {/* Result Section */}
+                    <h4 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">Result</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-1">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span>{formatTimestamp(selectedScorecard.resultInfo.createdOn)}</span>
+                    </div>
+                    <div className="grid grid-cols-[100px_1fr] gap-1 items-center">
+                      <span className="text-muted-foreground">Discount:</span>
+                      <span className="font-semibold text-lg text-primary">
+                        {selectedScorecard.resultInfo.percentDiscount}%
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
 
