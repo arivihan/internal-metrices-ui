@@ -154,10 +154,10 @@ function JsonNode({ name, value, depth, initialExpanded, isLast }: JsonNodeProps
     (type === 'object' && Object.keys(value as Record<string, unknown>).length === 0)
 
   return (
-    <div className="font-mono text-sm">
+    <div className="font-mono text-sm min-w-0">
       <div
         className={cn(
-          'flex items-start gap-1 py-0.5 rounded hover:bg-muted/50 -mx-1 px-1',
+          'flex items-start gap-1 py-0.5 rounded hover:bg-muted/50 -mx-1 px-1 min-w-0',
           isExpandable && !isEmpty && 'cursor-pointer'
         )}
         onClick={toggleExpand}
@@ -175,13 +175,13 @@ function JsonNode({ name, value, depth, initialExpanded, isLast }: JsonNodeProps
         </span>
 
         {/* Key name */}
-        <span className="text-purple-600 dark:text-purple-400">
+        <span className="text-purple-600 dark:text-purple-400 shrink-0">
           {typeof name === 'string' ? `"${name}"` : name}
         </span>
-        <span className="text-muted-foreground">:</span>
+        <span className="text-muted-foreground shrink-0">:</span>
 
         {/* Value */}
-        <span className="flex-1 break-all">
+        <span className="flex-1 min-w-0 break-all">
           {isExpandable ? renderExpandableValue() : renderValue()}
           {!isLast && !isExpandable && (
             <span className="text-muted-foreground">,</span>
@@ -257,7 +257,7 @@ export default function JsonViewer({
         }))
 
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden">
       {/* Copy button */}
       <button
         onClick={handleCopy}
@@ -267,7 +267,7 @@ export default function JsonViewer({
         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
       </button>
 
-      <div className="bg-muted/30 rounded-lg p-4 overflow-auto max-h-[60vh]">
+      <div className="bg-muted/30 rounded-lg p-4 overflow-auto max-h-[60vh] min-w-0">
         {rootName && (
           <div className="font-mono text-sm text-muted-foreground mb-1">
             {rootName}

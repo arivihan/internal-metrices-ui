@@ -358,12 +358,14 @@ export default function AppConfigs() {
         return { value: selectedConfig.data.value }
       }
     }
-    // For DynamoDB/Firebase, show the full config object
-    return {
-      featureKey: selectedConfig.data.featureKey,
-      ...(selectedConfig.data.keyValues && { keyValues: selectedConfig.data.keyValues }),
-      ...(selectedConfig.data.objectValues && { objectValues: selectedConfig.data.objectValues }),
+    // For DynamoDB/Firebase, show only the values (key is already the title)
+    if (selectedConfig.data.keyValues && Object.keys(selectedConfig.data.keyValues).length > 0) {
+      return selectedConfig.data.keyValues
     }
+    if (selectedConfig.data.objectValues && Object.keys(selectedConfig.data.objectValues).length > 0) {
+      return selectedConfig.data.objectValues
+    }
+    return {}
   }
 
   const truncateValue = (value: string, maxLength: number = 100) => {
