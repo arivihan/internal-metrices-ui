@@ -33,18 +33,55 @@ export const apiClient = async <T>(
     ;(headers as Record<string, string>)['avToken'] = accessToken.value
   }
 
+  console.log(`[apiClient] 🔗 ${init.method || 'GET'} ${url}`)
+
   const response = await fetch(url, {
     ...init,
     headers,
     credentials: 'include', // Include cookies in requests
   })
 
+  console.log(`[apiClient] 📊 Response Status: ${response.status}`)
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }))
+    console.error(`[apiClient] ❌ Error:`, error)
     throw new Error(error.message || 'Request failed')
   }
 
-  return response.json()
+  const data = await response.json()
+  console.log(`[apiClient] ✅ Response:`, data)
+  return data
+}
+
+/**
+ * POST request helper
+ */
+export const postData = async <T>(
+  endpoint: string,
+  data: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * PUT request helper
+ */
+export const putData = async <T>(
+  endpoint: string,
+  data: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
 }
 
 /**

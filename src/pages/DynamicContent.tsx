@@ -50,26 +50,19 @@ import {
   tableData,
   tableDataLoading,
   tableDataError,
-  fetchLayoutData,
+  fetchTableData,
   popupOpen,
   currentPopupButton,
   openPopup,
   closePopup,
 } from "@/signals/dynamicContent";
-// import { getBaseUrl, postData, putData } from "@/lib/api";
+import { postData, putData } from "@/services/apiClient";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-
-type TableHeaderConfig = {
-  Header: string;
-  accessor?: string;
-  type?: string;
-  order?: number;
-  actions?: any[];
-};
 
 // ============================================
 // 1. CellRenderer Component
 // ============================================
+// @ts-ignore
 const CellRenderer = ({ header, value, onViewJson }) => {
   if (value === undefined || value === null) return "-";
 
@@ -131,10 +124,10 @@ const CellRenderer = ({ header, value, onViewJson }) => {
   }
 };
 
-
 // ============================================
 // 2. FormPopup Component
 // ============================================
+// @ts-ignore
 const FormPopup = ({
   open,
   onClose,
@@ -216,6 +209,7 @@ const FormPopup = ({
 };
 
 // ===========================================
+// @ts-ignore
 const JsonViewPopup = ({ open, onClose, data }) => {
   if (!data) return null;
 
@@ -244,6 +238,7 @@ const JsonViewPopup = ({ open, onClose, data }) => {
 // ============================================
 // 3. SearchBar Component
 // ============================================
+// @ts-ignore
 const SearchBar = ({
   layout,
   searchData,
@@ -319,6 +314,7 @@ const SearchBar = ({
 // ============================================
 // 4. ActionButtons Component
 // ============================================
+// @ts-ignore
 const ActionButtons = ({ buttons, onButtonClick }) => {
   if (!buttons || buttons.length === 0) return null;
 
@@ -347,6 +343,7 @@ const ActionButtons = ({ buttons, onButtonClick }) => {
 // ============================================
 // 5. Pagination Component
 // ============================================
+// @ts-ignore
 const Pagination = ({
   currentPage,
   totalPages,
@@ -357,7 +354,6 @@ const Pagination = ({
 }) => {
   if (totalItems === 0) return null;
 
-  const startItem = currentPage * pageSize + 1;
   const endItem = Math.min((currentPage + 1) * pageSize, totalItems);
 
   return (
@@ -434,7 +430,6 @@ export default function DynamicContent() {
   const [jsonPopupOpen, setJsonPopupOpen] = useState(false);
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
 
-
   useEffect(() => {
     setSearchData({});
     setSearchResults(null);
@@ -448,7 +443,7 @@ export default function DynamicContent() {
   const displayData =
     searchResults !== null ? searchResults : tableData.value || [];
 
-  const handleButtonClick = (button) => {
+  const handleButtonClick = (button: any) => {
     if (button.type === "SHOW_POPUP" && button.popupFields) {
       openPopup(button);
       setFormData({});
@@ -459,40 +454,78 @@ export default function DynamicContent() {
     }
   };
 
-  const handleViewJson = (data) => {
+  const handleViewJson = (data: any) => {
     setJsonPopupData(data);
     setJsonPopupOpen(true);
   };
 
-  const handleRowAction = (action, rowData) => {
+  const handleRowAction = (action: any, rowData: any) => {
     if (action.type === "SHOW_POPUP" && action.popupFields) {
       openPopup(action);
-      const initialData = {
+      const initialData: any = {
         id: rowData.id || null,
       };
 
-      action.popupFields.forEach((field) => {
-        const apiField = field.apiField || field.value;
-        const rowValue = rowData[apiField] || rowData[field.value];
+      console.log("📋 Populating form from row data:", rowData);
+      console.log("📝 Action popup fields:", action.popupFields);
 
-        if (rowValue !== undefined && rowValue !== null) {
-          if (field.booleanField) {
-            initialData[field.value] = rowValue ? "active" : "inactive";
-          } else if (
-            field.formatDate &&
-            typeof rowValue === "string" &&
-            rowValue.includes("/")
-          ) {
-            const [day, month, year] = rowValue.split("/");
-            initialData[field.value] = `${year}-${month}-${day}`;
-          } else if (field.isArray && Array.isArray(rowValue)) {
-            initialData[field.value] = rowValue.join(", ");
-          } else {
-            initialData[field.value] = rowValue;
+      action.popupFields.forEach((field: any) => {
+        const formFieldKey = field.value; // Form field key (e.g., "discountType", "status")
+        const apiFieldKey = field.apiField || field.value; // API field key (e.g., "couponDiscountType", "active")
+        const rowValue = rowData[apiFieldKey]; // Get value from API response
+
+        console.log(`\n🔍 Field: ${formFieldKey} (API: ${apiFieldKey})`);
+        console.log(`   → Raw value from API: ${rowValue}`);
+
+        // Skip if value not found in row data
+        if (rowValue === undefined || rowValue === null) {
+          console.log(`   ⏭️  Field not found in row data`);
+          return;
+        }
+
+        // Handle status/boolean fields (active true/false -> active/inactive)
+        if (field.type === "select" && field.selectOptions) {
+          const isStatusField = field.selectOptions.some(
+            (opt: any) => opt.value === "active" || opt.value === "inactive"
+          );
+
+          if (isStatusField) {
+            // Convert boolean to "active" or "inactive"
+            initialData[formFieldKey] = rowValue === true || rowValue === "active" ? "active" : "inactive";
+            console.log(`   ✅ Status field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+            return;
           }
         }
+
+        // Handle date fields (DD/MM/YYYY -> YYYY-MM-DD format for input)
+        if (field.type === "date") {
+          if (typeof rowValue === "string" && rowValue.includes("/")) {
+            // Convert DD/MM/YYYY to YYYY-MM-DD
+            const [day, month, year] = rowValue.split("/");
+            initialData[formFieldKey] = `${year}-${month}-${day}`;
+            console.log(`   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}" (converted from ${rowValue})`);
+            return;
+          } else {
+            // Already in correct format or other format
+            initialData[formFieldKey] = rowValue;
+            console.log(`   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+            return;
+          }
+        }
+
+        // Handle array fields (join with comma)
+        if (Array.isArray(rowValue)) {
+          initialData[formFieldKey] = rowValue.join(", ");
+          console.log(`   ✅ Array field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+          return;
+        }
+
+        // Default: use value as-is
+        initialData[formFieldKey] = rowValue;
+        console.log(`   ✅ Field: ${formFieldKey} = "${initialData[formFieldKey]}" (${typeof rowValue})`);
       });
 
+      console.log("\n✅ Final form data:", initialData);
       setFormData(initialData);
     }
   };
@@ -500,86 +533,104 @@ export default function DynamicContent() {
   // ============================================
   // CRITICAL: Transform Form Data to API Payload
   // ============================================
-  const transformFormDataToPayload = (formData, popupFields) => {
-    const payload = {
-      id: formData.id || null,
-      discountAmount: "",
-    };
+  const transformFormDataToPayload = (formData: any, popupFields: any): any => {
+    const payload: any = {};
 
-    console.log("🔍 Starting transformation...");
+    console.log("🔍 Starting payload transformation...");
     console.log("📝 Form Data:", formData);
-    console.log("⚙️ Popup Fields Config:", popupFields);
 
-    popupFields.forEach((field) => {
-      const value = formData[field.value];
+    // Always include id if present
+    if (formData.id !== undefined && formData.id !== null) {
+      payload["id"] = formData.id;
+    }
 
-      // Determine the API field name (this is the KEY in the output)
-      const apiField = field.apiField || field.value;
+    popupFields.forEach((field: any) => {
+      const formFieldKey = field.value; // Key in form state
+      const value = formData[formFieldKey];
 
-      console.log(`\n🔄 Processing field: ${field.value}`);
-      console.log(`   → Value: ${value}`);
-      console.log(`   → API Field: ${apiField}`);
-      console.log(`   → Field Config:`, field);
+      console.log(`\n🔄 Processing field: ${formFieldKey}`);
+      console.log(`   → Raw Value: ${value}`);
+      console.log(`   → Field Type: ${field.type}`);
 
-      // Skip if no value (but allow false for booleans)
+      // Skip if no value provided
       if (value === undefined || value === null || value === "") {
-        if (field.booleanField) {
-          payload[apiField] = false;
-          console.log(`   ✅ Set ${apiField} = false (empty boolean field)`);
-        } else {
-          console.log(`   ⏭️ Skipping empty field`);
+        console.log(`   ⏭️  Skipping empty field`);
+        return;
+      }
+
+      // Determine the API key - check for apiField property, otherwise use form key
+      const apiKey = field.apiField || formFieldKey;
+
+      // Handle boolean/status fields (active/inactive -> active: true/false)
+      if (field.type === "select" && field.selectOptions) {
+        const isStatusField = field.selectOptions.some(
+          (opt: any) => opt.value === "active" || opt.value === "inactive"
+        );
+
+        if (isStatusField) {
+          // Status fields always map to "active" key in payload
+          const statusKey = field.apiField || "active";
+          payload[statusKey] = value === "active";
+          console.log(
+            `   ✅ Set ${statusKey} = ${value === "active"} (status: ${value})`
+          );
+          return;
         }
-        return;
       }
 
-      // Handle boolean fields (status -> active)
-      if (field.booleanField) {
-        payload[apiField] = value === "active";
-        console.log(`   ✅ Set ${apiField} = ${value === "active"} (boolean)`);
-        return;
-      }
-
-      // Handle array fields
-      if (field.isArray) {
-        if (typeof value === "string") {
-          payload[apiField] = value
-            .split(",")
-            .map((v) => v.trim())
-            .filter(Boolean);
-        } else if (Array.isArray(value)) {
-          payload[apiField] = value;
+      // Handle date fields (convert YYYY-MM-DD to DD/MM/YYYY)
+      if (field.type === "date") {
+        if (typeof value === "string" && value.includes("-")) {
+          const [year, month, day] = value.split("-");
+          payload[apiKey] = `${day}/${month}/${year}`;
+        } else {
+          payload[apiKey] = value;
         }
         console.log(
-          `   ✅ Set ${apiField} = ${JSON.stringify(payload[apiField])} (array)`
+          `   ✅ Set ${apiKey} = ${payload[apiKey]} (date formatted)`
         );
         return;
       }
 
-      // Handle date formatting (YYYY-MM-DD -> DD/MM/YYYY)
-      if (field.type === "date" || field.formatDate) {
-        if (value.includes("-")) {
-          const [year, month, day] = value.split("-");
-          payload[apiField] = `${day}/${month}/${year}`;
-        } else {
-          payload[apiField] = value;
-        }
-        console.log(`   ✅ Set ${apiField} = ${payload[apiField]} (date)`);
+      // Handle array fields (comma-separated to array)
+      if (typeof value === "string" && value.includes(",")) {
+        payload[apiKey] = value
+          .split(",")
+          .map((v: string) => v.trim())
+          .filter(Boolean);
+        console.log(
+          `   ✅ Set ${apiKey} = ${JSON.stringify(payload[apiKey])} (array)`
+        );
         return;
       }
 
-      // Handle number fields
-      if (field.type === "number") {
-        payload[apiField] = Number(value);
-        console.log(`   ✅ Set ${apiField} = ${payload[apiField]} (number)`);
+      // Handle fields that should always be arrays (like subscriptionPlanIds)
+      if (
+        field.isArray ||
+        apiKey.includes("Ids") ||
+        apiKey === "subscriptionPlanIds"
+      ) {
+        payload[apiKey] = typeof value === "string" ? [value] : value;
+        console.log(
+          `   ✅ Set ${apiKey} = ${JSON.stringify(
+            payload[apiKey]
+          )} (forced array)`
+        );
         return;
       }
 
-      // Default: copy with mapped field name
-      payload[apiField] = value;
-      console.log(`   ✅ Set ${apiField} = ${value} (default)`);
+      // Default: use the API key and value as-is
+      payload[apiKey] = value;
+      console.log(`   ✅ Set ${apiKey} = ${value} (${typeof value})`);
     });
 
-    console.log("\n✅ Final Payload:", payload);
+    // Add discountAmount as empty string if not provided (optional field)
+    if (!("discountAmount" in payload)) {
+      payload["discountAmount"] = "";
+      console.log(`   ✅ Added default discountAmount = "" (optional)`);
+    }
+
+    console.log("\n✅ Final Payload:", JSON.stringify(payload, null, 2));
     return payload;
   };
 
@@ -607,7 +658,7 @@ export default function DynamicContent() {
         currentPopupButton.value.popupFields || []
       );
 
-      console.log("📦 Final Payload Being Sent:", payload);
+      console.log("📦 Payload Being Sent:", JSON.stringify(payload, null, 2));
 
       const isUpdate =
         payload.id !== null && payload.id !== undefined && payload.id !== "";
@@ -616,17 +667,31 @@ export default function DynamicContent() {
         ? await putData(submitUrl, payload)
         : await postData(submitUrl, payload);
 
+      console.log("✅ API Response:", response);
+
       showAlert({
         title: "Success",
         description: `${isUpdate ? "Updated" : "Created"} successfully`,
       });
 
-      if (currentContentItem.value) {
-        await fetchLayoutData(currentContentItem.value);
+      // Refresh the table data from the current layout
+      if (layoutData.value?.getDataUrl) {
+        console.log(
+          "🔄 Refreshing table data from:",
+          layoutData.value.getDataUrl
+        );
+        try {
+          await fetchTableData(layoutData.value.getDataUrl);
+          console.log("✅ Table data refreshed");
+        } catch (refreshError) {
+          console.error("⚠️  Could not refresh table data:", refreshError);
+          // Still close popup even if refresh fails
+        }
       }
 
       closePopup();
       setFormData({});
+      setSearchResults(null); // Clear search results if any
     } catch (error) {
       console.error("❌ Submit error:", error);
       showAlert({
@@ -647,49 +712,56 @@ export default function DynamicContent() {
       return;
     }
 
-    const params = new URLSearchParams();
-    params.append("level", "SYSTEM");
-    params.append("pageNo", "0");
-    params.append("pageSize", "10");
+    // Build search parameters - include ALL fields (even empty ones)
+    const searchParams: Record<string, string> = {};
 
+    // Add pagination parameters
+    searchParams["pageNo"] = "0";
+    searchParams["pageSize"] = "10";
+
+    // Add level parameter (default to SYSTEM if not specified)
+    searchParams["level"] = "SYSTEM";
+
+    // Add all search fields (including empty ones)
     if (layout.search.fields) {
       layout.search.fields.forEach((field) => {
         const value = searchData[field.value];
-        params.append(field.value, value || "");
+        // Include ALL fields, even if empty
+        searchParams[field.value] = value || "";
       });
     }
 
-    const searchUrl = `${getBaseUrl()}${
-      layout.search.searchActionUrl
-    }/all?${params.toString()}`;
+    console.log("🔍 Search Params:", searchParams);
     setIsSearching(true);
 
     try {
-      const response = await fetch(searchUrl, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      // Import apiClient for proper request handling
+      const { apiClient } = await import("@/services/apiClient");
 
-      if (!response.ok) {
-        throw new Error(
-          `Search failed: ${response.status} ${response.statusText}`
-        );
+      // Ensure the search URL ends with /all if it's /secure/coupon
+      let searchUrl = layout.search.searchActionUrl;
+      if (searchUrl === "/secure/coupon") {
+        searchUrl = "/secure/coupon/all";
       }
 
-      const data = await response.json();
+      console.log("📍 Search URL:", searchUrl);
+
+      const response = await apiClient(searchUrl, {
+        params: searchParams,
+      });
+
+      console.log("📦 Search Response:", response);
+
+      // Extract data from response based on API structure
       let results = [];
-      if (Array.isArray(data)) {
-        results = data;
-      } else if (data.content && Array.isArray(data.content)) {
-        results = data.content;
-      } else if (data.data && Array.isArray(data.data)) {
-        results = data.data;
-      } else if (data.results && Array.isArray(data.results)) {
-        results = data.results;
+      if (response.data && Array.isArray(response.data)) {
+        results = response.data;
+      } else if (Array.isArray(response)) {
+        results = response;
+      } else if (response.content && Array.isArray(response.content)) {
+        results = response.content;
+      } else if (response.results && Array.isArray(response.results)) {
+        results = response.results;
       }
 
       setSearchResults(results);
@@ -703,10 +775,10 @@ export default function DynamicContent() {
       });
     } catch (error) {
       console.error("❌ Search error:", error);
-      setSearchResults([]);
       showAlert({
         title: "Search Failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description:
+          error instanceof Error ? error.message : "Failed to search",
         variant: "destructive",
       });
     } finally {
