@@ -416,7 +416,7 @@ export default function AppConfigs() {
           {/* Search and Add */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-500" />
               <Input
                 placeholder="Search configs..."
                 value={searchInput}
@@ -432,7 +432,11 @@ export default function AppConfigs() {
                 </button>
               )}
             </div>
-            <Button onClick={handleOpenAddDialog} size="sm" className="gap-1.5">
+            <Button
+              variant="outline"
+              onClick={handleOpenAddDialog}
+              className="gap-2 border-[var(--color-brand)]/50 text-[var(--color-brand)] hover:bg-[var(--color-brand)]/10"
+            >
               <Plus className="size-4" />
               Add Config
             </Button>
