@@ -114,7 +114,7 @@ const Login = () => {
         <AuthBackgroundShape />
       </div>
 
-      <Card className="z-10 w-full border-none shadow-lg sm:max-w-md">
+      <Card className="z-10 w-full bg-accent px-6 py-8 border shadow-lg sm:max-w-md">
         <CardHeader className="space-y-4">
           <Logo />
           <div>
