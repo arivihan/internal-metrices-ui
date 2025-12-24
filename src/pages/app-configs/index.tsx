@@ -582,10 +582,10 @@ export default function AppConfigs() {
       {/* Add Config Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
+          <DialogHeader className="border-b pb-4">
             <DialogTitle>Add New Config</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="config-type">Config Type</Label>
               <Select
