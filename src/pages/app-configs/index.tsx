@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Search, X, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, Plus, Eye, EyeOff, SquarePen } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -68,7 +68,7 @@ export default function AppConfigs() {
   // Search states
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Data states for each tab
   const [sqlData, setSqlData] = useState<AppConfigPaginatedResponse | null>(null)
@@ -94,13 +94,15 @@ export default function AppConfigs() {
   const [selectedConfig, setSelectedConfig] = useState<SelectedConfig | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  // Add Dialog state
+  // Add/Edit Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [addFormType, setAddFormType] = useState<AppConfigType>('SQL_CONFIG')
   const [addFormKey, setAddFormKey] = useState('')
   const [addFormValue, setAddFormValue] = useState('')
   const [addFormError, setAddFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showJsonPreview, setShowJsonPreview] = useState(false)
 
   // Debounce search input
   useEffect(() => {
@@ -241,11 +243,43 @@ export default function AppConfigs() {
 
   const handleOpenAddDialog = () => {
     // Pre-select the config type based on active tab
+    setIsEditMode(false)
     setAddFormType(TAB_TO_CONFIG_TYPE[activeTab])
     setAddFormKey('')
     setAddFormValue('')
     setAddFormError('')
+    setShowJsonPreview(false)
     setAddDialogOpen(true)
+  }
+
+  const handleEditClick = (config: SelectedConfig, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent row click from triggering view dialog
+    setIsEditMode(true)
+    setAddFormType(TAB_TO_CONFIG_TYPE[activeTab])
+
+    if (config.type === 'sql') {
+      setAddFormKey(config.data.name)
+      setAddFormValue(config.data.value)
+    } else {
+      setAddFormKey(config.data.featureKey)
+      // Combine keyValues and objectValues for editing
+      const valueToEdit = config.data.keyValues && Object.keys(config.data.keyValues).length > 0
+        ? config.data.keyValues
+        : config.data.objectValues || {}
+      setAddFormValue(JSON.stringify(valueToEdit, null, 2))
+    }
+
+    setAddFormError('')
+    setShowJsonPreview(false)
+    setAddDialogOpen(true)
+  }
+
+  const getPreviewData = () => {
+    try {
+      return JSON.parse(addFormValue)
+    } catch {
+      return null
+    }
   }
 
   const handleAddConfig = async () => {
@@ -279,7 +313,7 @@ export default function AppConfigs() {
         configValue: parsedValue,
       })
 
-      toast.success('Config added successfully')
+      toast.success(isEditMode ? 'Config updated successfully' : 'Config added successfully')
       setAddDialogOpen(false)
 
       // Refresh the current tab's data
@@ -295,7 +329,7 @@ export default function AppConfigs() {
       }
     } catch (error) {
       console.error('Failed to add config:', error)
-      toast.error('Failed to add config')
+      toast.error(isEditMode ? 'Failed to update config' : 'Failed to add config')
     } finally {
       setIsSubmitting(false)
     }
@@ -451,7 +485,8 @@ export default function AppConfigs() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-1/3">{isSqlTab ? 'Name' : 'Feature Key'}</TableHead>
-                <TableHead className="w-2/3">{isSqlTab ? 'Value' : 'Key/Object Values'}</TableHead>
+                <TableHead>{isSqlTab ? 'Value' : 'Key/Object Values'}</TableHead>
+                <TableHead className="w-16 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -463,6 +498,9 @@ export default function AppConfigs() {
                   <TableCell>
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Skeleton className="h-8 w-8 mx-auto" />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -473,14 +511,15 @@ export default function AppConfigs() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-1/3">{isSqlTab ? 'Name' : 'Feature Key'}</TableHead>
-                  <TableHead className="w-2/3">{isSqlTab ? 'Value' : 'Key/Object Values'}</TableHead>
+                  <TableHead>{isSqlTab ? 'Value' : 'Key/Object Values'}</TableHead>
+                  <TableHead className="w-16 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dataItems.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={2}
+                      colSpan={3}
                       className="h-32 text-center text-muted-foreground"
                     >
                       {debouncedSearch ? `No configs found for "${debouncedSearch}"` : 'No configs found'}
@@ -502,6 +541,16 @@ export default function AppConfigs() {
                           {truncateValue(config.value, 300)}
                         </pre>
                       </TableCell>
+                      <TableCell className="text-center align-top">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={(e) => handleEditClick({ type: 'sql', data: config }, e)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <SquarePen className="size-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : currentData && isDynamoDbConfigResponse(currentData) ? (
@@ -519,6 +568,16 @@ export default function AppConfigs() {
                         <pre className="whitespace-pre-wrap break-all bg-muted/50 p-2 rounded text-xs">
                           {truncateValue(formatKeyValues(config.keyValues, config.objectValues), 300)}
                         </pre>
+                      </TableCell>
+                      <TableCell className="text-center align-top">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={(e) => handleEditClick({ type: 'dynamodb', data: config }, e)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <SquarePen className="size-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -579,53 +638,88 @@ export default function AppConfigs() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Config Dialog */}
+      {/* Add/Edit Config Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle>Add New Config</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden" showCloseButton={false}>
+          <DialogHeader className="border-b pb-4 shrink-0">
+            <DialogTitle>{isEditMode ? 'Edit Config' : 'Add New Config'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="config-type">Config Type</Label>
-              <Select
-                value={addFormType}
-                onValueChange={(value) => setAddFormType(value as AppConfigType)}
-              >
-                <SelectTrigger id="config-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SQL_CONFIG">SQL Config</SelectItem>
-                  <SelectItem value="DYNAMODB_CONFIG">DynamoDB Config</SelectItem>
-                  <SelectItem value="FIREBASE_CONFIG">Firebase Config</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex-1 overflow-y-auto py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="config-type">Config Type</Label>
+                <Select
+                  value={addFormType}
+                  onValueChange={(value) => setAddFormType(value as AppConfigType)}
+                  disabled={isEditMode}
+                >
+                  <SelectTrigger id="config-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SQL_CONFIG">SQL Config</SelectItem>
+                    <SelectItem value="DYNAMODB_CONFIG">DynamoDB Config</SelectItem>
+                    <SelectItem value="FIREBASE_CONFIG">Firebase Config</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="config-key">Config Key</Label>
+                <Input
+                  id="config-key"
+                  placeholder="Enter config key..."
+                  value={addFormKey}
+                  onChange={(e) => setAddFormKey(e.target.value)}
+                  disabled={isEditMode}
+                  className={isEditMode ? 'bg-muted cursor-not-allowed' : ''}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="config-value">Config Value</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowJsonPreview(!showJsonPreview)}
+                    disabled={!addFormValue.trim()}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    {showJsonPreview ? (
+                      <>
+                        <EyeOff className="size-3.5" />
+                        Hide Preview
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="size-3.5" />
+                        Preview
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {showJsonPreview && getPreviewData() ? (
+                  <JsonViewer data={getPreviewData()} />
+                ) : showJsonPreview && !getPreviewData() ? (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                    Invalid JSON - please check your syntax
+                  </div>
+                ) : (
+                  <Textarea
+                    id="config-value"
+                    placeholder='{"key": "value"}'
+                    value={addFormValue}
+                    onChange={(e) => setAddFormValue(e.target.value)}
+                    className="font-mono text-sm min-h-30"
+                  />
+                )}
+              </div>
+              {addFormError && (
+                <p className="text-sm text-destructive">{addFormError}</p>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="config-key">Config Key</Label>
-              <Input
-                id="config-key"
-                placeholder="Enter config key..."
-                value={addFormKey}
-                onChange={(e) => setAddFormKey(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="config-value">Config Value</Label>
-              <Textarea
-                id="config-value"
-                placeholder='{"key": "value"}'
-                value={addFormValue}
-                onChange={(e) => setAddFormValue(e.target.value)}
-                className="font-mono text-sm min-h-[120px]"
-              />
-            </div>
-            {addFormError && (
-              <p className="text-sm text-destructive">{addFormError}</p>
-            )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button
               variant="outline"
               onClick={() => setAddDialogOpen(false)}
@@ -634,7 +728,9 @@ export default function AppConfigs() {
               Cancel
             </Button>
             <Button onClick={handleAddConfig} disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Config'}
+              {isSubmitting
+                ? (isEditMode ? 'Updating...' : 'Adding...')
+                : (isEditMode ? 'Update Config' : 'Add Config')}
             </Button>
           </DialogFooter>
         </DialogContent>
