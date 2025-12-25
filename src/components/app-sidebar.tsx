@@ -67,6 +67,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "Settings",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "Chapters",
+    type: "getData",
+    getDataUrl: "/chapters",
+    icon: "BookOpen",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {

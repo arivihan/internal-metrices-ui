@@ -83,6 +83,11 @@ export function DashboardLayout() {
       return [{ label: "App Configs" }];
     }
 
+    // Chapters page
+    if (pathname === "/dashboard/chapters") {
+      return [{ label: "Chapters" }];
+    }
+
     // Check dynamic sidebar items
     for (const item of drawerItems) {
       const itemUrl = item.getDataUrl?.startsWith("/dashboard")

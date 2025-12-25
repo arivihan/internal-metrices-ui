@@ -40,7 +40,7 @@ export function SubscriptionTab({
       {/* Quick Actions Section */}
       <div className="grid gap-6 sm:grid-cols-2">
         <Card
-          className="cursor-pointer transition-colors hover:bg-muted/50"
+          className="cursor-pointer border transition-colors hover:bg-muted/50"
           onClick={onOpenAddSubscription}
         >
           <CardContent className="flex items-center gap-4 px-5 py-2.5">
@@ -57,7 +57,7 @@ export function SubscriptionTab({
         </Card>
 
         <Card
-          className="cursor-pointer transition-colors hover:bg-muted/50"
+          className="cursor-pointer border transition-colors hover:bg-muted/50"
           onClick={onOpenInitiatePayment}
         >
           <CardContent className="flex items-center gap-4 px-5 py-2.5">
