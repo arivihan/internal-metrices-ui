@@ -74,6 +74,13 @@ const staticNavItems: DrawerItem[] = [
     icon: "BookOpen",
     accessibleToRoles: ["ADMIN"],
   },
+  {
+    title: "RBAC",
+    type: "getData",
+    getDataUrl: "/rbac",
+    icon: "Shield",
+    accessibleToRoles: ["ADMIN"],
+  },
 ];
 
 function NavUserSkeleton() {
