@@ -17,7 +17,15 @@ export const apiClient = async <T>(
 ): Promise<T> => {
   const { params, ...init } = config
 
-  let url = `${BASE_URL}${endpoint}`
+  // Construct URL with proper slash handling
+let url: string;
+if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+  // Absolute URL - use as is
+  url = endpoint;
+} else {
+  // Relative URL - prepend BASE_URL
+  url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
+}
   if (params) {
     const searchParams = new URLSearchParams(params)
     url += `?${searchParams.toString()}`
@@ -55,6 +63,28 @@ export const apiClient = async <T>(
 }
 
 /**
+ * DYNAMIC request helper - uses method from config
+ */
+export const dynamicRequest = async <T>(
+  endpoint: string,
+  method: string = 'GET',
+  data?: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  const requestConfig: RequestConfig = {
+    ...config,
+    method: method.toUpperCase(),
+  }
+
+  // Add body for methods that support it
+  if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+    requestConfig.body = JSON.stringify(data)
+  }
+
+  return apiClient<T>(endpoint, requestConfig)
+}
+
+/**
  * POST request helper
  */
 export const postData = async <T>(
@@ -81,6 +111,34 @@ export const putData = async <T>(
     ...config,
     method: 'PUT',
     body: JSON.stringify(data),
+  })
+}
+
+/**
+ * PATCH request helper
+ */
+export const patchData = async <T>(
+  endpoint: string,
+  data: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * DELETE request helper
+ */
+export const deleteData = async <T>(
+  endpoint: string,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'DELETE',
   })
 }
 

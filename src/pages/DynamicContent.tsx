@@ -50,6 +50,7 @@ import {
   tableData,
   tableDataLoading,
   tableDataError,
+  pagination,
   fetchTableData,
   popupOpen,
   currentPopupButton,
@@ -58,12 +59,13 @@ import {
 } from "@/signals/dynamicContent";
 import { postData, putData } from "@/services/apiClient";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ViewDetailsPopup } from "@/components/ViewDetailsPopup";
 
 // ============================================
 // 1. CellRenderer Component
 // ============================================
 // @ts-ignore
-const CellRenderer = ({ header, value, onViewJson }) => {
+const CellRenderer = ({ header, value, onViewJson, rowData }) => {
   if (value === undefined || value === null) return "-";
 
   if (header.Header === "Id") {
@@ -77,6 +79,23 @@ const CellRenderer = ({ header, value, onViewJson }) => {
         {idValue}
       </div>
     );
+  }
+
+  if (header.Header === "File Name") {
+    const fileUrl = rowData?.url;
+    if (fileUrl) {
+      return (
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-500 hover:text-chan-500 hover:underline font-medium cursor-pointer"
+        >
+          {String(value)}
+        </a>
+      );
+    }
+    return <div>{String(value)}</div>;
   }
 
   switch (header.type) {
@@ -142,10 +161,20 @@ const FormPopup = ({
       <DialogContent className="max-w-2xl h-[80vh] p-0 flex flex-col">
         <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4">
           <DialogTitle>{button?.popupTitle || "Form"}</DialogTitle>
-          <DialogDescription>Fill in the details below</DialogDescription>
+          <DialogDescription>
+            {button?.popupSubTitle || "Fill in the details below"}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div
+          className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <style>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
           <div className="grid gap-4">
             {button?.popupFields?.map((field, index) => (
               <div key={index} className="grid gap-2">
@@ -269,11 +298,13 @@ const SearchBar = ({
                   <SelectValue placeholder={field.placeholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {field.selectOptions?.map((option, idx) => (
-                    <SelectItem key={idx} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  {field.selectOptions
+                    ?.filter((option) => option.value !== "") // Filter out empty values
+                    .map((option, idx) => (
+                      <SelectItem key={idx} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             ) : (
@@ -423,12 +454,13 @@ export default function DynamicContent() {
   const [formData, setFormData] = useState({});
   const [searchData, setSearchData] = useState({});
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(10);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
   const [jsonPopupOpen, setJsonPopupOpen] = useState(false);
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  const [viewDetailsData, setViewDetailsData] = useState<any>(null);
 
   useEffect(() => {
     setSearchData({});
@@ -439,6 +471,8 @@ export default function DynamicContent() {
   useEffect(() => {
     setCurrentPage(0);
   }, [searchData]);
+
+  // Handle pagination changes - re-run search when page changes
 
   const displayData =
     searchResults !== null ? searchResults : tableData.value || [];
@@ -460,6 +494,15 @@ export default function DynamicContent() {
   };
 
   const handleRowAction = (action: any, rowData: any) => {
+    // Handle VIEW action
+    if (action.type === "link" || action.title?.toLowerCase() === "view") {
+      console.log("� Opening view details for:", rowData);
+      setViewDetailsData(rowData);
+      setViewDetailsOpen(true);
+      return;
+    }
+
+    // Handle SHOW_POPUP action (Edit)
     if (action.type === "SHOW_POPUP" && action.popupFields) {
       openPopup(action);
       const initialData: any = {
@@ -491,8 +534,13 @@ export default function DynamicContent() {
 
           if (isStatusField) {
             // Convert boolean to "active" or "inactive"
-            initialData[formFieldKey] = rowValue === true || rowValue === "active" ? "active" : "inactive";
-            console.log(`   ✅ Status field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+            initialData[formFieldKey] =
+              rowValue === true || rowValue === "active"
+                ? "active"
+                : "inactive";
+            console.log(
+              `   ✅ Status field: ${formFieldKey} = "${initialData[formFieldKey]}"`
+            );
             return;
           }
         }
@@ -503,12 +551,16 @@ export default function DynamicContent() {
             // Convert DD/MM/YYYY to YYYY-MM-DD
             const [day, month, year] = rowValue.split("/");
             initialData[formFieldKey] = `${year}-${month}-${day}`;
-            console.log(`   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}" (converted from ${rowValue})`);
+            console.log(
+              `   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}" (converted from ${rowValue})`
+            );
             return;
           } else {
             // Already in correct format or other format
             initialData[formFieldKey] = rowValue;
-            console.log(`   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+            console.log(
+              `   ✅ Date field: ${formFieldKey} = "${initialData[formFieldKey]}"`
+            );
             return;
           }
         }
@@ -516,13 +568,19 @@ export default function DynamicContent() {
         // Handle array fields (join with comma)
         if (Array.isArray(rowValue)) {
           initialData[formFieldKey] = rowValue.join(", ");
-          console.log(`   ✅ Array field: ${formFieldKey} = "${initialData[formFieldKey]}"`);
+          console.log(
+            `   ✅ Array field: ${formFieldKey} = "${initialData[formFieldKey]}"`
+          );
           return;
         }
 
         // Default: use value as-is
         initialData[formFieldKey] = rowValue;
-        console.log(`   ✅ Field: ${formFieldKey} = "${initialData[formFieldKey]}" (${typeof rowValue})`);
+        console.log(
+          `   ✅ Field: ${formFieldKey} = "${
+            initialData[formFieldKey]
+          }" (${typeof rowValue})`
+        );
       });
 
       console.log("\n✅ Final form data:", initialData);
@@ -576,19 +634,44 @@ export default function DynamicContent() {
           );
           return;
         }
+
+        // Handle discount type field - set BOTH couponDiscountType and discountType
+        if (
+          formFieldKey === "discountType" ||
+          apiKey === "couponDiscountType"
+        ) {
+          payload["couponDiscountType"] = value;
+          payload["discountType"] = value;
+          console.log(`   ✅ Set couponDiscountType & discountType = ${value}`);
+          return;
+        }
       }
 
       // Handle date fields (convert YYYY-MM-DD to DD/MM/YYYY)
       if (field.type === "date") {
+        let formattedDate = value;
         if (typeof value === "string" && value.includes("-")) {
           const [year, month, day] = value.split("-");
-          payload[apiKey] = `${day}/${month}/${year}`;
-        } else {
-          payload[apiKey] = value;
+          formattedDate = `${day}/${month}/${year}`;
         }
-        console.log(
-          `   ✅ Set ${apiKey} = ${payload[apiKey]} (date formatted)`
-        );
+
+        // Set BOTH the string version and the regular version
+        if (apiKey === "validFromInString") {
+          payload["validFrom"] = formattedDate;
+          payload["validFromInString"] = formattedDate;
+          console.log(
+            `   ✅ Set validFrom & validFromInString = ${formattedDate}`
+          );
+        } else if (apiKey === "validToInString") {
+          payload["validTo"] = formattedDate;
+          payload["validToInString"] = formattedDate;
+          console.log(`   ✅ Set validTo & validToInString = ${formattedDate}`);
+        } else {
+          payload[apiKey] = formattedDate;
+          console.log(
+            `   ✅ Set ${apiKey} = ${formattedDate} (date formatted)`
+          );
+        }
         return;
       }
 
@@ -624,10 +707,16 @@ export default function DynamicContent() {
       console.log(`   ✅ Set ${apiKey} = ${value} (${typeof value})`);
     });
 
-    // Add discountAmount as empty string if not provided (optional field)
+    // Add discountAmount as null if not provided (optional field)
     if (!("discountAmount" in payload)) {
-      payload["discountAmount"] = "";
-      console.log(`   ✅ Added default discountAmount = "" (optional)`);
+      payload["discountAmount"] = null;
+      console.log(`   ✅ Added default discountAmount = null (optional)`);
+    }
+
+    // Add subscriptionPlanIds as null if not provided
+    if (!("subscriptionPlanIds" in payload)) {
+      payload["subscriptionPlanIds"] = null;
+      console.log(`   ✅ Added default subscriptionPlanIds = null`);
     }
 
     console.log("\n✅ Final Payload:", JSON.stringify(payload, null, 2));
@@ -660,12 +749,21 @@ export default function DynamicContent() {
 
       console.log("📦 Payload Being Sent:", JSON.stringify(payload, null, 2));
 
+      // Get the HTTP method from config (default to POST)
+      const method = currentPopupButton.value.method || "POST";
+      console.log(`🔧 Using HTTP Method: ${method}`);
+
+      // Determine if it's an update based on presence of id
       const isUpdate =
         payload.id !== null && payload.id !== undefined && payload.id !== "";
 
-      const response = isUpdate
-        ? await putData(submitUrl, payload)
-        : await postData(submitUrl, payload);
+      console.log(`📝 Operation Type: ${isUpdate ? "UPDATE" : "CREATE"}`);
+
+      // Import the dynamic request helper
+      const { dynamicRequest } = await import("@/services/apiClient");
+
+      // Use dynamic method from JSON config
+      const response = await dynamicRequest(submitUrl, method, payload);
 
       console.log("✅ API Response:", response);
 
@@ -705,6 +803,92 @@ export default function DynamicContent() {
     }
   };
 
+const handlePageChange = async (newPage: number) => {
+  setCurrentPage(newPage);
+
+  const layout = layoutData.value;
+  if (!layout?.getDataUrl) return;
+
+  // Determine if we're in search mode or normal pagination mode
+  const isSearchMode = searchResults !== null;
+  const apiUrl = isSearchMode
+    ? layout.search?.searchActionUrl
+    : layout.getDataUrl;
+
+  if (!apiUrl) return;
+
+  // Build parameters
+  const params: Record<string, string> = {
+    level: "SYSTEM",
+    pageNo: String(newPage),
+    pageSize: String(pagination.value.pageSize),
+  };
+
+  // If in search mode, include all search fields
+  if (isSearchMode && layout.search?.fields) {
+    layout.search.fields.forEach((field) => {
+      const value = searchData[field.value];
+      params[field.value] = value || "";
+    });
+  }
+
+  console.log("📄 Pagination request params:", params);
+
+  try {
+    const { dynamicRequest } = await import("@/services/apiClient");
+    const method = isSearchMode ? layout.search?.method || "GET" : "GET";
+
+    const response = await dynamicRequest(apiUrl, method, undefined, {
+      params,
+    });
+
+    console.log("📦 Pagination response:", response);
+
+    // Handle wrapped response
+    let responseData = response;
+    if (response?.data && typeof response.data === "object") {
+      responseData = response.data;
+    }
+
+    let results = [];
+    let paginationInfo: any = {};
+
+    if (responseData?.content && Array.isArray(responseData.content)) {
+      results = responseData.content;
+      paginationInfo = {
+        currentPage: responseData.number ?? 0,
+        pageSize: responseData.size ?? 10,
+        totalPages: responseData.totalPages ?? 1,
+        totalElements: responseData.totalElements ?? 0,
+      };
+    } else if (responseData?.data && Array.isArray(responseData.data)) {
+      results = responseData.data;
+    } else if (Array.isArray(responseData)) {
+      results = responseData;
+    }
+
+    // Update the appropriate data based on mode
+    if (isSearchMode) {
+      setSearchResults(results);
+    } else {
+      tableData.value = results;
+    }
+
+    // Update pagination info
+    if (Object.keys(paginationInfo).length > 0) {
+      pagination.value = paginationInfo;
+    }
+  } catch (error) {
+    console.error("❌ Pagination error:", error);
+    showAlert({
+      title: "Pagination Failed",
+      description:
+        error instanceof Error ? error.message : "Failed to fetch page",
+      variant: "destructive",
+    });
+  }
+};
+
   const handleSearch = async () => {
     const layout = layoutData.value;
     if (!layout?.search?.searchActionUrl) {
@@ -712,21 +896,17 @@ export default function DynamicContent() {
       return;
     }
 
-    // Build search parameters - include ALL fields (even empty ones)
-    const searchParams: Record<string, string> = {};
+    // Build search parameters - INCLUDE ALL FIELDS (even empty ones) + level
+    const searchParams: Record<string, string> = {
+      level: "SYSTEM",
+      pageNo: "0",
+      pageSize: String(pagination.value.pageSize),
+    };
 
-    // Add pagination parameters
-    searchParams["pageNo"] = "0";
-    searchParams["pageSize"] = "10";
-
-    // Add level parameter (default to SYSTEM if not specified)
-    searchParams["level"] = "SYSTEM";
-
-    // Add all search fields (including empty ones)
+    // Add ALL search fields (including empty ones)
     if (layout.search.fields) {
       layout.search.fields.forEach((field) => {
         const value = searchData[field.value];
-        // Include ALL fields, even if empty
         searchParams[field.value] = value || "";
       });
     }
@@ -735,37 +915,51 @@ export default function DynamicContent() {
     setIsSearching(true);
 
     try {
-      // Import apiClient for proper request handling
-      const { apiClient } = await import("@/services/apiClient");
+      // Get the HTTP method from config (default to GET)
+      const searchMethod = layout.search.method || "GET";
+      console.log(`🔧 Search Method: ${searchMethod}`);
 
-      // Ensure the search URL ends with /all if it's /secure/coupon
-      let searchUrl = layout.search.searchActionUrl;
-      if (searchUrl === "/secure/coupon") {
-        searchUrl = "/secure/coupon/all";
-      }
+      // Import dynamic request helper
+      const { dynamicRequest } = await import("@/services/apiClient");
 
-      console.log("📍 Search URL:", searchUrl);
-
-      const response = await apiClient(searchUrl, {
-        params: searchParams,
-      });
+      // Use dynamic method from JSON config
+      const response = await dynamicRequest(
+        layout.search.searchActionUrl,
+        searchMethod,
+        undefined,
+        {
+          params: searchParams,
+        }
+      );
 
       console.log("📦 Search Response:", response);
 
-      // Extract data from response based on API structure
       let results = [];
-      if (response.data && Array.isArray(response.data)) {
+      let paginationInfo: any = {};
+      
+      if (response?.content && Array.isArray(response.content)) {
+        results = response.content;
+        paginationInfo = {
+          currentPage: response.number ?? 0,
+          pageSize: response.size ?? 10,
+          totalPages: response.totalPages ?? 1,
+          totalElements: response.totalElements ?? 0,
+        };
+      } else if (response?.data && Array.isArray(response.data)) {
         results = response.data;
       } else if (Array.isArray(response)) {
         results = response;
-      } else if (response.content && Array.isArray(response.content)) {
-        results = response.content;
       } else if (response.results && Array.isArray(response.results)) {
         results = response.results;
       }
 
       setSearchResults(results);
       setCurrentPage(0);
+      
+      // Update pagination signal with new data
+      if (Object.keys(paginationInfo).length > 0) {
+        pagination.value = paginationInfo;
+      }
 
       showAlert({
         title: "Search Complete",
@@ -825,11 +1019,11 @@ export default function DynamicContent() {
     );
   }
 
-  const totalPages = Math.ceil(displayData.length / pageSize);
-  const paginatedData = displayData.slice(
-    currentPage * pageSize,
-    (currentPage + 1) * pageSize
-  );
+  const totalPages = pagination.value.totalPages;
+  const pageSize = pagination.value.pageSize;
+  const totalItems = pagination.value.totalElements;
+
+ const paginatedData = displayData;
 
   const hasSearchCriteria = Object.values(searchData).some(
     (val) => val !== "" && val !== null && val !== undefined
@@ -870,6 +1064,12 @@ export default function DynamicContent() {
           open={jsonPopupOpen}
           onClose={() => setJsonPopupOpen(false)}
           data={jsonPopupData}
+        />
+        <ViewDetailsPopup
+          open={viewDetailsOpen}
+          onClose={() => setViewDetailsOpen(false)}
+          data={viewDetailsData}
+          title="View Coupon Details"
         />
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
@@ -997,6 +1197,7 @@ export default function DynamicContent() {
                                       header={header}
                                       value={row[header.accessor]}
                                       onViewJson={handleViewJson}
+                                      rowData={row}
                                     />
                                   </TableCell>
                                 );
@@ -1023,9 +1224,9 @@ export default function DynamicContent() {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   pageSize={pageSize}
-                  totalItems={displayData.length}
+                  totalItems={totalItems}
                   isSearchResults={searchResults !== null}
-                  onPageChange={setCurrentPage}
+                  onPageChange={handlePageChange}
                 />
               </CardContent>
             </Card>
