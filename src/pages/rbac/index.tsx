@@ -11,12 +11,15 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 import { AddRoleDialog } from './AddRoleDialog'
 import { AddModuleDialog } from './AddModuleDialog'
 import { PermissionsMatrixDialog } from './PermissionsMatrixDialog'
 
 import type { Role, Module, Permission, RolePermissions } from '@/types/rbac'
+
+type ActiveView = 'roles' | 'modules'
 
 // Placeholder data - replace with API calls when backend is ready
 const PLACEHOLDER_ROLES: Role[] = [
@@ -71,6 +74,7 @@ export default function RBAC() {
   const [modules, setModules] = useState<Module[]>(PLACEHOLDER_MODULES)
   const [rolePermissions, setRolePermissions] = useState<RolePermissions[]>(PLACEHOLDER_PERMISSIONS)
 
+  const [activeView, setActiveView] = useState<ActiveView>('roles')
   const [addRoleOpen, setAddRoleOpen] = useState(false)
   const [addModuleOpen, setAddModuleOpen] = useState(false)
   const [permissionsOpen, setPermissionsOpen] = useState(false)
@@ -147,7 +151,13 @@ export default function RBAC() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex items-center justify-between rounded-xl border bg-card p-5">
+        <button
+          onClick={() => setActiveView('roles')}
+          className={cn(
+            'flex items-center justify-between rounded-xl border bg-card p-5 text-left transition-all',
+            activeView === 'roles' ? 'ring-2 ring-brand' : 'hover:border-brand/50'
+          )}
+        >
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Roles
@@ -157,8 +167,14 @@ export default function RBAC() {
           <div className="flex size-12 items-center justify-center rounded-lg bg-brand/10">
             <Shield className="size-6 text-brand" />
           </div>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border bg-card p-5">
+        </button>
+        <button
+          onClick={() => setActiveView('modules')}
+          className={cn(
+            'flex items-center justify-between rounded-xl border bg-card p-5 text-left transition-all',
+            activeView === 'modules' ? 'ring-2 ring-purple-500' : 'hover:border-purple-500/50'
+          )}
+        >
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Modules
@@ -168,7 +184,7 @@ export default function RBAC() {
           <div className="flex size-12 items-center justify-center rounded-lg bg-purple-500/10">
             <Box className="size-6 text-purple-500" />
           </div>
-        </div>
+        </button>
         <div className="flex items-center justify-between rounded-xl border bg-card p-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -183,18 +199,14 @@ export default function RBAC() {
       </div>
 
       {/* Roles Table */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="size-5 text-brand" />
-            <h2 className="font-medium">Roles</h2>
-            <Badge variant="secondary" className="font-normal">{roles.length}</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setAddModuleOpen(true)}>
-              <Box className="mr-1.5 size-4" />
-              Add Module
-            </Button>
+      {activeView === 'roles' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="size-5 text-brand" />
+              <h2 className="font-medium">Roles</h2>
+              <Badge variant="secondary" className="font-normal">{roles.length}</Badge>
+            </div>
             <Button
               variant="outline"
               onClick={() => setAddRoleOpen(true)}
@@ -204,55 +216,129 @@ export default function RBAC() {
               Add Role
             </Button>
           </div>
-        </div>
 
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Permissions</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="w-24"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {roles.length === 0 ? (
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No roles created yet
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Permissions</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
-              ) : (
-                roles.map((role) => {
-                  const permCount = getPermissionCount(role.id)
-                  const maxPerms = getMaxPermissions()
-                  return (
-                    <TableRow
-                      key={role.id}
-                      className="cursor-pointer"
-                      onClick={() => handleRoleClick(role)}
-                    >
-                      <TableCell className="font-medium">{role.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="line-clamp-1">{role.description || '—'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-brand"
-                              style={{ width: `${maxPerms > 0 ? (permCount / maxPerms) * 100 : 0}%` }}
-                            />
+              </TableHeader>
+              <TableBody>
+                {roles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      No roles created yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  roles.map((role) => {
+                    const permCount = getPermissionCount(role.id)
+                    const maxPerms = getMaxPermissions()
+                    return (
+                      <TableRow
+                        key={role.id}
+                        className="cursor-pointer"
+                        onClick={() => handleRoleClick(role)}
+                      >
+                        <TableCell className="font-medium">{role.name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <span className="line-clamp-1">{role.description || '—'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-brand"
+                                style={{ width: `${maxPerms > 0 ? (permCount / maxPerms) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {permCount}/{maxPerms}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {permCount}/{maxPerms}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {role.createdAt ? new Date(role.createdAt).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {role.createdAt ? new Date(role.createdAt).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              onClick={(e) => { e.stopPropagation(); handleRoleClick(role) }}
+                            >
+                              <Pencil className="size-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-destructive hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Click on a role to manage its permissions
+          </p>
+        </div>
+      )}
+
+      {/* Modules Table */}
+      {activeView === 'modules' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Box className="size-5 text-purple-500" />
+              <h2 className="font-medium">Modules</h2>
+              <Badge variant="secondary" className="font-normal">{modules.length}</Badge>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setAddModuleOpen(true)}
+              className="gap-2 border-purple-500/50 text-purple-500 hover:bg-purple-500/10"
+            >
+              <Plus className="size-4" />
+              Add Module
+            </Button>
+          </div>
+
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-24"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {modules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No modules created yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  modules.map((module) => (
+                    <TableRow key={module.id}>
+                      <TableCell className="font-medium">{module.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <span className="line-clamp-1">{module.description || '—'}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -260,7 +346,6 @@ export default function RBAC() {
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            onClick={(e) => { e.stopPropagation(); handleRoleClick(role) }}
                           >
                             <Pencil className="size-4 text-muted-foreground" />
                           </Button>
@@ -268,23 +353,22 @@ export default function RBAC() {
                             variant="ghost"
                             size="icon"
                             className="size-8 text-destructive hover:text-destructive"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Modules define the areas of your application that can have permissions assigned
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Click on a role to manage its permissions
-        </p>
-      </div>
+      )}
 
       {/* Dialogs */}
       <AddRoleDialog open={addRoleOpen} onOpenChange={setAddRoleOpen} onSuccess={handleAddRole} />
