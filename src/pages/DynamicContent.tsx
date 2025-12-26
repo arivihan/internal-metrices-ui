@@ -89,7 +89,7 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
           href={fileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-cyan-500 hover:text-chan-500 hover:underline font-medium cursor-pointer"
+          className="text-cyan-600 hover:text-chan-500 hover:underline font-medium cursor-pointer"
         >
           {String(value)}
         </a>
@@ -265,6 +265,102 @@ const JsonViewPopup = ({ open, onClose, data }) => {
 // ===========================================
 
 // ============================================
+// ============================================
+// 3A. Advanced Search Dialog Component
+// ============================================
+// @ts-ignore
+const AdvancedSearchDialog = ({
+  open,
+  onClose,
+  layout,
+  searchData,
+  onSearchDataChange,
+  onSearch,
+  onClear,
+  isSearching,
+}) => {
+  const hasSearchCriteria = Object.values(searchData).some(
+    (val) => val !== "" && val !== null && val !== undefined
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Advanced Search</DialogTitle>
+          <DialogDescription>
+            Enter your search criteria to filter results
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          {layout?.search?.fields?.map((field, index) => (
+            <div key={index} className="grid gap-2">
+              <Label htmlFor={field.value}>{field.label || field.placeholder}</Label>
+              {field.type === "select" ? (
+                <Select
+                  value={searchData[field.value] || ""}
+                  onValueChange={(value) =>
+                    onSearchDataChange({ ...searchData, [field.value]: value })
+                  }
+                >
+                  <SelectTrigger id={field.value}>
+                    <SelectValue placeholder={field.placeholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {field.selectOptions
+                      ?.filter((option) => option.value !== "")
+                      .map((option, idx) => (
+                        <SelectItem key={idx} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id={field.value}
+                  type={field.type}
+                  placeholder={field.placeholder}
+                  value={searchData[field.value] || ""}
+                  onChange={(e) =>
+                    onSearchDataChange({
+                      ...searchData,
+                      [field.value]: e.target.value,
+                    })
+                  }
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          {hasSearchCriteria && (
+            <Button variant="outline" onClick={onClear}>
+              Clear
+            </Button>
+          )}
+          <Button onClick={onSearch} disabled={isSearching}>
+            {isSearching ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              layout?.search?.searchBtnText || "Search"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================
 // 3. SearchBar Component
 // ============================================
 // @ts-ignore
@@ -275,8 +371,13 @@ const SearchBar = ({
   onSearch,
   onClear,
   isSearching,
+  onAdvancedSearchOpen,
 }) => {
   if (!layout?.searchable || !layout?.search) return null;
+
+  const fieldCount = layout.search.fields?.length || 0;
+  const hasMoreThan4Fields = fieldCount > 4;
+  const visibleFields = hasMoreThan4Fields ? layout.search.fields.slice(0, 4) : layout.search.fields;
 
   const hasSearchCriteria = Object.values(searchData).some(
     (val) => val !== "" && val !== null && val !== undefined
@@ -285,7 +386,7 @@ const SearchBar = ({
   return (
     <CardContent>
       <div className="flex gap-2">
-        {layout.search.fields.map((field, index) => (
+        {visibleFields.map((field, index) => (
           <div key={index} className="flex-1">
             {field.type === "select" ? (
               <Select
@@ -332,6 +433,11 @@ const SearchBar = ({
             layout.search.searchBtnText || "Search"
           )}
         </Button>
+        {hasMoreThan4Fields && (
+          <Button variant="outline" onClick={onAdvancedSearchOpen}>
+            More Filters
+          </Button>
+        )}
         {hasSearchCriteria && (
           <Button variant="outline" onClick={onClear}>
             Clear
@@ -392,7 +498,7 @@ const Pagination = ({
       <p className="text-sm text-muted-foreground">
         Showing {endItem} of {totalItems} results
         {isSearchResults && (
-          <span className="ml-1 text-blue-600">(search results)</span>
+          <span className="ml-1 text-cyan-600">(search results)</span>
         )}
       </p>
       {totalPages > 1 && (
@@ -461,6 +567,7 @@ export default function DynamicContent() {
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [viewDetailsData, setViewDetailsData] = useState<any>(null);
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
 
   useEffect(() => {
     setSearchData({});
@@ -1072,6 +1179,18 @@ const handlePageChange = async (newPage: number) => {
           title="View Coupon Details"
         />
 
+        {/* Advanced Search Dialog */}
+        <AdvancedSearchDialog
+          open={advancedSearchOpen}
+          onClose={() => setAdvancedSearchOpen(false)}
+          layout={layout}
+          searchData={searchData}
+          onSearchDataChange={setSearchData}
+          onSearch={handleSearch}
+          onClear={clearSearch}
+          isSearching={isSearching}
+        />
+
         <div className="flex items-center justify-between border-b py-4 bg-background">
           <SearchBar
             layout={layout}
@@ -1080,6 +1199,7 @@ const handlePageChange = async (newPage: number) => {
             onSearch={handleSearch}
             onClear={clearSearch}
             isSearching={isSearching}
+            onAdvancedSearchOpen={() => setAdvancedSearchOpen(true)}
           />
 
           <ActionButtons
