@@ -18,12 +18,15 @@ const transformDrawerItem = (item: any): DrawerItem => {
     searchable: item.searchable,
     search: item.search,
     subMenuItems: item.subMenuItems?.map(transformSubMenuItem) || [],
+    section: item.section,
+    sectionOrder: item.sectionOrder,
   }
 }
 
 const transformSubMenuItem = (item: any): SubMenuItem => {
   return {
     title: item.title,
+    type: item.type,
     getDataUrl: item.getLayoutDataUrl || item.getDataUrl || '',
     getLayoutDataUrl: item.getLayoutDataUrl || '',
     tableHeaders: item.tableHeaders,
@@ -31,6 +34,7 @@ const transformSubMenuItem = (item: any): SubMenuItem => {
     actions: item.actions,
     searchable: item.searchable,
     search: item.search,
+    accessibleToRoles: item.accessibleToRoles,
   }
 }
 

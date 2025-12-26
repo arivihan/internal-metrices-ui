@@ -67,18 +67,21 @@ export interface Button {
 // Sub Menu Item
 export interface SubMenuItem {
   title: string
+  type?: 'GET_DATA' | 'GET_LAYOUT_DATA' | 'getData' | 'getLayout'
   getDataUrl?: string
+  getLayoutDataUrl?: string
   tableHeaders?: TableHeader[]
   buttons?: Button[]
   actions?: Action[]
   searchable?: boolean
   search?: Search
+  accessibleToRoles?: string[]
 }
 
 // Drawer Item
 export interface DrawerItem {
   title: string
-  type: 'dropdown' | 'getData' | 'getLayout'
+  type: 'dropdown' | 'getData' | 'getLayout' | 'DROP_DOWN_MENU' | 'GET_DATA' | 'GET_LAYOUT_DATA'
   getDataUrl?: string
   getLayoutDataUrl?: string
   icon?: string
@@ -89,6 +92,8 @@ export interface DrawerItem {
   searchable?: boolean
   search?: Search
   subMenuItems?: SubMenuItem[]
+  section?: string
+  sectionOrder?: number
 }
 
 // Sidebar Config
