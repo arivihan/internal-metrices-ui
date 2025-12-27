@@ -98,22 +98,56 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
     return <div>{String(value)}</div>;
   }
 
-  switch (header.type) {
-    case "image":
-      return (
-        <div className="flex h-[10vh] w-[10vw] overflow-hidden items-center justify-center">
+  const isImageUrl = (str) => {
+    if (typeof str !== "string") return false;
+    return /\.(png|jpg|jpeg|gif|svg|webp)(\?.*)?$/i.test(str);
+  };
+
+  // Check if this is specifically an Icon URL column (render small)
+  const isIconUrlColumn = header.Header?.toLowerCase().includes("icon url");
+
+  // Check if this is a general image column
+  const isImageType = header.type === "image";
+
+  // If it's an Icon URL column, render small thumbnail
+  if (isIconUrlColumn && isImageUrl(value)) {
+    return (
+      <div className="flex items-center justify-center py-2">
+        <div className="h-12 w-12 overflow-hidden rounded border bg-gray-50 flex items-center justify-center">
           <img
-            src={value}
-            alt="Image"
-            className="w-full h-full object-cover border shadow-sm"
+            src={String(value)}
+            alt={header.Header}
+            className="h-full w-full object-contain"
             onError={(e) => {
               e.currentTarget.src =
-                "https://via.placeholder.com/64?text=No+Image";
+                "https://via.placeholder.com/48?text=No+Image";
+              e.currentTarget.className =
+                "h-full w-full object-contain opacity-50";
             }}
           />
         </div>
-      );
+      </div>
+    );
+  }
 
+  // For other image types, use larger dimensions (previous behavior)
+  if (isImageType || isImageUrl(value)) {
+    return (
+      <div className="flex h-[10vh] w-[10vw] overflow-hidden items-center justify-center">
+        <img
+          src={String(value)}
+          alt={header.Header}
+          className="w-full h-full object-cover border shadow-sm"
+          onError={(e) => {
+            e.currentTarget.src =
+              "https://via.placeholder.com/64?text=No+Image";
+          }}
+        />
+      </div>
+    );
+  }
+
+  switch (header.type) {
     case "text":
       if (
         typeof value === "string" &&
@@ -296,7 +330,9 @@ const AdvancedSearchDialog = ({
         <div className="grid gap-4 py-4">
           {layout?.search?.fields?.map((field, index) => (
             <div key={index} className="grid gap-2">
-              <Label htmlFor={field.value}>{field.label || field.placeholder}</Label>
+              <Label htmlFor={field.value}>
+                {field.label || field.placeholder}
+              </Label>
               {field.type === "select" ? (
                 <Select
                   value={searchData[field.value] || ""}
@@ -377,7 +413,9 @@ const SearchBar = ({
 
   const fieldCount = layout.search.fields?.length || 0;
   const hasMoreThan4Fields = fieldCount > 4;
-  const visibleFields = hasMoreThan4Fields ? layout.search.fields.slice(0, 4) : layout.search.fields;
+  const visibleFields = hasMoreThan4Fields
+    ? layout.search.fields.slice(0, 4)
+    : layout.search.fields;
 
   const hasSearchCriteria = Object.values(searchData).some(
     (val) => val !== "" && val !== null && val !== undefined
@@ -759,7 +797,8 @@ export default function DynamicContent() {
         let formattedDate = value;
         if (typeof value === "string" && value.includes("-")) {
           const [year, month, day] = value.split("-");
-          formattedDate = `${day}/${month}/${year}`;
+          // formattedDate = `${day}/${month}/${year}`;
+          formattedDate = `${year}-${month}-${day}`; 
         }
 
         // Set BOTH the string version and the regular version
@@ -782,36 +821,42 @@ export default function DynamicContent() {
         return;
       }
 
-      // Handle array fields (comma-separated to array)
-      if (typeof value === "string" && value.includes(",")) {
+      // IMPORTANT: Only convert comma-separated to array if field is explicitly marked with isArray: true
+      // Otherwise, send as-is (string format) to API
+      if (field.isArray && typeof value === "string" && value.includes(",")) {
         payload[apiKey] = value
           .split(",")
           .map((v: string) => v.trim())
           .filter(Boolean);
         console.log(
-          `   ✅ Set ${apiKey} = ${JSON.stringify(payload[apiKey])} (array)`
+          `   ✅ Set ${apiKey} = ${JSON.stringify(
+            payload[apiKey]
+          )} (array - isArray field)`
         );
         return;
       }
 
-      // Handle fields that should always be arrays (like subscriptionPlanIds)
+      // Handle fields that should always be arrays (like subscriptionPlanIds) - only if they end with Ids
       if (
-        field.isArray ||
-        apiKey.includes("Ids") ||
+        (apiKey.includes("Ids") &&
+          apiKey !== "batchId" &&
+          apiKey !== "academicYearId") ||
         apiKey === "subscriptionPlanIds"
       ) {
         payload[apiKey] = typeof value === "string" ? [value] : value;
         console.log(
           `   ✅ Set ${apiKey} = ${JSON.stringify(
             payload[apiKey]
-          )} (forced array)`
+          )} (forced array - Ids suffix)`
         );
         return;
       }
 
-      // Default: use the API key and value as-is
+      // Default: use the API key and value as-is (keep string format)
       payload[apiKey] = value;
-      console.log(`   ✅ Set ${apiKey} = ${value} (${typeof value})`);
+      console.log(
+        `   ✅ Set ${apiKey} = ${value} (${typeof value}) - sent as-is`
+      );
     });
 
     // Add discountAmount as null if not provided (optional field)
@@ -833,7 +878,7 @@ export default function DynamicContent() {
   const handlePopupSubmit = async () => {
     if (!currentPopupButton.value) return;
 
-    const submitUrl =
+    let submitUrl =
       currentPopupButton.value.popupSubmitUrl ||
       currentPopupButton.value.actionUrl;
 
@@ -845,6 +890,19 @@ export default function DynamicContent() {
       });
       return;
     }
+
+    // 🔥 NEW: Replace URL variables like {id} with actual values from formData
+    submitUrl = submitUrl.replace(/\{(\w+)\}/g, (match, variable) => {
+      const value = formData[variable];
+      if (value === undefined || value === null) {
+        console.warn(`⚠️ Variable ${variable} not found in formData`);
+        return match; // Keep the placeholder if value not found
+      }
+      console.log(`✅ Replacing {${variable}} with "${value}"`);
+      return String(value);
+    });
+
+    console.log(`📍 Final URL: ${submitUrl}`);
 
     setIsSubmitting(true);
 
@@ -910,91 +968,91 @@ export default function DynamicContent() {
     }
   };
 
-const handlePageChange = async (newPage: number) => {
-  setCurrentPage(newPage);
+  const handlePageChange = async (newPage: number) => {
+    setCurrentPage(newPage);
 
-  const layout = layoutData.value;
-  if (!layout?.getDataUrl) return;
+    const layout = layoutData.value;
+    if (!layout?.getDataUrl) return;
 
-  // Determine if we're in search mode or normal pagination mode
-  const isSearchMode = searchResults !== null;
-  const apiUrl = isSearchMode
-    ? layout.search?.searchActionUrl
-    : layout.getDataUrl;
+    // Determine if we're in search mode or normal pagination mode
+    const isSearchMode = searchResults !== null;
+    const apiUrl = isSearchMode
+      ? layout.search?.searchActionUrl
+      : layout.getDataUrl;
 
-  if (!apiUrl) return;
+    if (!apiUrl) return;
 
-  // Build parameters
-  const params: Record<string, string> = {
-    level: "SYSTEM",
-    pageNo: String(newPage),
-    pageSize: String(pagination.value.pageSize),
+    // Build parameters
+    const params: Record<string, string> = {
+      level: "SYSTEM",
+      pageNo: String(newPage),
+      pageSize: String(pagination.value.pageSize),
+    };
+
+    // If in search mode, include all search fields
+    if (isSearchMode && layout.search?.fields) {
+      layout.search.fields.forEach((field) => {
+        const value = searchData[field.value];
+        params[field.value] = value || "";
+      });
+    }
+
+    console.log("📄 Pagination request params:", params);
+
+    try {
+      const { dynamicRequest } = await import("@/services/apiClient");
+      const method = isSearchMode ? layout.search?.method || "GET" : "GET";
+
+      const response = await dynamicRequest(apiUrl, method, undefined, {
+        params,
+      });
+
+      console.log("📦 Pagination response:", response);
+
+      // Handle wrapped response
+      let responseData = response;
+      if (response?.data && typeof response.data === "object") {
+        responseData = response.data;
+      }
+
+      let results = [];
+      let paginationInfo: any = {};
+
+      if (responseData?.content && Array.isArray(responseData.content)) {
+        results = responseData.content;
+        paginationInfo = {
+          currentPage: responseData.number ?? 0,
+          pageSize: responseData.size ?? 10,
+          totalPages: responseData.totalPages ?? 1,
+          totalElements: responseData.totalElements ?? 0,
+        };
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        results = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        results = responseData;
+      }
+
+      // Update the appropriate data based on mode
+      if (isSearchMode) {
+        setSearchResults(results);
+      } else {
+        tableData.value = results;
+      }
+
+      // Update pagination info
+      if (Object.keys(paginationInfo).length > 0) {
+        pagination.value = paginationInfo;
+      }
+    } catch (error) {
+      console.error("❌ Pagination error:", error);
+      showAlert({
+        title: "Pagination Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to fetch page",
+        variant: "destructive",
+      });
+    }
   };
-
-  // If in search mode, include all search fields
-  if (isSearchMode && layout.search?.fields) {
-    layout.search.fields.forEach((field) => {
-      const value = searchData[field.value];
-      params[field.value] = value || "";
-    });
-  }
-
-  console.log("📄 Pagination request params:", params);
-
-  try {
-    const { dynamicRequest } = await import("@/services/apiClient");
-    const method = isSearchMode ? layout.search?.method || "GET" : "GET";
-
-    const response = await dynamicRequest(apiUrl, method, undefined, {
-      params,
-    });
-
-    console.log("📦 Pagination response:", response);
-
-    // Handle wrapped response
-    let responseData = response;
-    if (response?.data && typeof response.data === "object") {
-      responseData = response.data;
-    }
-
-    let results = [];
-    let paginationInfo: any = {};
-
-    if (responseData?.content && Array.isArray(responseData.content)) {
-      results = responseData.content;
-      paginationInfo = {
-        currentPage: responseData.number ?? 0,
-        pageSize: responseData.size ?? 10,
-        totalPages: responseData.totalPages ?? 1,
-        totalElements: responseData.totalElements ?? 0,
-      };
-    } else if (responseData?.data && Array.isArray(responseData.data)) {
-      results = responseData.data;
-    } else if (Array.isArray(responseData)) {
-      results = responseData;
-    }
-
-    // Update the appropriate data based on mode
-    if (isSearchMode) {
-      setSearchResults(results);
-    } else {
-      tableData.value = results;
-    }
-
-    // Update pagination info
-    if (Object.keys(paginationInfo).length > 0) {
-      pagination.value = paginationInfo;
-    }
-  } catch (error) {
-    console.error("❌ Pagination error:", error);
-    showAlert({
-      title: "Pagination Failed",
-      description:
-        error instanceof Error ? error.message : "Failed to fetch page",
-      variant: "destructive",
-    });
-  }
-};
 
   const handleSearch = async () => {
     const layout = layoutData.value;
@@ -1043,7 +1101,7 @@ const handlePageChange = async (newPage: number) => {
 
       let results = [];
       let paginationInfo: any = {};
-      
+
       if (response?.content && Array.isArray(response.content)) {
         results = response.content;
         paginationInfo = {
@@ -1062,7 +1120,7 @@ const handlePageChange = async (newPage: number) => {
 
       setSearchResults(results);
       setCurrentPage(0);
-      
+
       // Update pagination signal with new data
       if (Object.keys(paginationInfo).length > 0) {
         pagination.value = paginationInfo;
@@ -1130,7 +1188,7 @@ const handlePageChange = async (newPage: number) => {
   const pageSize = pagination.value.pageSize;
   const totalItems = pagination.value.totalElements;
 
- const paginatedData = displayData;
+  const paginatedData = displayData;
 
   const hasSearchCriteria = Object.values(searchData).some(
     (val) => val !== "" && val !== null && val !== undefined
