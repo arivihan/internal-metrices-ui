@@ -33,53 +33,51 @@ const dashboardItem: DrawerItem[] = [
   },
 ];
 
-/* ------------------------------------------------------------------ */
-/* Static items per section - HARDCODED */
-/* ------------------------------------------------------------------ */
-
-const staticItemsBySection: Record<string, DrawerItem[]> = {
-  MANAGEMENT: [
-    {
-      title: "Users",
-      type: "getData",
-      getDataUrl: "/users",
-      icon: "Users",
-      accessibleToRoles: ["ADMIN"],
-    },
-    {
-      title: "Notifications",
-      type: "getData",
-      getDataUrl: "/notifications",
-      icon: "Bell",
-      accessibleToRoles: ["ADMIN"],
-    },
-    {
-      title: "ASAT Scorecards",
-      type: "getData",
-      getDataUrl: "/asat-scorecards",
-      icon: "FileCheck",
-      accessibleToRoles: ["ADMIN"],
-    },
-    {
-      title: "SQL Playground",
-      type: "getData",
-      getDataUrl: "/sql-playground",
-      icon: "DatabaseZap",
-      accessibleToRoles: ["ADMIN"],
-    },
-    {
-      title: "App Configs",
-      type: "getData",
-      getDataUrl: "/app-configs",
-      icon: "Settings",
-      accessibleToRoles: ["ADMIN"],
-    },
-  ],
-};
-
-/* ------------------------------------------------------------------ */
-/* Skeleton */
-/* ------------------------------------------------------------------ */
+// Static navigation items (hardcoded, not from API)
+const staticNavItems: DrawerItem[] = [
+  {
+    title: "Users",
+    type: "getData",
+    getDataUrl: "/users",
+    icon: "Users",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "Notifications",
+    type: "getData",
+    getDataUrl: "/notifications",
+    icon: "Bell",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "ASAT Scorecards",
+    type: "getData",
+    getDataUrl: "/asat-scorecards",
+    icon: "FileCheck",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "SQL Playground",
+    type: "getData",
+    getDataUrl: "/sql-playground",
+    icon: "DatabaseZap",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "App Configs",
+    type: "getData",
+    getDataUrl: "/app-configs",
+    icon: "Settings",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "Chapters",
+    type: "getData",
+    getDataUrl: "/chapters",
+    icon: "BookOpen",
+    accessibleToRoles: ["ADMIN"],
+  },
+];
 
 function NavUserSkeleton() {
   return (

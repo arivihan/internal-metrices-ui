@@ -30,14 +30,14 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
       {/* Info Cards */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Basic Info Card */}
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="border">
+          <CardHeader className="p-6 pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <UserCircle className="size-5 text-muted-foreground" />
               Basic Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid gap-4 p-6">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Phone Number</span>
               <span className="text-sm font-medium">{user.phoneNumber}</span>
@@ -66,14 +66,14 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
         </Card>
 
         {/* Rewards Card */}
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="border">
+          <CardHeader className="p-6 pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Gift className="size-5 text-muted-foreground" />
               Rewards & Referral
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid gap-4 p-6">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Points</span>
               <span className="text-sm font-medium">{user.points}</span>
@@ -94,8 +94,8 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
 
       {/* Subjects */}
       {user.subjects && user.subjects.length > 0 && (
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="border">
+          <CardHeader className="p-6 pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <BookOpen className="size-5 text-muted-foreground" />
               Enrolled Subjects
@@ -104,7 +104,7 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {user.subjects.map((subject) => (
                 <div
@@ -120,8 +120,8 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
       )}
 
       {/* Test Activity */}
-      <Card className="min-w-0 overflow-hidden">
-        <CardHeader className="pb-4">
+      <Card className="min-w-0 overflow-hidden border">
+        <CardHeader className="p-6 pb-4">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <Activity className="size-5 text-muted-foreground" />
             {testActivity?.title || 'Test Series Activity'}
@@ -132,7 +132,7 @@ export function UserDetailsTab({ user, testActivity, testLoading }: UserDetailsT
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-hidden">
+        <CardContent className="overflow-hidden p-6">
           {testLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />

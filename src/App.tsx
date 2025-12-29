@@ -12,6 +12,7 @@ import ASATScorecards from "@/pages/asat";
 import SqlPlayground from "@/pages/sql-playground";
 import CreateQuery from "@/pages/sql-playground/create";
 import AppConfigs from "@/pages/app-configs";
+import Chapters from "@/pages/chapters";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
@@ -57,6 +58,7 @@ function App() {
             <Route path="/dashboard/sql-playground" element={<SqlPlayground />} />
             <Route path="/dashboard/sql-playground/create" element={<CreateQuery />} />
             <Route path="/dashboard/app-configs" element={<AppConfigs />} />
+            <Route path="/dashboard/chapters" element={<Chapters />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>
