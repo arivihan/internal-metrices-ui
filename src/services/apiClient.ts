@@ -22,7 +22,8 @@ let url: string;
 if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
   // Absolute URL - use as is
   url = endpoint;
-} else {
+}
+ else {
   // Relative URL - prepend BASE_URL
   url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 }
@@ -51,10 +52,24 @@ if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
 
   console.log(`[apiClient] 📊 Response Status: ${response.status}`)
 
+  // Handle 204 No Content - successful response with no body
+  if (response.status === 204) {
+    console.log(`[apiClient] ✅ No Content Response (204)`)
+    return { success: true, status: 204 } as T
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }))
     console.error(`[apiClient] ❌ Error:`, error)
     throw new Error(error.message || 'Request failed')
+  }
+
+  // Check content-type before parsing
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    console.error(`[apiClient] ❌ Invalid content-type: ${contentType}`)
+    console.error(`[apiClient] ❌ Response body:`, await response.text())
+    throw new Error(`Expected JSON but got ${contentType || 'unknown'} content type`)
   }
 
   const data = await response.json()

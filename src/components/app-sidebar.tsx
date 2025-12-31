@@ -79,6 +79,11 @@ const staticNavItems: DrawerItem[] = [
   },
 ];
 
+// Static items organized by section (for sidebar organization)
+const staticItemsBySection: Record<string, DrawerItem[]> = {
+  MANAGEMENT: staticNavItems,
+};
+
 function NavUserSkeleton() {
   return (
     <SidebarMenu>
@@ -154,7 +159,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         .filter((item) => {
           // normalize section - if no section provided, default to NAVIGATION
           const itemSection = (item.section ?? "NAVIGATION").toUpperCase();
-          console.log(itemSection)
+          console.log(itemSection);
           console.log(
             `Item "${item.title}" section: "${itemSection}", comparing with "${section}"`
           );

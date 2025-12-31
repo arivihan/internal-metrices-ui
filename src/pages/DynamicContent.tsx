@@ -39,8 +39,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { MoreVertical, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Plus,
+  X,
+} from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
+import { TabsViewer } from "@/components/TabsViewer";
 import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
@@ -190,6 +198,88 @@ const FormPopup = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
+    {}
+  );
+  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [languageOptions, setLanguageOptions] = useState<any[]>([]);
+  const [loadingLanguages, setLoadingLanguages] = useState(false);
+  const [expandedTranslations, setExpandedTranslations] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Fetch dropdown options when field has fetchOptionsUrl
+  useEffect(() => {
+    if (!open || !button?.popupFields) return;
+
+    button.popupFields.forEach(async (field: any) => {
+      // Fetch languages for dynamic-translations field
+      if (field.type === "dynamic-translations" && field.languagesUrl) {
+        setLoadingLanguages(true);
+        try {
+          const { dynamicRequest } = await import("@/services/apiClient");
+          const response = await dynamicRequest(field.languagesUrl, "GET");
+
+          let languages = [];
+          if (response?.data && Array.isArray(response.data)) {
+            languages = response.data;
+          } else if (Array.isArray(response)) {
+            languages = response;
+          }
+
+          // Transform languages to have both label and value
+          const transformedLanguages = languages.map((lang: any) => ({
+            value: lang.code,
+            label: lang.displayNameEn || lang.nativeName || lang.code,
+            original: lang,
+          }));
+
+          setLanguageOptions(transformedLanguages);
+        } catch (error) {
+          console.error(`Failed to fetch languages:`, error);
+        } finally {
+          setLoadingLanguages(false);
+        }
+      }
+
+      if (
+        (field.type === "select" || field.type === "multi-select") &&
+        field.fetchOptionsUrl
+      ) {
+        setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
+        try {
+          const { dynamicRequest } = await import("@/services/apiClient");
+          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+
+          let options = [];
+          if (response?.data && Array.isArray(response.data)) {
+            options = response.data;
+          } else if (Array.isArray(response)) {
+            options = response;
+          }
+
+          // Transform options to have both label and value
+          const transformedOptions = options.map((opt: any) => ({
+            value: opt[field.optionValueKey] || opt.id,
+            label: opt[field.optionLabelKey] || opt.name || String(opt),
+            original: opt,
+          }));
+
+          setDropdownOptions((prev) => ({
+            ...prev,
+            [field.value]: transformedOptions,
+          }));
+        } catch (error) {
+          console.error(`Failed to fetch options for ${field.value}:`, error);
+        } finally {
+          setLoadingOptions((prev) => ({ ...prev, [field.value]: false }));
+        }
+      }
+    });
+  }, [open, button]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl h-[80vh] p-0 flex flex-col">
@@ -220,18 +310,135 @@ const FormPopup = ({
                     onValueChange={(value) =>
                       onFormDataChange({ ...formData, [field.value]: value })
                     }
+                    disabled={loadingOptions[field.value]}
                   >
                     <SelectTrigger id={field.value}>
                       <SelectValue placeholder={field.placeholder} />
                     </SelectTrigger>
                     <SelectContent>
-                      {field.selectOptions?.map((option, idx) => (
-                        <SelectItem key={idx} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      {loadingOptions[field.value] ? (
+                        <div className="p-2 text-center text-sm text-muted-foreground">
+                          Loading...
+                        </div>
+                      ) : (dropdownOptions[field.value] || []).length > 0 ? (
+                        (dropdownOptions[field.value] || []).map(
+                          (option, idx) => (
+                            <SelectItem key={idx} value={String(option.value)}>
+                              {option.label}
+                            </SelectItem>
+                          )
+                        )
+                      ) : field.selectOptions &&
+                        field.selectOptions.length > 0 ? (
+                        field.selectOptions.map((option, idx) => (
+                          <SelectItem key={idx} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-center text-sm text-muted-foreground">
+                          No options available
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
+                ) : field.type === "multi-select" ? (
+                  <div className="border rounded-md p-2 max-h-48 overflow-y-auto">
+                    {loadingOptions[field.value] ? (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        Loading...
+                      </div>
+                    ) : (dropdownOptions[field.value] || []).length > 0 ? (
+                      (dropdownOptions[field.value] || []).map(
+                        (option, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 py-1"
+                          >
+                            <input
+                              type="checkbox"
+                              id={`${field.value}-${idx}`}
+                              checked={
+                                Array.isArray(formData[field.value])
+                                  ? formData[field.value].includes(option.value)
+                                  : false
+                              }
+                              onChange={(e) => {
+                                const current = Array.isArray(
+                                  formData[field.value]
+                                )
+                                  ? formData[field.value]
+                                  : [];
+                                const updated = e.target.checked
+                                  ? [...current, option.value]
+                                  : current.filter((v) => v !== option.value);
+                                onFormDataChange({
+                                  ...formData,
+                                  [field.value]: updated,
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <label
+                              htmlFor={`${field.value}-${idx}`}
+                              className="flex-1 cursor-pointer text-sm"
+                            >
+                              {option.label}
+                            </label>
+                          </div>
+                        )
+                      )
+                    ) : (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        No options available
+                      </div>
+                    )}
+                  </div>
+                ) : field.type === "dynamic-translations" ? (
+                  <div className="space-y-3 border rounded-lg p-4 ">
+                    {loadingLanguages ? (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        Loading languages...
+                      </div>
+                    ) : languageOptions.length > 0 ? (
+                      <div className="space-y-3">
+                        {languageOptions.map((lang, idx) => {
+                          const currentTranslations =
+                            formData[field.value] || {};
+                          return (
+                            <div key={idx} className="grid gap-2">
+                              <Label
+                                htmlFor={`trans-${lang.value}`}
+                                className="text-sm font-medium"
+                              >
+                                {lang.label}
+                              </Label>
+                              <Input
+                                id={`trans-${lang.value}`}
+                                type="text"
+                                placeholder={`Enter text in ${lang.label}`}
+                                value={currentTranslations[lang.value] || ""}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...currentTranslations,
+                                    [lang.value]: e.target.value,
+                                  };
+                                  onFormDataChange({
+                                    ...formData,
+                                    [field.value]: updated,
+                                  });
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        No languages available
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <Input
                     id={field.value}
@@ -313,6 +520,49 @@ const AdvancedSearchDialog = ({
   onClear,
   isSearching,
 }) => {
+  const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
+    {}
+  );
+  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  // Fetch dropdown options when dialog opens
+  useEffect(() => {
+    if (!open || !layout?.search?.fields) return;
+
+    layout.search.fields.forEach(async (field: any) => {
+      if (field.type === "select" && field.fetchOptionsUrl) {
+        setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
+        try {
+          const { dynamicRequest } = await import("@/services/apiClient");
+          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+
+          let options = [];
+          if (response?.data && Array.isArray(response.data)) {
+            options = response.data;
+          } else if (Array.isArray(response)) {
+            options = response;
+          }
+
+          const transformedOptions = options.map((opt: any) => ({
+            value: opt[field.optionValueKey] || opt.id,
+            label: opt[field.optionLabelKey] || opt.name || String(opt),
+          }));
+
+          setDropdownOptions((prev) => ({
+            ...prev,
+            [field.value]: transformedOptions,
+          }));
+        } catch (error) {
+          console.error(`Failed to fetch options for ${field.value}:`, error);
+        } finally {
+          setLoadingOptions((prev) => ({ ...prev, [field.value]: false }));
+        }
+      }
+    });
+  }, [open, layout?.search?.fields]);
+
   const hasSearchCriteria = Object.values(searchData).some(
     (val) => val !== "" && val !== null && val !== undefined
   );
@@ -339,18 +589,37 @@ const AdvancedSearchDialog = ({
                   onValueChange={(value) =>
                     onSearchDataChange({ ...searchData, [field.value]: value })
                   }
+                  disabled={loadingOptions[field.value]}
                 >
                   <SelectTrigger id={field.value}>
                     <SelectValue placeholder={field.placeholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    {field.selectOptions
-                      ?.filter((option) => option.value !== "")
-                      .map((option, idx) => (
-                        <SelectItem key={idx} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                    {loadingOptions[field.value] ? (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        Loading...
+                      </div>
+                    ) : (dropdownOptions[field.value] || []).length > 0 ? (
+                      (dropdownOptions[field.value] || []).map(
+                        (option, idx) => (
+                          <SelectItem key={idx} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
+                        )
+                      )
+                    ) : field.selectOptions?.length > 0 ? (
+                      field.selectOptions
+                        .filter((option) => option.value !== "")
+                        .map((option, idx) => (
+                          <SelectItem key={idx} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))
+                    ) : (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        No options available
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               ) : (
@@ -409,7 +678,50 @@ const SearchBar = ({
   isSearching,
   onAdvancedSearchOpen,
 }) => {
+  const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
+    {}
+  );
+  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(
+    {}
+  );
+
   if (!layout?.searchable || !layout?.search) return null;
+
+  // Fetch dropdown options when needed
+  useEffect(() => {
+    if (!layout?.search?.fields) return;
+
+    layout.search.fields.forEach(async (field: any) => {
+      if (field.type === "select" && field.fetchOptionsUrl) {
+        setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
+        try {
+          const { dynamicRequest } = await import("@/services/apiClient");
+          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+
+          let options = [];
+          if (response?.data && Array.isArray(response.data)) {
+            options = response.data;
+          } else if (Array.isArray(response)) {
+            options = response;
+          }
+
+          const transformedOptions = options.map((opt: any) => ({
+            value: opt[field.optionValueKey] || opt.id,
+            label: opt[field.optionLabelKey] || opt.name || String(opt),
+          }));
+
+          setDropdownOptions((prev) => ({
+            ...prev,
+            [field.value]: transformedOptions,
+          }));
+        } catch (error) {
+          console.error(`Failed to fetch options for ${field.value}:`, error);
+        } finally {
+          setLoadingOptions((prev) => ({ ...prev, [field.value]: false }));
+        }
+      }
+    });
+  }, [layout?.search?.fields]);
 
   const fieldCount = layout.search.fields?.length || 0;
   const hasMoreThan4Fields = fieldCount > 4;
@@ -432,18 +744,35 @@ const SearchBar = ({
                 onValueChange={(value) =>
                   onSearchDataChange({ ...searchData, [field.value]: value })
                 }
+                disabled={loadingOptions[field.value]}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={field.placeholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {field.selectOptions
-                    ?.filter((option) => option.value !== "") // Filter out empty values
-                    .map((option, idx) => (
-                      <SelectItem key={idx} value={option.value}>
+                  {loadingOptions[field.value] ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      Loading...
+                    </div>
+                  ) : (dropdownOptions[field.value] || []).length > 0 ? (
+                    (dropdownOptions[field.value] || []).map((option, idx) => (
+                      <SelectItem key={idx} value={String(option.value)}>
                         {option.label}
                       </SelectItem>
-                    ))}
+                    ))
+                  ) : field.selectOptions?.length > 0 ? (
+                    field.selectOptions
+                      .filter((option) => option.value !== "")
+                      .map((option, idx) => (
+                        <SelectItem key={idx} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))
+                  ) : (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      No options available
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             ) : (
@@ -606,6 +935,10 @@ export default function DynamicContent() {
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [viewDetailsData, setViewDetailsData] = useState<any>(null);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("");
+  const [tabsData, setTabsData] = useState<Record<string, any[]>>({});
+  const [loadingTabs, setLoadingTabs] = useState<Record<string, boolean>>({});
+  const [tabErrors, setTabErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setSearchData({});
@@ -616,6 +949,32 @@ export default function DynamicContent() {
   useEffect(() => {
     setCurrentPage(0);
   }, [searchData]);
+
+  // Initialize first tab when layout type is TABS
+  useEffect(() => {
+    console.log(`[TabsInitEffect] 🔍 Checking layout data:`, {
+      type: layoutData.value?.type,
+      hasTabsArray: !!layoutData.value?.tabs,
+      tabsLength: layoutData.value?.tabs?.length,
+      fullData: layoutData.value
+    });
+    
+    if (
+      layoutData.value?.type === "TABS" &&
+      layoutData.value?.tabs?.length > 0
+    ) {
+      console.log(`[TabsInitEffect] ✅ TABS layout detected, initializing first tab`);
+      const firstTab = layoutData.value.tabs[0];
+      setActiveTab(firstTab.tabId);
+      setTabsData({});
+      setLoadingTabs({});
+      setTabErrors({});
+      // Fetch first tab data
+      handleTabChange(firstTab.tabId, firstTab.getDataUrl);
+    } else {
+      console.log(`[TabsInitEffect] ❌ Layout is not TABS type or no tabs array`);
+    }
+  }, [layoutData.value]);
 
   // Handle pagination changes - re-run search when page changes
 
@@ -638,10 +997,73 @@ export default function DynamicContent() {
     setJsonPopupOpen(true);
   };
 
+  const handleTabChange = async (tabId: string, getDataUrl: string) => {
+    // Check if we already have the data cached
+    if (tabsData[tabId]) {
+      setActiveTab(tabId);
+      // Clear any previous errors
+      setTabErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[tabId];
+        return updated;
+      });
+      return;
+    }
+
+    // Set loading state and fetch data
+    setLoadingTabs((prev) => ({ ...prev, [tabId]: true }));
+    setActiveTab(tabId);
+    // Clear any previous errors
+    setTabErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[tabId];
+      return updated;
+    });
+
+    try {
+      const { dynamicRequest } = await import("@/services/apiClient");
+      const response = await dynamicRequest(getDataUrl, "GET", undefined, {
+        params: { level: "SYSTEM", pageNo: "0", pageSize: "100" },
+      });
+
+      console.log(`📦 Tab ${tabId} Response:`, response);
+
+      // Handle wrapped response
+      let responseData = response;
+      if (response?.data && typeof response.data === "object") {
+        responseData = response.data;
+      }
+
+      let results = [];
+
+      if (responseData?.content && Array.isArray(responseData.content)) {
+        results = responseData.content;
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        results = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        results = responseData;
+      }
+
+      setTabsData((prev) => ({ ...prev, [tabId]: results }));
+    } catch (error) {
+      console.error(`❌ Error fetching tab ${tabId}:`, error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Request failed";
+      setTabErrors((prev) => ({ ...prev, [tabId]: errorMessage }));
+      showAlert({
+        title: `Failed to load ${tabId} tab`,
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTabs((prev) => ({ ...prev, [tabId]: false }));
+    }
+  };
+
   const handleRowAction = (action: any, rowData: any) => {
     // Handle VIEW action
     if (action.type === "link" || action.title?.toLowerCase() === "view") {
-      console.log("� Opening view details for:", rowData);
+      console.log("🔍 Opening view details for:", rowData);
       setViewDetailsData(rowData);
       setViewDetailsOpen(true);
       return;
@@ -672,10 +1094,12 @@ export default function DynamicContent() {
         }
 
         // Handle status/boolean fields (active true/false -> active/inactive)
-        if (field.type === "select" && field.selectOptions) {
-          const isStatusField = field.selectOptions.some(
-            (opt: any) => opt.value === "active" || opt.value === "inactive"
-          );
+        if (field.type === "select") {
+          const isStatusField =
+            field.selectOptions &&
+            field.selectOptions.some(
+              (opt: any) => opt.value === "active" || opt.value === "inactive"
+            );
 
           if (isStatusField) {
             // Convert boolean to "active" or "inactive"
@@ -685,6 +1109,16 @@ export default function DynamicContent() {
                 : "inactive";
             console.log(
               `   ✅ Status field: ${formFieldKey} = "${initialData[formFieldKey]}"`
+            );
+            return;
+          }
+
+          // Handle boolean fields that should map to true/false options
+          if (typeof rowValue === "boolean") {
+            // Convert boolean to "true" or "false" string for select field
+            initialData[formFieldKey] = rowValue ? "true" : "false";
+            console.log(
+              `   ✅ Boolean field: ${formFieldKey} = "${initialData[formFieldKey]}"`
             );
             return;
           }
@@ -712,9 +1146,39 @@ export default function DynamicContent() {
 
         // Handle array fields (join with comma)
         if (Array.isArray(rowValue)) {
+          // Check if this is a dynamic-translations field
+          if (field.type === "dynamic-translations") {
+            // Convert array of translation objects to key-value pair
+            const translationObj: any = {};
+            rowValue.forEach((trans: any) => {
+              if (trans.languageCode && trans.displayName) {
+                translationObj[trans.languageCode] = trans.displayName;
+              }
+            });
+            initialData[formFieldKey] = translationObj;
+            console.log(
+              `   ✅ Translations field: ${formFieldKey} = ${JSON.stringify(
+                translationObj
+              )}`
+            );
+            return;
+          }
+
           initialData[formFieldKey] = rowValue.join(", ");
           console.log(
             `   ✅ Array field: ${formFieldKey} = "${initialData[formFieldKey]}"`
+          );
+          return;
+        }
+
+        // Handle dynamic-translations field (object type)
+        if (
+          field.type === "dynamic-translations" &&
+          typeof rowValue === "object"
+        ) {
+          initialData[formFieldKey] = rowValue;
+          console.log(
+            `   ✅ Translations field: ${formFieldKey} = set from row data`
           );
           return;
         }
@@ -765,10 +1229,12 @@ export default function DynamicContent() {
       const apiKey = field.apiField || formFieldKey;
 
       // Handle boolean/status fields (active/inactive -> active: true/false)
-      if (field.type === "select" && field.selectOptions) {
-        const isStatusField = field.selectOptions.some(
-          (opt: any) => opt.value === "active" || opt.value === "inactive"
-        );
+      if (field.type === "select") {
+        const isStatusField =
+          field.selectOptions &&
+          field.selectOptions.some(
+            (opt: any) => opt.value === "active" || opt.value === "inactive"
+          );
 
         if (isStatusField) {
           // Status fields always map to "active" key in payload
@@ -776,6 +1242,15 @@ export default function DynamicContent() {
           payload[statusKey] = value === "active";
           console.log(
             `   ✅ Set ${statusKey} = ${value === "active"} (status: ${value})`
+          );
+          return;
+        }
+
+        // Handle boolean fields (true/false strings -> booleans)
+        if (value === "true" || value === "false") {
+          payload[apiKey] = value === "true";
+          console.log(
+            `   ✅ Set ${apiKey} = ${payload[apiKey]} (boolean: ${value})`
           );
           return;
         }
@@ -792,13 +1267,29 @@ export default function DynamicContent() {
         }
       }
 
+      // Handle dynamic-translations fields (key-value pairs)
+      if (field.type === "dynamic-translations") {
+        if (typeof value === "object" && Object.keys(value).length > 0) {
+          payload[apiKey] = value;
+          console.log(
+            `   ✅ Set ${apiKey} = ${JSON.stringify(
+              value
+            )} (translations key-value pairs)`
+          );
+        } else {
+          payload[apiKey] = {};
+          console.log(`   ✅ Set ${apiKey} = {} (empty translations)`);
+        }
+        return;
+      }
+
       // Handle date fields (convert YYYY-MM-DD to DD/MM/YYYY)
       if (field.type === "date") {
         let formattedDate = value;
         if (typeof value === "string" && value.includes("-")) {
           const [year, month, day] = value.split("-");
           // formattedDate = `${day}/${month}/${year}`;
-          formattedDate = `${year}-${month}-${day}`; 
+          formattedDate = `${year}-${month}-${day}`;
         }
 
         // Set BOTH the string version and the regular version
@@ -924,13 +1415,62 @@ export default function DynamicContent() {
 
       console.log(`📝 Operation Type: ${isUpdate ? "UPDATE" : "CREATE"}`);
 
+      // Build custom headers from config
+      const customHeaders: Record<string, string> = {};
+
+      console.log("\n" + "=".repeat(60));
+      console.log("📤 HEADERS BEING SENT:");
+      console.log("=".repeat(60));
+
+      if (
+        currentPopupButton.value?.headers &&
+        Array.isArray(currentPopupButton.value.headers)
+      ) {
+        currentPopupButton.value.headers.forEach((headerConfig: any) => {
+          const headerName = headerConfig.name;
+          let headerValue: any;
+
+          if (headerConfig.value) {
+            // Static value
+            headerValue = headerConfig.value;
+          } else if (headerConfig.field) {
+            // Dynamic value from form data or payload
+            headerValue =
+              formData[headerConfig.field] || payload[headerConfig.field];
+          } else if (headerConfig.payloadField) {
+            // Value from transformed payload
+            headerValue = payload[headerConfig.payloadField];
+          }
+
+          if (headerValue !== undefined && headerValue !== null) {
+            customHeaders[headerName] = String(headerValue);
+            console.log(`✅ ${headerName}: ${headerValue}`);
+          }
+        });
+      }
+
+      console.log("=".repeat(60) + "\n");
+
       // Import the dynamic request helper
       const { dynamicRequest } = await import("@/services/apiClient");
 
-      // Use dynamic method from JSON config
-      const response = await dynamicRequest(submitUrl, method, payload);
+      // Use dynamic method from JSON config with custom headers
+      const response = await dynamicRequest(submitUrl, method, payload, {
+        headers: customHeaders,
+      });
 
       console.log("✅ API Response:", response);
+
+      // Check for success - handles both normal responses and 204 No Content
+      const isSuccess =
+        response?.success ||
+        response?.status === 204 ||
+        response?.code === 200 ||
+        response?.data !== undefined;
+
+      if (!isSuccess) {
+        throw new Error("Unexpected response format from server");
+      }
 
       showAlert({
         title: "Success",
@@ -1250,179 +1790,213 @@ export default function DynamicContent() {
         />
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
-          <SearchBar
-            layout={layout}
-            searchData={searchData}
-            onSearchDataChange={setSearchData}
-            onSearch={handleSearch}
-            onClear={clearSearch}
-            isSearching={isSearching}
-            onAdvancedSearchOpen={() => setAdvancedSearchOpen(true)}
-          />
+          {layoutData.value?.type === "TABS" && layoutData.value?.tabs ? (
+            <>
+              {console.log(`[Render] 🎯 Rendering TabsViewer with ${layoutData.value.tabs.length} tabs`)}
+              <TabsViewer
+                tabs={layoutData.value.tabs}
+                activeTab={activeTab}
+                tabsData={tabsData}
+                loadingTabs={loadingTabs}
+                tabErrors={tabErrors}
+                title={currentContentItem.value?.title || "Mappings"}
+                onTabChange={handleTabChange}
+                onRowAction={handleRowAction}
+                onButtonClick={handleButtonClick}
+                onViewJson={handleViewJson}
+                CellRenderer={CellRenderer}
+              />
+            </>
+          ) : (
+            <>
+              {console.log(`[Render] 📋 Rendering Standard View - type: ${layoutData.value?.type}, has tabs: ${!!layoutData.value?.tabs}`)}
+              <SearchBar
+                layout={layout}
+                searchData={searchData}
+                onSearchDataChange={setSearchData}
+                onSearch={handleSearch}
+                onClear={clearSearch}
+                isSearching={isSearching}
+                onAdvancedSearchOpen={() => setAdvancedSearchOpen(true)}
+              />
 
-          <ActionButtons
-            buttons={layout?.buttons}
-            onButtonClick={handleButtonClick}
-          />
+              <ActionButtons
+                buttons={layout?.buttons}
+                onButtonClick={handleButtonClick}
+              />
+            </>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto w-full space-y-6">
-          {layoutError.value && (
-            <Card className="m-6">
-              <CardHeader>
-                <CardTitle>Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-destructive">{layoutError.value}</p>
-              </CardContent>
-            </Card>
-          )}
+          {layoutData.value?.type !== "TABS" && (
+            <>
+              {layoutError.value && (
+                <Card className="m-6">
+                  <CardHeader>
+                    <CardTitle>Error</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-destructive">{layoutError.value}</p>
+                  </CardContent>
+                </Card>
+              )}
 
-          {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
-            <Card>
-              <CardHeader />
-              <CardContent>
-                <div className="border rounded">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {layout.tableHeaders
-                          .sort((a, b) => (a.order || 999) - (b.order || 999))
-                          .map((header, index) => (
-                            <TableHead key={index}>{header.Header}</TableHead>
-                          ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isSearching ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={layout.tableHeaders.length}
-                            className="h-24 text-center"
-                          >
-                            <div className="flex items-center justify-center">
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              <p className="text-muted-foreground">
-                                Searching...
-                              </p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : tableDataLoading.value ? (
-                        [...Array(5)].map((_, i) => (
-                          <TableRow key={i}>
-                            {layout.tableHeaders.map((_, j) => (
-                              <TableCell key={j}>
-                                <Skeleton className="h-4 w-full" />
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : tableDataError.value ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={layout.tableHeaders.length}
-                            className="h-24 text-center text-destructive"
-                          >
-                            <p>{tableDataError.value}</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : paginatedData && paginatedData.length > 0 ? (
-                        paginatedData.map((row, rowIndex) => (
-                          <TableRow key={rowIndex}>
+              {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
+                <Card>
+                  <CardHeader />
+                  <CardContent>
+                    <div className="border rounded">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
                             {layout.tableHeaders
                               .sort(
                                 (a, b) => (a.order || 999) - (b.order || 999)
                               )
-                              .map((header, colIndex) => {
-                                if (
-                                  header.type === "actions" &&
-                                  header.actions
-                                ) {
-                                  return (
-                                    <TableCell key={colIndex}>
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0"
-                                          >
-                                            <MoreVertical className="h-4 w-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          {header.actions.map(
-                                            (action, actionIndex) => (
-                                              <DropdownMenuItem
-                                                key={actionIndex}
-                                                onClick={() =>
-                                                  handleRowAction(action, row)
-                                                }
-                                              >
-                                                {action.title}
-                                              </DropdownMenuItem>
-                                            )
-                                          )}
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </TableCell>
-                                  );
-                                }
-                                return (
-                                  <TableCell key={colIndex}>
-                                    <CellRenderer
-                                      header={header}
-                                      value={row[header.accessor]}
-                                      onViewJson={handleViewJson}
-                                      rowData={row}
-                                    />
-                                  </TableCell>
-                                );
-                              })}
+                              .map((header, index) => (
+                                <TableHead key={index}>
+                                  {header.Header}
+                                </TableHead>
+                              ))}
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={layout.tableHeaders.length}
-                            className="h-24 text-center text-muted-foreground"
-                          >
-                            {hasSearchCriteria || searchResults !== null
-                              ? "No results found. Try different search criteria."
-                              : "No data available. Click 'Add' button to create new records."}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {isSearching ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={layout.tableHeaders.length}
+                                className="h-24 text-center"
+                              >
+                                <div className="flex items-center justify-center">
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  <p className="text-muted-foreground">
+                                    Searching...
+                                  </p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : tableDataLoading.value ? (
+                            [...Array(5)].map((_, i) => (
+                              <TableRow key={i}>
+                                {layout.tableHeaders.map((_, j) => (
+                                  <TableCell key={j}>
+                                    <Skeleton className="h-4 w-full" />
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))
+                          ) : tableDataError.value ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={layout.tableHeaders.length}
+                                className="h-24 text-center text-destructive"
+                              >
+                                <p>{tableDataError.value}</p>
+                              </TableCell>
+                            </TableRow>
+                          ) : paginatedData && paginatedData.length > 0 ? (
+                            paginatedData.map((row, rowIndex) => (
+                              <TableRow key={rowIndex}>
+                                {layout.tableHeaders
+                                  .sort(
+                                    (a, b) =>
+                                      (a.order || 999) - (b.order || 999)
+                                  )
+                                  .map((header, colIndex) => {
+                                    if (
+                                      header.type === "actions" &&
+                                      header.actions
+                                    ) {
+                                      return (
+                                        <TableCell key={colIndex}>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0"
+                                              >
+                                                <MoreVertical className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              {header.actions.map(
+                                                (action, actionIndex) => (
+                                                  <DropdownMenuItem
+                                                    key={actionIndex}
+                                                    onClick={() =>
+                                                      handleRowAction(
+                                                        action,
+                                                        row
+                                                      )
+                                                    }
+                                                  >
+                                                    {action.title}
+                                                  </DropdownMenuItem>
+                                                )
+                                              )}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </TableCell>
+                                      );
+                                    }
+                                    return (
+                                      <TableCell key={colIndex}>
+                                        <CellRenderer
+                                          header={header}
+                                          value={row[header.accessor]}
+                                          onViewJson={handleViewJson}
+                                          rowData={row}
+                                        />
+                                      </TableCell>
+                                    );
+                                  })}
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell
+                                colSpan={layout.tableHeaders.length}
+                                className="h-24 text-center text-muted-foreground"
+                              >
+                                {hasSearchCriteria || searchResults !== null
+                                  ? "No results found. Try different search criteria."
+                                  : "No data available. Click 'Add' button to create new records."}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  pageSize={pageSize}
-                  totalItems={totalItems}
-                  isSearchResults={searchResults !== null}
-                  onPageChange={handlePageChange}
-                />
-              </CardContent>
-            </Card>
-          )}
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      pageSize={pageSize}
+                      totalItems={totalItems}
+                      isSearchResults={searchResults !== null}
+                      onPageChange={handlePageChange}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
-          {!layout && !layoutLoading.value && !layoutError.value && (
-            <Card className="m-6">
-              <CardContent className="flex min-h-[200px] items-center justify-center">
-                <div className="text-center">
-                  <p className="text-lg font-medium text-muted-foreground">
-                    Content will be displayed here
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    This section is ready for dynamic content
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              {!layout && !layoutLoading.value && !layoutError.value && (
+                <Card className="m-6">
+                  <CardContent className="flex min-h-[200px] items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-lg font-medium text-muted-foreground">
+                        Content will be displayed here
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        This section is ready for dynamic content
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
       </div>

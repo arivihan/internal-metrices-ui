@@ -160,11 +160,28 @@ export const fetchLayoutData = async (url: string) => {
     console.log(`[fetchLayoutData] 📡 Starting fetch from: ${url}`)
     const response = await fetchDataByUrl(url)
     
+    console.log(`[fetchLayoutData] 📦 Raw response:`, response)
+    
     // Handle wrapped API response (with code, message, success, data, etc.)
     let layoutContent = response;
-    if (response?.data && typeof response.data === 'object') {
-      // If response has a data field, extract it
+    
+    // Check if response has standard wrapper structure (code, message, success, data)
+    if (response?.code && response?.data && typeof response.data === 'object') {
+      // Extract data from wrapper
       layoutContent = response.data;
+      console.log(`[fetchLayoutData] 🔄 Extracting from wrapped response.data`);
+    }
+    
+    // Check if data has uiJson with tabs (old TABS format)
+    if (layoutContent?.uiJson && layoutContent?.uiJson?.tabs) {
+      console.log(`[fetchLayoutData] 🔄 Extracting from uiJson (old TABS format)`);
+      layoutContent = layoutContent.uiJson;
+    }
+    
+    // Ensure we have type property for TABS layout
+    if (layoutContent?.tabs && !layoutContent?.type) {
+      console.log(`[fetchLayoutData] ✏️ Adding type: TABS to layout`);
+      layoutContent = { ...layoutContent, type: "TABS" };
     }
     
     console.log(`[fetchLayoutData] ✅ Received layout data:`, layoutContent)
@@ -173,9 +190,9 @@ export const fetchLayoutData = async (url: string) => {
     
     // If the layout response includes a getDataUrl, fetch the table data
     if (layoutContent?.getDataUrl) {
-  console.log(`[fetchLayoutData] Found getDataUrl in response: ${layoutContent.getDataUrl}, fetching table data`);
-  await fetchTableData(layoutContent.getDataUrl, 0, 10); // Pass initial page params
-}
+      console.log(`[fetchLayoutData] Found getDataUrl in response: ${layoutContent.getDataUrl}, fetching table data`);
+      await fetchTableData(layoutContent.getDataUrl, 0, 10); // Pass initial page params
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Failed to fetch layout data'
     console.error(`[fetchLayoutData] ❌ Error:`, errorMsg)
