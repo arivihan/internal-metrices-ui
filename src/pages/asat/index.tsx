@@ -259,7 +259,7 @@ export default function ASATScorecards() {
         rejectionRemarks: null,
       })
 
-      toast.success('Status updated successfully')
+      toast.success('Status request praised successfully')
       handleCloseDialog()
 
       // Refetch all tabs to reflect changes

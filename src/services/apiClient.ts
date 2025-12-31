@@ -17,7 +17,16 @@ export const apiClient = async <T>(
 ): Promise<T> => {
   const { params, ...init } = config
 
-  let url = `${BASE_URL}${endpoint}`
+  // Construct URL with proper slash handling
+let url: string;
+if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+  // Absolute URL - use as is
+  url = endpoint;
+}
+ else {
+  // Relative URL - prepend BASE_URL
+  url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
+}
   if (params) {
     const searchParams = new URLSearchParams(params)
     url += `?${searchParams.toString()}`
@@ -43,15 +52,51 @@ export const apiClient = async <T>(
 
   console.log(`[apiClient] 📊 Response Status: ${response.status}`)
 
+  // Handle 204 No Content - successful response with no body
+  if (response.status === 204) {
+    console.log(`[apiClient] ✅ No Content Response (204)`)
+    return { success: true, status: 204 } as T
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }))
     console.error(`[apiClient] ❌ Error:`, error)
     throw new Error(error.message || 'Request failed')
   }
 
+  // Check content-type before parsing
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    console.error(`[apiClient] ❌ Invalid content-type: ${contentType}`)
+    console.error(`[apiClient] ❌ Response body:`, await response.text())
+    throw new Error(`Expected JSON but got ${contentType || 'unknown'} content type`)
+  }
+
   const data = await response.json()
   console.log(`[apiClient] ✅ Response:`, data)
   return data
+}
+
+/**
+ * DYNAMIC request helper - uses method from config
+ */
+export const dynamicRequest = async <T>(
+  endpoint: string,
+  method: string = 'GET',
+  data?: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  const requestConfig: RequestConfig = {
+    ...config,
+    method: method.toUpperCase(),
+  }
+
+  // Add body for methods that support it
+  if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+    requestConfig.body = JSON.stringify(data)
+  }
+
+  return apiClient<T>(endpoint, requestConfig)
 }
 
 /**
@@ -81,6 +126,34 @@ export const putData = async <T>(
     ...config,
     method: 'PUT',
     body: JSON.stringify(data),
+  })
+}
+
+/**
+ * PATCH request helper
+ */
+export const patchData = async <T>(
+  endpoint: string,
+  data: any,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * DELETE request helper
+ */
+export const deleteData = async <T>(
+  endpoint: string,
+  config: RequestConfig = {}
+): Promise<T> => {
+  return apiClient<T>(endpoint, {
+    ...config,
+    method: 'DELETE',
   })
 }
 

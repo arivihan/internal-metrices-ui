@@ -53,32 +53,49 @@ export interface Search {
 // Button
 export interface Button {
   title: string
-  type: 'text' | 'iconButton' | 'icon'
+  type: 'text' | 'iconButton' | 'icon' | 'SHOW_POPUP'
   icon?: string
-  action: 'showpopup' | 'download' | 'link'
-  actionUrl: string
+  action?: 'showpopup' | 'download' | 'link'
+  actionUrl?: string
   accessibleToRoles?: string[]
   popupFields?: PopupField[]
   popupTitle?: string
   popupSubmitText?: string
   popupSubmitUrl?: string
+  method?: string
+  popupSubtitle?: string
+}
+
+// Tab Item
+export interface TabItem {
+  tabId: string
+  tabTitle: string
+  icon?: string
+  tableHeaders: TableHeader[]
+  search?: Search
+  buttons?: Button[]
+  getDataUrl: string
+  searchable?: boolean
 }
 
 // Sub Menu Item
 export interface SubMenuItem {
   title: string
+  type?: 'GET_DATA' | 'GET_LAYOUT_DATA' | 'getData' | 'getLayout'
   getDataUrl?: string
+  getLayoutDataUrl?: string
   tableHeaders?: TableHeader[]
   buttons?: Button[]
   actions?: Action[]
   searchable?: boolean
   search?: Search
+  accessibleToRoles?: string[]
 }
 
 // Drawer Item
 export interface DrawerItem {
   title: string
-  type: 'dropdown' | 'getData' | 'getLayout'
+  type: 'dropdown' | 'getData' | 'getLayout' | 'DROP_DOWN_MENU' | 'GET_DATA' | 'GET_LAYOUT_DATA' | 'TABS'
   getDataUrl?: string
   getLayoutDataUrl?: string
   icon?: string
@@ -89,6 +106,9 @@ export interface DrawerItem {
   searchable?: boolean
   search?: Search
   subMenuItems?: SubMenuItem[]
+  section?: string
+  sectionOrder?: number
+  tabs?: TabItem[]
 }
 
 // Sidebar Config

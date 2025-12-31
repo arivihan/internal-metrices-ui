@@ -8,7 +8,7 @@ const Logo = ({ className }: LogoProps) => {
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
       <img src='/arivihan.jpeg' alt='Arivihan' className='size-9 rounded-md object-contain' />
-      <span className='text-xl font-semibold'>Internal Metrics</span>
+      <span className='text-xl text-gray-900 font-semibold'>Internal Metrics</span>
     </div>
   )
 }
