@@ -8,9 +8,14 @@ export interface SelectOption {
 export interface PopupField {
   label: string
   value: string
-  type: 'text' | 'select' | 'date'
+  type: 'text' | 'select' | 'date' | 'number' | 'multi-select'
   placeholder?: string
   selectOptions?: SelectOption[]
+  fetchOptionsUrl?: string
+  optionLabelKey?: string
+  optionLabelKey2?: string
+  optionValueKey?: string
+  required?: boolean
 }
 
 // Action
@@ -39,8 +44,13 @@ export interface TableHeader {
 export interface SearchField {
   label: string
   value: string
-  type: 'text'
+  type: 'text' | 'select'
   placeholder?: string
+  selectOptions?: SelectOption[]
+  fetchOptionsUrl?: string
+  optionLabelKey?: string
+  optionLabelKey2?: string
+  optionValueKey?: string
 }
 
 // Search
