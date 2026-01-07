@@ -12,6 +12,7 @@ import ASATScorecards from "@/pages/asat";
 import SqlPlayground from "@/pages/sql-playground";
 import CreateQuery from "@/pages/sql-playground/create";
 import AppConfigs from "@/pages/app-configs";
+import DasboardUIConfig from "@/pages/dashboard-ui-config";
 import Chapters from "@/pages/chapters";
 import RBAC from "@/pages/rbac";
 import { isAuthenticated } from "@/signals/auth";
@@ -59,6 +60,8 @@ function App() {
             <Route path="/dashboard/sql-playground" element={<SqlPlayground />} />
             <Route path="/dashboard/sql-playground/create" element={<CreateQuery />} />
             <Route path="/dashboard/app-configs" element={<AppConfigs />} />
+            <Route path="/dashboard/dashboard-ui-configs" element={<DasboardUIConfig />} />
+
             <Route path="/dashboard/chapters" element={<Chapters />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
             {/* Dynamic routes for sidebar items under /dashboard */}

@@ -44,8 +44,8 @@ export function EnvironmentSwitcher() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        {/* <DropdownMenu>
+          <DropdownMenuTrigger asChild> */}
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
@@ -61,12 +61,12 @@ export function EnvironmentSwitcher() {
                       {activeEnv.name}
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4" />
+                  {/* <ChevronsUpDown className="ml-auto size-4" /> */}
                 </>
               )}
             </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
+          {/* </DropdownMenuTrigger> */}
+          {/* <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             align="start"
             side={isMobile ? "bottom" : "right"}
@@ -89,8 +89,8 @@ export function EnvironmentSwitcher() {
                 </span>
               </DropdownMenuItem>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenuContent> */}
+        {/* </DropdownMenu> */}
       </SidebarMenuItem>
     </SidebarMenu>
   )
