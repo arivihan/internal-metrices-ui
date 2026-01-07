@@ -136,7 +136,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
       {/* Header Section */}
 
       {/* Tabs Section */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col w-full">
         <Tabs
           value={activeTab || defaultTabId}
           onValueChange={async (tabId) => {
@@ -145,7 +145,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
               await onTabChange(tab.tabId, tab.getDataUrl);
             }
           }}
-          className="flex flex-col h-full"
+          className="flex flex-col h-full w-full"
         >
           {/* Tab List - Professional Styling */}
           <div className="border-b">
@@ -162,7 +162,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                       className="mr-2 h-4 w-4 shrink-0"
                     />
                   )}
-                  <span className="truncate">{tab.tabTitle}</span>
+                  <span className="truncate">{tab.tabTitle || tab.title || "Mapping"}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -181,7 +181,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                     <div className="text-center">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" />
                       <p className="text-sm font-medium text-muted-foreground">
-                        Loading {tab.tabTitle}...
+                        Loading {tab.tabTitle || tab.title || "mapping"}...
                       </p>
                     </div>
                   </div>
@@ -207,7 +207,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                         Something went wrong
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Failed to load {tab.tabTitle.toLowerCase()} data
+                        Failed to load {(tab.tabTitle || tab.title || "mapping").toLowerCase()} data
                       </p>
                       <p className="text-xs text-red-600 font-mono bg-red-50 rounded px-3 py-2 mb-4">
                         {tabErrors[tab.tabId]}
@@ -347,10 +347,10 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                     )}
 
                     {/* Table Section */}
-                    <div className="flex-1 overflow-y-auto p-2">
-                      <Card className="border-0 shadow-sm h-full flex flex-col">
-                        <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
-                          <div className="rounded border overflow-hidden flex flex-col flex-1">
+                    <div className="flex-1 overflow-y-auto p-2 w-full">
+                      <Card className="border-0 shadow-sm h-full flex flex-col w-full">
+                        <CardContent className="p-0 flex-1 flex flex-col overflow-hidden w-full">
+                          <div className="rounded border overflow-hidden flex flex-col flex-1 w-full">
                             <Table>
                               <TableHeader className="border-b  sticky top-0">
                                 <TableRow>
@@ -465,7 +465,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
                                           There are no{" "}
-                                          {tab.tabTitle.toLowerCase()} mappings
+                                          {(tab.tabTitle || tab.title || "mapping").toLowerCase()} mappings
                                           yet.
                                         </p>
                                       </div>

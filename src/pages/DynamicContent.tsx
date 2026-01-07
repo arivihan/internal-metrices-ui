@@ -47,6 +47,9 @@ import {
 } from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
 import { TabsViewer } from "@/components/TabsViewer";
+import { MappingSelector } from "@/components/MappingSelector";
+import { DropdownTableView } from "@/components/DropdownTableView";
+import { DualSectionView } from "@/components/DualSectionView";
 import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
@@ -2204,19 +2207,34 @@ export default function DynamicContent() {
     setCurrentPage(0);
   };
 
-  // Tab-specific search handler
-  const handleTabSearch = async () => {
-    if (!activeTab || !layoutData.value?.tabs) {
-      console.log("❌ No active tab found");
-      return;
+  // Tab-specific search handler (supports both TABS view and DROPDOWN_VIEW)
+  const handleTabSearch = async (selectedViewOrTab?: string, searchValue?: string) => {
+    // Determine if this is for DROPDOWN_VIEW or TABS view
+    let activeTabConfig: any;
+    let tabId: string;
+
+    if (layoutData.value?.type === "DROPDOWN_VIEW") {
+      // For DROPDOWN_VIEW, use the selectedViewOrTab parameter (view key)
+      tabId = selectedViewOrTab || activeTab || "";
+      if (!tabId || !layoutData.value?.views) {
+        console.log("❌ No view selected or no views configured");
+        return;
+      }
+      activeTabConfig = layoutData.value.views[tabId];
+    } else {
+      // For TABS view, use activeTab
+      if (!activeTab || !layoutData.value?.tabs) {
+        console.log("❌ No active tab found");
+        return;
+      }
+      tabId = activeTab;
+      activeTabConfig = layoutData.value.tabs.find(
+        (t: any) => t.tabId === activeTab
+      );
     }
 
-    const activeTabConfig = layoutData.value.tabs.find(
-      (t: any) => t.tabId === activeTab
-    );
-
     if (!activeTabConfig?.search?.searchActionUrl) {
-      console.log("❌ No search action URL configured for this tab");
+      console.log(`❌ No search action URL configured for ${tabId}`);
       return;
     }
 
@@ -2235,13 +2253,14 @@ export default function DynamicContent() {
       });
     }
 
-    console.log(`🔍 Tab Search Params for ${activeTab}:`, searchParams);
+    console.log(`🔍 Search Params for ${tabId}:`, searchParams);
+    console.log(`📍 Search Action URL: ${activeTabConfig.search.searchActionUrl}`);
     setIsSearching(true);
 
     try {
       // Get the HTTP method from config (default to GET)
       const searchMethod = activeTabConfig.search.method || "GET";
-      console.log(`🔧 Tab Search Method: ${searchMethod}`);
+      console.log(`🔧 Search Method: ${searchMethod}`);
 
       // Import dynamic request helper
       const { dynamicRequest } = await import("@/services/apiClient");
@@ -2256,7 +2275,7 @@ export default function DynamicContent() {
         }
       );
 
-      console.log(`📦 Tab Search Response for ${activeTab}:`, response);
+      console.log(`📦 Search Response for ${tabId}:`, response);
 
       let results = [];
       let paginationInfo: any = {};
@@ -2284,7 +2303,7 @@ export default function DynamicContent() {
       }
 
       // Update the specific tab's data with search results
-      setTabsData((prev) => ({ ...prev, [activeTab]: results }));
+      setTabsData((prev) => ({ ...prev, [tabId]: results }));
       setCurrentPage(0);
 
       // Update pagination signal with new data
@@ -2299,7 +2318,7 @@ export default function DynamicContent() {
         }`,
       });
     } catch (error) {
-      console.error(`❌ Tab search error for ${activeTab}:`, error);
+      console.error(`❌ Search error for ${tabId}:`, error);
       showAlert({
         title: "Search Failed",
         description:
@@ -2311,22 +2330,38 @@ export default function DynamicContent() {
     }
   };
 
-  const clearTabSearch = async () => {
+  const clearTabSearch = async (selectedViewOrTab?: string) => {
+    console.log(`🧹 Clear button clicked for view: ${selectedViewOrTab}`);
     setSearchData({});
-    if (activeTab && layoutData.value?.tabs) {
-      const activeTabConfig = layoutData.value.tabs.find(
-        (t: any) => t.tabId === activeTab
-      );
-      if (activeTabConfig?.getDataUrl) {
-        // Use handleTabChange to refetch with pagination (page 0)
-        console.log(`🔄 Clearing search and refetching tab: ${activeTab}`);
-        await handleTabChange(activeTab, activeTabConfig.getDataUrl, 0);
-        
-        showAlert({
-          title: "Search Cleared",
-          description: "Showing all records",
-        });
+    let activeTabConfig: any;
+    let tabId: string;
+
+    if (layoutData.value?.type === "DROPDOWN_VIEW") {
+      tabId = selectedViewOrTab || activeTab || "";
+      if (tabId && layoutData.value?.views) {
+        activeTabConfig = layoutData.value.views[tabId];
       }
+    } else {
+      tabId = activeTab || "";
+      if (layoutData.value?.tabs) {
+        activeTabConfig = layoutData.value.tabs.find(
+          (t: any) => t.tabId === tabId
+        );
+      }
+    }
+
+    if (activeTabConfig?.getDataUrl) {
+      // Use handleTabChange to refetch with pagination (page 0)
+      console.log(`🔄 Clearing search and refetching: ${tabId}`);
+      console.log(`📍 Fetching from URL: ${activeTabConfig.getDataUrl}`);
+      await handleTabChange(tabId, activeTabConfig.getDataUrl, 0);
+      
+      showAlert({
+        title: "Search Cleared",
+        description: "Showing all records",
+      });
+    } else {
+      console.warn(`⚠️ No getDataUrl found for ${tabId}`);
     }
   };
 
@@ -2442,7 +2477,53 @@ export default function DynamicContent() {
         />
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
-          {layoutData.value?.type === "TABS" && layoutData.value?.tabs ? (
+          {layoutData.value?.type === "DUAL_SECTION_VIEW" && layoutData.value?.leftSection && layoutData.value?.rightSection ? (
+            <>
+              {console.log(
+                `[Render] 🎯 Rendering DualSectionView for ${layoutData.value.title}`
+              )}
+              <DualSectionView
+                title={layoutData.value.title}
+                description={layoutData.value.description}
+                icon={layoutData.value.icon}
+                leftSection={layoutData.value.leftSection}
+                rightSection={layoutData.value.rightSection}
+                actions={layoutData.value.actions}
+                submitUrl={layoutData.value.submitUrl}
+                submitText={layoutData.value.submitText}
+                method={layoutData.value.method}
+                onSuccess={() => {
+                  console.log("[DualSectionView] Mapping created successfully");
+                  // Optional: Refresh any related data if needed
+                }}
+              />
+            </>
+          ) : layoutData.value?.type === "DROPDOWN_VIEW" && layoutData.value?.dropdownSelector && layoutData.value?.views ? (
+            <>
+              {console.log(
+                `[Render] 🎯 Rendering DropdownTableView with dropdown views`
+              )}
+              <DropdownTableView
+                dropdownSelector={layoutData.value.dropdownSelector}
+                views={layoutData.value.views}
+                onTabChange={handleTabChange}
+                onRowAction={handleRowAction}
+                onButtonClick={handleButtonClick}
+                onViewJson={handleViewJson}
+                CellRenderer={CellRenderer}
+                tabPagination={tabPagination}
+                onPageChange={handleTabPageChange}
+                searchData={searchData}
+                onSearchDataChange={setSearchData}
+                onSearch={handleTabSearch}
+                onClear={clearTabSearch}
+                isSearching={isSearching}
+                tabsData={tabsData}
+                loadingTabs={loadingTabs}
+                tabErrors={tabErrors}
+              />
+            </>
+          ) : layoutData.value?.type === "TABS" && layoutData.value?.tabs ? (
             <>
               {console.log(
                 `[Render] 🎯 Rendering TabsViewer with ${layoutData.value.tabs.length} tabs`

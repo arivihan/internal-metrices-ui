@@ -1,0 +1,760 @@
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { DynamicIcon } from "@/lib/icon-map";
+import { Loader2, X } from "lucide-react";
+import { apiClient } from "@/services/apiClient";
+import { toast } from "sonner";
+
+interface Section {
+  title: string;
+  description: string;
+  fieldName: string;
+  selectionType: "single" | "multi-select";
+  fetchUrl: string;
+  searchParam?: string;
+  optionLabelKey: string;
+  optionValueKey: string;
+  placeholder?: string;
+  includeDisplayOrder?: boolean;
+  displayOrderPlaceholder?: string;
+}
+
+interface Action {
+  id: string;
+  type: "modal" | "copy" | "submit";
+  label: string;
+  icon: string;
+  buttonVariant: string;
+  modalTitle?: string;
+  modalDescription?: string;
+  modalFetchUrl?: string;
+  modalOptionLabelKey?: string;
+  modalOptionValueKey?: string;
+  modalSelectionType?: string;
+}
+
+interface DualSectionViewProps {
+  title: string;
+  description?: string;
+  icon?: string;
+  leftSection: Section;
+  rightSection: Section;
+  actions: Action[];
+  submitUrl: string;
+  submitText: string;
+  method: "POST" | "PATCH";
+  onSuccess?: () => void;
+}
+
+interface SelectionItem {
+  [key: string]: any;
+}
+
+interface SelectedData {
+  [key: string]: any;
+  displayOrder?: number;
+}
+
+export const DualSectionView: React.FC<DualSectionViewProps> = ({
+  leftSection,
+  rightSection,
+  actions,
+  submitUrl,
+  method,
+  onSuccess,
+}) => {
+  const [leftOptions, setLeftOptions] = useState<SelectionItem[]>([]);
+  const [rightOptions, setRightOptions] = useState<SelectionItem[]>([]);
+  const [allModalOptions, setAllModalOptions] = useState<SelectionItem[]>([]);
+  const [addedItems, setAddedItems] = useState<Record<string, SelectionItem>>({});
+  const [leftLoading, setLeftLoading] = useState(false);
+  const [rightLoading, setRightLoading] = useState(false);
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [selectedLeftObject, setSelectedLeftObject] = useState<SelectionItem | null>(null);
+  const [selectedRight, setSelectedRight] = useState<string[]>([]);
+  const [rightDisplayOrders, setRightDisplayOrders] = useState<
+    Record<string, number>
+  >({});
+  const [submitting, setSubmitting] = useState(false);
+  const [searchLeft, setSearchLeft] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSelectedItems, setModalSelectedItems] = useState<Set<string>>(new Set());
+  const [originalRightOptions, setOriginalRightOptions] = useState<SelectionItem[]>([]);
+  
+  // Pagination states for left section
+  const [leftPageNumber, setLeftPageNumber] = useState(0);
+  const [leftPageSize, setLeftPageSize] = useState(10);
+  const [leftTotalElements, setLeftTotalElements] = useState(0);
+
+  // Fetch left section options on mount
+  useEffect(() => {
+    console.log("[DualSectionView] Mounted, fetching left options");
+    fetchLeftOptions();
+  }, [leftSection.fetchUrl]);
+
+  // Fetch right section options when left selection changes
+  useEffect(() => {
+    if (selectedLeft) {
+      console.log(`[DualSectionView] Selected left: ${selectedLeft}, fetching right options`);
+      fetchRightOptions();
+    } else {
+      console.log("[DualSectionView] No left selection, clearing right options");
+      setRightOptions([]);
+      setSelectedRight([]);
+      setRightDisplayOrders({});
+      setOriginalRightOptions([]);
+    }
+  }, [selectedLeft, selectedLeftObject, rightSection.fetchUrl, rightSection.searchParam, (rightSection as any).searchParams]);
+
+  const fetchLeftOptions = async (pageNumber: number = 0) => {
+    try {
+      setLeftLoading(true);
+      setLeftPageNumber(pageNumber);
+      console.log(`[DualSectionView] Fetching left options from: ${leftSection.fetchUrl} - Page: ${pageNumber}`);
+      const response = await apiClient<any>(leftSection.fetchUrl, {
+        method: "GET",
+        params: { 
+          level: "SYSTEM",
+          pageNo: pageNumber,
+          pageSize: leftPageSize,
+        },
+      });
+      console.log("[DualSectionView] Left options response:", response);
+      
+      // Handle paginated response
+      let data = [];
+      let totalElements = 0;
+      
+      if (response?.content && Array.isArray(response.content)) {
+        data = response.content;
+        totalElements = response.totalElements || 0;
+        setLeftTotalElements(totalElements);
+      } else if (Array.isArray(response?.data)) {
+        data = response.data;
+        totalElements = response.data.length;
+        setLeftTotalElements(totalElements);
+      } else if (Array.isArray(response)) {
+        data = response;
+        totalElements = response.length;
+        setLeftTotalElements(totalElements);
+      }
+      
+      console.log("[DualSectionView] Parsed left data:", data);
+      setLeftOptions(data || []);
+      
+      // Auto-select first item on initial load (page 0) or if no selection exists
+      if (data && data.length > 0 && (pageNumber === 0 || !selectedLeft)) {
+        const firstItem = data[0];
+        const firstItemValue = String(firstItem[leftValue]);
+        console.log("[DualSectionView] Auto-selecting first item:", firstItem);
+        setSelectedLeft(firstItemValue);
+        setSelectedLeftObject(firstItem);
+      }
+    } catch (error) {
+      console.error("[DualSectionView] Failed to fetch left options:", error);
+      setLeftOptions([]);
+    } finally {
+      setLeftLoading(false);
+    }
+  };
+
+  const fetchRightOptions = async () => {
+    try {
+      setRightLoading(true);
+      const params: Record<string, string> = { level: "SYSTEM" };
+      
+      // Check if we need extracted fields for search params
+      if ((rightSection as any).searchParams && selectedLeftObject) {
+        const searchParams = (rightSection as any).searchParams;
+        console.log("[DualSectionView] Using extracted searchParams:", searchParams);
+        for (const [paramKey, objectKey] of Object.entries(searchParams)) {
+          params[paramKey] = String(selectedLeftObject[objectKey] || "");
+        }
+      } else if (rightSection.searchParam && selectedLeft) {
+        // Fallback to old searchParam (single param)
+        params[rightSection.searchParam] = String(selectedLeft);
+      }
+      
+      console.log(`[DualSectionView] Fetching right options from: ${rightSection.fetchUrl}`, params);
+      const response = await apiClient<any>(rightSection.fetchUrl, {
+        method: "GET",
+        params,
+      });
+      console.log("[DualSectionView] Right options response:", response);
+      const data = Array.isArray(response?.content)
+        ? response.content
+        : Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+        ? response
+        : [];
+      console.log("[DualSectionView] Parsed right data:", data);
+      setRightOptions(data || []);
+      setOriginalRightOptions(data || []);
+      
+      // Auto-populate selectedRight with the IDs from fetched items so they display as selected
+      const selectedIds = (data || []).map((item: any) => String(item[rightSection.optionValueKey]));
+      console.log("[DualSectionView] Auto-selected right items:", selectedIds);
+      setSelectedRight(selectedIds);
+      
+      // Auto-populate display orders from fetched items
+      const orders: Record<string, number> = {};
+      (data || []).forEach((item: any) => {
+        const itemId = String(item[rightSection.optionValueKey]);
+        orders[itemId] = item.displayOrder || 0;
+      });
+      setRightDisplayOrders(orders);
+      setAddedItems({}); // Clear added items when left selection changes
+    } catch (error) {
+      console.error("[DualSectionView] Failed to fetch right options:", error);
+      setRightOptions([]);
+      setOriginalRightOptions([]);
+    } finally {
+      setRightLoading(false);
+    }
+  };
+
+  const handleAddItemsClick = async () => {
+    const addAction = actions.find((a) => a.type === "modal");
+    if (addAction?.modalFetchUrl) {
+      setModalLoading(true);
+      try {
+        console.log(`[DualSectionView] Fetching modal options from: ${addAction.modalFetchUrl}`);
+        const response = await apiClient<any>(addAction.modalFetchUrl, {
+          method: "GET",
+          params: { level: "SYSTEM" },
+        });
+        console.log("[DualSectionView] Modal options response:", response);
+        const data = Array.isArray(response?.content)
+          ? response.content
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+          ? response
+          : [];
+        console.log("[DualSectionView] Parsed modal data:", data);
+        setAllModalOptions(data || []);
+        setShowAddModal(true);
+      } catch (error) {
+        console.error("[DualSectionView] Failed to fetch modal options:", error);
+      } finally {
+        setModalLoading(false);
+      }
+    }
+  };
+
+  const handleAddSelectedItems = (selectedIds: string[]) => {
+    const addAction = actions.find((a) => a.type === "modal");
+    if (!addAction) return;
+
+    const modalValueKey = addAction.modalOptionValueKey || "id";
+    const modalLabelKey = addAction.modalOptionLabelKey || "name";
+
+    // Get selected items from modal
+    const newItems = allModalOptions.filter((item) =>
+      selectedIds.includes(String(item[modalValueKey]))
+    );
+
+    // Transform items to match rightSection structure and store them
+    // Keep ALL original item data + add the mapped fields
+    const newAddedItems: Record<string, SelectionItem> = {};
+    newItems.forEach((item) => {
+      const itemId = String(item[modalValueKey]);
+      const itemLabel = item[modalLabelKey] || item.displayName || item.name || item.gradeName || `Item ${itemId}`;
+      
+      console.log("[DualSectionView] Adding item:", { itemId, modalLabelKey, itemLabel, originalItem: item });
+      
+      newAddedItems[itemId] = {
+        ...item, // Keep all original fields
+        [rightSection.optionValueKey]: itemId,
+        [rightSection.optionLabelKey]: itemLabel, // Set the mapped label field
+        // Also set common label fields for fallback rendering
+        name: item.name || itemLabel,
+        gradeName: item.gradeName || itemLabel,
+        displayName: item.displayName || itemLabel,
+      };
+    });
+
+    // Add new items avoiding duplicates
+    const existingIds = selectedRight;
+    const uniqueNewIds = Object.keys(newAddedItems).filter(
+      (id) => !existingIds.includes(id)
+    );
+
+    const combined = [...selectedRight, ...uniqueNewIds];
+    console.log("[DualSectionView] Adding items:", {
+      newAddedItems,
+      uniqueNewIds,
+      combined,
+    });
+    setSelectedRight(combined);
+
+    // Store the added items for later lookup
+    setAddedItems((prev) => ({
+      ...prev,
+      ...newAddedItems,
+    }));
+
+    // Auto-set display orders for new items
+    if (rightSection.includeDisplayOrder) {
+      const maxOrder = Math.max(0, ...Object.values(rightDisplayOrders), 0);
+      uniqueNewIds.forEach((itemId, idx) => {
+        setRightDisplayOrders((prev) => ({
+          ...prev,
+          [itemId]: maxOrder + idx + 1,
+        }));
+      });
+    }
+
+    setShowAddModal(false);
+    setModalSelectedItems(new Set());
+  };
+
+  const handleRemoveRightItem = (itemId: string) => {
+    // Check if this is a newly added item (not in original)
+    const isNewlyAdded = !originalRightOptions.some((item) => String(item[rightSection.optionValueKey]) === itemId);
+    
+    if (!isNewlyAdded) {
+      console.warn("[DualSectionView] Cannot remove originally mapped item:", itemId);
+      return;
+    }
+
+    console.log("[DualSectionView] Removing item:", { itemId, isNewlyAdded });
+    setSelectedRight((prev) => prev.filter((id) => id !== itemId));
+    setRightDisplayOrders((prev) => {
+      const updated = { ...prev };
+      delete updated[itemId];
+      return updated;
+    });
+  };
+
+  const handleRightSelection = (id: string, isSelected: boolean) => {
+    // This is called by modal handler, kept for reference
+    if (isSelected) {
+      setSelectedRight([...selectedRight, id]);
+      if (rightSection.includeDisplayOrder) {
+        setRightDisplayOrders({
+          ...rightDisplayOrders,
+          [id]: rightDisplayOrders[id] || 0,
+        });
+      }
+    } else {
+      setSelectedRight(selectedRight.filter((item) => item !== id));
+      const newOrders = { ...rightDisplayOrders };
+      delete newOrders[id];
+      setRightDisplayOrders(newOrders);
+    }
+  };
+
+  const handleDisplayOrderChange = (id: string, order: number) => {
+    setRightDisplayOrders({
+      ...rightDisplayOrders,
+      [id]: order,
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedLeft) {
+      toast.error("Please select from left section");
+      return;
+    }
+
+    if (selectedRight.length === 0) {
+      toast.error("Please select at least one item from right section");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      // Send only newly added items (filter out original items)
+      const newlyAddedItems = selectedRight.filter(
+        (id) => !originalRightOptions.some((item) => String(item[rightSection.optionValueKey]) === id)
+      );
+
+      const payload: Record<string, any> = {};
+
+      // Check if we need to extract additional fields from left section
+      if ((leftSection as any).extractFields && selectedLeftObject) {
+        const extractFields = (leftSection as any).extractFields;
+        // Extract examId, gradeId, etc. from the selected left object
+        for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
+          payload[payloadKey] = selectedLeftObject[objectKey];
+        }
+        console.log(`[DualSectionView] Extracted fields from left section:`, extractFields, payload);
+      } else {
+        // Default behavior: use fieldName
+        payload[leftSection.fieldName] = selectedLeft;
+      }
+
+      if (rightSection.selectionType === "multi-select") {
+        const rightData = newlyAddedItems.map((id) => {
+          const item: SelectedData = {
+            [rightSection.optionValueKey]: parseInt(id, 10),
+          };
+          if (rightSection.includeDisplayOrder) {
+            item.displayOrder = rightDisplayOrders[id] || 0;
+          }
+          return item;
+        });
+        payload[rightSection.fieldName] = rightData;
+      } else {
+        payload[rightSection.fieldName] = parseInt(selectedRight[0], 10);
+      }
+
+      console.log(`[DualSectionView] Submitting to ${submitUrl}:`, payload);
+      console.log("[DualSectionView] Newly added items:", newlyAddedItems);
+      const response = await apiClient<any>(submitUrl, {
+        method,
+        body: JSON.stringify(payload),
+      });
+
+      console.log("[DualSectionView] Submit response:", response);
+      toast.success("Mapping created successfully!");
+      if (onSuccess) {
+        onSuccess();
+      }
+      // Reset form
+      setSelectedLeft(null);
+      setSelectedLeftObject(null);
+      setSelectedRight([]);
+      setRightDisplayOrders({});
+      setOriginalRightOptions([]);
+    } catch (error) {
+      console.error("Submit failed:", error);
+      toast.error("Failed to create mapping. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const leftLabel = leftSection.optionLabelKey;
+  const leftValue = leftSection.optionValueKey;
+  const rightLabel = rightSection.optionLabelKey;
+  const rightValue = rightSection.optionValueKey;
+
+  return (
+    <div className="w-full h-full flex flex-col bg-background">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{leftSection.title}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {leftSection.description}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {leftLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    placeholder={`Search ${leftSection.placeholder || "items"}...`}
+                    value={searchLeft}
+                    onChange={(e) => {
+                      setSearchLeft(e.target.value);
+                      // Reset to page 0 when searching
+                      setLeftPageNumber(0);
+                    }}
+                    className="mb-4"
+                  />
+                  <div className="max-h-80 overflow-y-auto border rounded p-3 space-y-2 scrollbar-hide">
+                    {leftOptions.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-4">
+                        No options available
+                      </div>
+                    ) : (
+                      leftOptions
+                        .filter((item) => {
+                          const label = String(item[leftLabel] || item.displayName || item.name || "");
+                          return label.toLowerCase().includes(searchLeft.toLowerCase());
+                        })
+                        .map((item) => {
+                          const label = item[leftLabel] || item.displayName || item.name || "Untitled";
+                          const value = String(item[leftValue]);
+                          const isSelected = selectedLeft === value || selectedLeft === String(item[leftValue]);
+                          return (
+                            <div
+                              key={value}
+                              onClick={() => {
+                                setSelectedLeft(value);
+                                setSelectedLeftObject(item);
+                              }}
+                              className={`p-2 rounded cursor-pointer transition-all ${
+                                isSelected
+                                  ? "bg-cyan-100 border-cyan-500 border text-cyan-900 font-medium"
+                                  : "border border-transparent"
+                              }`}
+                            >
+                              {label}
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                  
+                  {/* Pagination Controls for Left Section */}
+                  {leftTotalElements > leftPageSize && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                      <div className="text-xs text-muted-foreground">
+                        Page {leftPageNumber + 1} of {Math.ceil(leftTotalElements / leftPageSize)} ({leftTotalElements} total)
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchLeftOptions(leftPageNumber - 1)}
+                          disabled={leftPageNumber === 0 || leftLoading}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchLeftOptions(leftPageNumber + 1)}
+                          disabled={leftPageNumber >= Math.ceil(leftTotalElements / leftPageSize) - 1 || leftLoading}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Right Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{rightSection.title}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {rightSection.description}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {rightLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : selectedLeft ? (
+                <div className="max-h-80 overflow-y-auto border rounded p-3 space-y-3 scrollbar-hide">
+                  {selectedRight.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-4">
+                      No options selected. Click "Add Items" to add.
+                    </div>
+                  ) : (
+                    selectedRight.map((value) => {
+                      // First check if it's in rightOptions (original items), then check in addedItems (newly added)
+                      const item = rightOptions.find((opt) => String(opt[rightValue]) === value) || addedItems[value];
+                      const label = item ? (item[rightLabel] || item.gradeName || item.name || "Untitled") : "Untitled";
+                      const isNewlyAdded = !originalRightOptions.some((opt) => String(opt[rightValue]) === value);
+                      
+                      console.log("[DualSectionView] Rendering right item:", { value, item, label, isNewlyAdded });
+                      
+                      return (
+                        <div
+                          key={value}
+                          className="flex items-center gap-3 p-2 rounded bg-primary/5 border border-primary/20"
+                        >
+                          <div className="flex-1 flex items-center gap-2">
+                            <span className="text-sm font-medium">{label}</span>
+                            {isNewlyAdded && (
+                              <span className="text-xs px-2 py-1 bg-cyan-100 text-cyan-700 rounded-full font-medium">
+                                New
+                              </span>
+                            )}
+                          </div>
+                          {rightSection.includeDisplayOrder && (
+                            <input
+                              type="number"
+                              min="0"
+                              value={rightDisplayOrders[value] || 0}
+                              onChange={(e) =>
+                                handleDisplayOrderChange(value, parseInt(e.target.value))
+                              }
+                              placeholder="Order"
+                              className="w-16 px-2 py-1 border rounded text-sm"
+                            />
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveRightItem(value);
+                            }}
+                            disabled={!isNewlyAdded}
+                            className={`p-1 rounded transition-colors ${
+                              isNewlyAdded
+                                ? "text-destructive hover:bg-destructive/10 cursor-pointer"
+                                : "text-gray-400 cursor-not-allowed opacity-50"
+                            }`}
+                            title={isNewlyAdded ? "Remove item" : "Cannot remove originally mapped items"}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  Select from left section first
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="border-t p-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          {actions.map((action) => (
+            <Button
+              key={action.id}
+              variant={action.buttonVariant as any}
+              disabled={submitting || !selectedLeft}
+              onClick={() => {
+                if (action.type === "modal") {
+                  handleAddItemsClick();
+                } else if (action.type === "submit") {
+                  handleSubmit();
+                } else if (action.type === "copy") {
+                  // TODO: Implement copy functionality
+                  toast.info("Copy functionality coming soon");
+                }
+              }}
+            >
+              <DynamicIcon name={action.icon} className="h-4 w-4 mr-2" />
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Add Items Modal */}
+      <Dialog open={showAddModal} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setModalSelectedItems(new Set());
+        }
+        setShowAddModal(isOpen);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            {(() => {
+              const addAction = actions.find((a) => a.type === "modal");
+              return (
+                <>
+                  <DialogTitle>{addAction?.modalTitle || "Select Items to Add"}</DialogTitle>
+                  <DialogDescription>{addAction?.modalDescription}</DialogDescription>
+                </>
+              );
+            })()}
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
+            {modalLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {allModalOptions.map((item) => {
+                  const addAction = actions.find((a) => a.type === "modal");
+                  const modalValueKey = addAction?.modalOptionValueKey || "id";
+                  const modalLabelKey = addAction?.modalOptionLabelKey || "name";
+                  const itemId = String(item[modalValueKey]);
+                  const itemLabel = item[modalLabelKey] || item.displayName || item.name || `Item ${itemId}`;
+
+                  // Check if already mapped in original
+                  const isMapped = originalRightOptions.some(
+                    (rItem) => String(rItem[rightSection.optionValueKey]) === itemId
+                  );
+                  // Check if selected in modal
+                  const isSelected = modalSelectedItems.has(itemId);
+                  // Check if already in selectedRight
+                  const isAlreadyAdded = selectedRight.includes(itemId);
+
+                  return (
+                    <button
+                      key={itemId}
+                      onClick={() => {
+                        const newSet = new Set(modalSelectedItems);
+                        if (newSet.has(itemId)) {
+                          newSet.delete(itemId);
+                        } else {
+                          newSet.add(itemId);
+                        }
+                        setModalSelectedItems(newSet);
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-md border-2 transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{itemLabel}</span>
+                        <div className="flex gap-2 items-center">
+                          {isMapped && !isAlreadyAdded && (
+                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                              Mapped
+                            </span>
+                          )}
+                          {isAlreadyAdded && (
+                            <span className="text-xs px-2 py-1 bg-cyan-100 text-cyan-600 rounded-full font-medium">
+                              Already Added
+                            </span>
+                          )}
+                          {isSelected && <span className="text-primary font-bold">✓</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalSelectedItems(new Set());
+                setShowAddModal(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                handleAddSelectedItems(Array.from(modalSelectedItems));
+                setModalSelectedItems(new Set());
+              }}
+              disabled={modalSelectedItems.size === 0}
+            >
+              Add Selected ({modalSelectedItems.size})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
