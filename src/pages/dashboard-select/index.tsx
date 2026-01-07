@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
+  Headset,
+  FileCodeCorner
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -21,6 +23,7 @@ import {
   fetchDashboardServices,
   type DashboardService,
 } from "@/services/dashboardSelect"
+import { checkCanAccess, useRole } from "@/hooks/useRole"
 
 // Icon mapping for dashboards - Backend sends icon name, frontend renders Lucide icon
 const iconMap: Record<string, LucideIcon> = {
@@ -32,6 +35,8 @@ const iconMap: Record<string, LucideIcon> = {
   UserCog,
   HelpCircle,
   Activity,
+    Headset,
+  FileCodeCorner
 }
 
 // Color schemes for dashboard icons (cycled based on index)
@@ -56,6 +61,10 @@ const DashboardSelect = () => {
   const [externalServices, setExternalServices] = useState<DashboardService[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const userRole = useRole();
+
+
 
   useEffect(() => {
     const loadServices = async () => {
@@ -152,6 +161,8 @@ const DashboardSelect = () => {
                 </div>
               </div>
             )}
+
+
           </div>
         </div>
       </header>
@@ -171,7 +182,7 @@ const DashboardSelect = () => {
             </div>
           ) : (
             /* Dashboards Section */
-            <div className="grid grid-cols-2 gap-x-8 gap-y-16 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-16 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6">
               {filteredInHouseServices.map((service, index) => {
                 const Icon = getIcon(service.iconUrl)
                 const colors = getColorScheme(index)
@@ -179,7 +190,7 @@ const DashboardSelect = () => {
                   <button
                     key={service.name}
                     onClick={() => handleDashboardClick(service)}
-                    className="group flex flex-col items-center gap-3 text-center"
+                    className="group flex flex-col items-center gap-3 text-center cursor-pointer"
                   >
                     <div
                       className={`flex h-20 w-20 items-center justify-center rounded-2xl ${colors.bgColor} transition-transform duration-200 group-hover:scale-105`}

@@ -70,11 +70,25 @@ const staticNavItems: DrawerItem[] = [
     icon: "Settings",
     accessibleToRoles: ["ADMIN"],
   },
+    {
+    title: "Dashboard UI Configs",
+    type: "getData",
+    getDataUrl: "/dashboard-ui-configs",
+    icon: "Settings2",
+    accessibleToRoles: ["ADMIN"],
+  },
   {
     title: "Chapters",
     type: "getData",
     getDataUrl: "/chapters",
     icon: "BookOpen",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "RBAC",
+    type: "getData",
+    getDataUrl: "/rbac",
+    icon: "Shield",
     accessibleToRoles: ["ADMIN"],
   },
 ];
@@ -176,9 +190,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
    */
   const getCombinedSectionItems = React.useCallback(
     (section: string): DrawerItem[] => {
-      const staticItems = getStaticItems(section);
+      // const staticItems = getStaticItems(section);
       const dynamicItems = getDynamicSectionItems(section);
-      return [...staticItems, ...dynamicItems];
+      // ...staticItems,
+      return [ ...dynamicItems];
     },
     [getStaticItems, getDynamicSectionItems]
   );
