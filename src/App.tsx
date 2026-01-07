@@ -18,6 +18,7 @@ import RBAC from "@/pages/rbac";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
+import ServiceStatusPage from "@/pages/service-status";
 
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
@@ -49,6 +50,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           {/* Dashboard Selection Screen */}
           <Route path="/select-dashboard" element={<DashboardSelect />} />
+
+          <Route path="/service-status" element={<ServiceStatusPage />} />
           {/* Internal Metrics Dashboard */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -64,6 +67,8 @@ function App() {
 
             <Route path="/dashboard/chapters" element={<Chapters />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
+
+
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>
