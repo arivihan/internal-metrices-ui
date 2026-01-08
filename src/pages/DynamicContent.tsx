@@ -44,11 +44,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Plus,
-  X,
 } from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
 import { TabsViewer } from "@/components/TabsViewer";
+import { MappingSelector } from "@/components/MappingSelector";
+import { DropdownTableView } from "@/components/DropdownTableView";
+import { DualSectionView } from "@/components/DualSectionView";
 import { useSignals } from "@preact/signals-react/runtime";
 import {
   currentContentItem,
@@ -66,9 +67,9 @@ import {
   openPopup,
   closePopup,
 } from "@/signals/dynamicContent";
-import { postData, putData } from "@/services/apiClient";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ViewDetailsPopup } from "@/components/ViewDetailsPopup";
+import { DualSectionPopup } from "@/components/DualSectionPopup";
 
 // ============================================
 // 1. CellRenderer Component
@@ -81,7 +82,7 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
     const idValue = String(value);
     return (
       <div
-        className={`max-w-[150px] break-all font-mono font-semibold text-primary ${
+        className={`max-w-37.5 break-all font-mono font-semibold text-primary ${
           idValue.length > 5 ? "text-xs leading-tight" : "text-sm"
         }`}
       >
@@ -207,6 +208,19 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
 // 2. FormPopup Component
 // ============================================
 // @ts-ignore
+interface FormPopupProps {
+  open: boolean;
+  onClose: () => void;
+  button: any;
+  formData: any;
+  onFormDataChange: (data: any) => void;
+  onSubmit: (data: any) => void;
+  isSubmitting: boolean;
+  onSelectedOptionsChange: (options: any) => void;
+  displayOrderValues?: Record<string, any>;
+  onDisplayOrderValuesChange: (values: any) => void;
+}
+
 const FormPopup = ({
   open,
   onClose,
@@ -215,7 +229,10 @@ const FormPopup = ({
   onFormDataChange,
   onSubmit,
   isSubmitting,
-}) => {
+  onSelectedOptionsChange,
+  displayOrderValues = {},
+  onDisplayOrderValuesChange,
+}: FormPopupProps) => {
   const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
     {}
   );
@@ -224,8 +241,9 @@ const FormPopup = ({
   );
   const [languageOptions, setLanguageOptions] = useState<any[]>([]);
   const [loadingLanguages, setLoadingLanguages] = useState(false);
-  const [expandedTranslations, setExpandedTranslations] = useState<
-    Record<string, boolean>
+  // Use passed selectedOptions or fallback to local state
+  const [localSelectedOptions, setLocalSelectedOptions] = useState<
+    Record<string, any[]>
   >({});
 
   // Fetch dropdown options when field has fetchOptionsUrl
@@ -238,7 +256,7 @@ const FormPopup = ({
         setLoadingLanguages(true);
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response = await dynamicRequest(field.languagesUrl, "GET");
+          const response: any = await dynamicRequest(field.languagesUrl, "GET");
 
           let languages = [];
           if (response?.data && Array.isArray(response.data)) {
@@ -269,21 +287,39 @@ const FormPopup = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
+          // Handle different response formats
+          if (response?.content && Array.isArray(response.content)) {
+            // Pagination format: {content: [...]}
+            options = response.content;
+          } else if (response?.data && Array.isArray(response.data)) {
+            // Data wrapper format: {data: [...]}
             options = response.data;
           } else if (Array.isArray(response)) {
+            // Direct array format
             options = response;
           }
 
           // Transform options to have both label and value
-          const transformedOptions = options.map((opt: any) => ({
-            value: opt[field.optionValueKey] || opt.id,
-            label: opt[field.optionLabelKey] || opt.name || String(opt),
-            original: opt,
-          }));
+          const transformedOptions = options.map((opt: any) => {
+            let label =
+              opt[field.optionLabelKey] ||
+              opt.displayName ||
+              opt.name ||
+              String(opt);
+            // If optionLabelKey2 exists, concatenate both labels
+            if (field.optionLabelKey2) {
+              const label2 = opt[field.optionLabelKey2] || "";
+              label = label2 ? `${label} + ${label2}` : label;
+            }
+            return {
+              value: opt[field.optionValueKey] || opt.id,
+              label: label,
+              original: opt,
+            };
+          });
 
           setDropdownOptions((prev) => ({
             ...prev,
@@ -318,7 +354,7 @@ const FormPopup = ({
             }
           `}</style>
           <div className="grid gap-4">
-            {button?.popupFields?.map((field, index) => (
+            {button?.popupFields?.map((field: any, index: number) => (
               <div key={index} className="grid gap-2">
                 <Label htmlFor={field.value}>{field.label}</Label>
 
@@ -348,7 +384,7 @@ const FormPopup = ({
                         )
                       ) : field.selectOptions &&
                         field.selectOptions.length > 0 ? (
-                        field.selectOptions.map((option, idx) => (
+                        field.selectOptions.map((option: any, idx: number) => (
                           <SelectItem key={idx} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -361,51 +397,206 @@ const FormPopup = ({
                     </SelectContent>
                   </Select>
                 ) : field.type === "multi-select" ? (
-                  <div className="border rounded-md p-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-3 border rounded-md p-3">
+                    {/* Selected items with display order input */}
+                    {(localSelectedOptions[field.value] || []).length > 0 && (
+                      <div className="border-b pb-3">
+                        <div className="text-xs font-semibold text-muted-foreground mb-2">
+                          Selected Items (Set Display Order):
+                        </div>
+                        <div className="space-y-2">
+                          {(localSelectedOptions[field.value] || []).map(
+                            (item: any, idx: number) => {
+                              const itemId = item[field.optionValueKey || "id"];
+                              const displayOrder =
+                                (displayOrderValues[field.value] as Record<string, number>)?.[itemId] ??
+                                idx + 1;
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-2 bg-accent/50 p-2 rounded"
+                                >
+                                  <span className="flex-1 text-sm">
+                                    {item[field.optionLabelKey] ||
+                                      item.displayName ||
+                                      item.name}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    placeholder="Order"
+                                    value={displayOrder}
+                                    onChange={(e) => {
+                                      const newDisplayOrderValues = {
+                                        ...displayOrderValues,
+                                        [field.value]: {
+                                          ...(displayOrderValues[field.value] ||
+                                            {}),
+                                          [itemId]:
+                                            parseInt(e.target.value) || 0,
+                                        },
+                                      };
+                                      onDisplayOrderValuesChange(
+                                        newDisplayOrderValues
+                                      );
+                                    }}
+                                    className="w-20 h-8 px-2 py-1 border border-input rounded text-sm"
+                                    min="0"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const updated = (
+                                        localSelectedOptions[field.value] || []
+                                      ).filter((_, i: number) => i !== idx);
+                                      const updatedValues = Array.isArray(
+                                        formData[field.value]
+                                      )
+                                        ? formData[field.value].filter(
+                                            (v: any) => v !== itemId
+                                          )
+                                        : [];
+
+                                      onFormDataChange({
+                                        ...formData,
+                                        [field.value]: updatedValues,
+                                      });
+                                      const newSelectedOptions = {
+                                        ...localSelectedOptions,
+                                        [field.value]: updated,
+                                      };
+                                      setLocalSelectedOptions(
+                                        newSelectedOptions
+                                      );
+                                      onSelectedOptionsChange(
+                                        newSelectedOptions
+                                      );
+
+                                      // Clean up display order value
+                                      const newDisplayOrderValues = {
+                                        ...displayOrderValues,
+                                      };
+                                      if ((newDisplayOrderValues[field.value] as Record<string, number>)) {
+                                        delete (newDisplayOrderValues[field.value] as Record<string, number>)[itemId];
+                                      }
+                                      onDisplayOrderValuesChange(
+                                        newDisplayOrderValues
+                                      );
+                                    }}
+                                    className="px-2 py-1 text-destructive hover:bg-destructive/10 rounded text-sm"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Checkbox list for selection */}
                     {loadingOptions[field.value] ? (
                       <div className="text-center text-sm text-muted-foreground py-4">
                         Loading...
                       </div>
                     ) : (dropdownOptions[field.value] || []).length > 0 ? (
-                      (dropdownOptions[field.value] || []).map(
-                        (option, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 py-1"
-                          >
-                            <input
-                              type="checkbox"
-                              id={`${field.value}-${idx}`}
-                              checked={
-                                Array.isArray(formData[field.value])
-                                  ? formData[field.value].includes(option.value)
-                                  : false
-                              }
-                              onChange={(e) => {
-                                const current = Array.isArray(
-                                  formData[field.value]
-                                )
-                                  ? formData[field.value]
-                                  : [];
-                                const updated = e.target.checked
-                                  ? [...current, option.value]
-                                  : current.filter((v) => v !== option.value);
-                                onFormDataChange({
-                                  ...formData,
-                                  [field.value]: updated,
-                                });
-                              }}
-                              className="rounded"
-                            />
-                            <label
-                              htmlFor={`${field.value}-${idx}`}
-                              className="flex-1 cursor-pointer text-sm"
-                            >
-                              {option.label}
-                            </label>
-                          </div>
-                        )
-                      )
+                      <div>
+                        <div className="text-xs font-semibold text-muted-foreground mb-2">
+                          Available Options:
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {(dropdownOptions[field.value] || []).map(
+                            (option, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-2 py-1"
+                              >
+                                <input
+                                  type="checkbox"
+                                  id={`${field.value}-${idx}`}
+                                  checked={
+                                    Array.isArray(formData[field.value])
+                                      ? formData[field.value].includes(
+                                          option.value
+                                        )
+                                      : false
+                                  }
+                                  onChange={(e) => {
+                                    const current = Array.isArray(
+                                      formData[field.value]
+                                    )
+                                      ? formData[field.value]
+                                      : [];
+                                    const currentSelected =
+                                      localSelectedOptions[field.value] || [];
+
+                                    let updated, updatedSelected;
+                                    if (e.target.checked) {
+                                      updated = [...current, option.value];
+                                      updatedSelected = [
+                                        ...currentSelected,
+                                        option.original,
+                                      ];
+
+                                      // Auto-set display order
+                                      const newDisplayOrderValues = {
+                                        ...displayOrderValues,
+                                        [field.value]: {
+                                          ...(displayOrderValues[field.value] ||
+                                            {}),
+                                          [option.value]:
+                                            updatedSelected.length,
+                                        },
+                                      };
+                                      onDisplayOrderValuesChange(
+                                        newDisplayOrderValues
+                                      );
+                                    } else {
+                                      updated = current.filter(
+                                        (v: any) => v !== option.value
+                                      );
+                                      updatedSelected = currentSelected.filter(
+                                        (opt: any) =>
+                                          opt[field.optionValueKey || "id"] !==
+                                          option.value
+                                      );
+
+                                      // Remove display order value
+                                      const newDisplayOrderValues = {
+                                        ...displayOrderValues,
+                                      };
+                                      if ((newDisplayOrderValues[field.value] as Record<string, number>)) {
+                                        delete (newDisplayOrderValues[field.value] as Record<string, number>)[option.value];
+                                      }
+                                      onDisplayOrderValuesChange(
+                                        newDisplayOrderValues
+                                      );
+                                    }
+
+                                    // Store both values and original objects
+                                    onFormDataChange({
+                                      ...formData,
+                                      [field.value]: updated,
+                                    });
+                                    const newSelectedOptions = {
+                                      ...localSelectedOptions,
+                                      [field.value]: updatedSelected,
+                                    };
+                                    setLocalSelectedOptions(newSelectedOptions);
+                                    onSelectedOptionsChange(newSelectedOptions);
+                                  }}
+                                  className="rounded"
+                                />
+                                <label
+                                  htmlFor={`${field.value}-${idx}`}
+                                  className="flex-1 cursor-pointer text-sm"
+                                >
+                                  {option.label}
+                                </label>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center text-sm text-muted-foreground py-4">
                         No options available
@@ -511,7 +702,7 @@ const JsonViewPopup = ({ open, onClose, data }) => {
 
         <Card className="flex-1 overflow-auto">
           <CardContent>
-            <pre className="text-xs whitespace-pre-wrap break-words">
+            <pre className="text-xs whitespace-pre-wrap wrap-break-word">
               {JSON.stringify(data, null, 2)}
             </pre>
           </CardContent>
@@ -527,7 +718,17 @@ const JsonViewPopup = ({ open, onClose, data }) => {
 // ============================================
 // 3A. Advanced Search Dialog Component
 // ============================================
-// @ts-ignore
+interface AdvancedSearchDialogProps {
+  open: boolean;
+  onClose: () => void;
+  layout: any;
+  searchData: any;
+  onSearchDataChange: (data: any) => void;
+  onSearch: () => void;
+  onClear: () => void;
+  isSearching: boolean;
+}
+
 const AdvancedSearchDialog = ({
   open,
   onClose,
@@ -537,7 +738,7 @@ const AdvancedSearchDialog = ({
   onSearch,
   onClear,
   isSearching,
-}) => {
+}: AdvancedSearchDialogProps) => {
   const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
     {}
   );
@@ -554,7 +755,7 @@ const AdvancedSearchDialog = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
           if (response?.data && Array.isArray(response.data)) {
@@ -563,10 +764,18 @@ const AdvancedSearchDialog = ({
             options = response;
           }
 
-          const transformedOptions = options.map((opt: any) => ({
-            value: opt[field.optionValueKey] || opt.id,
-            label: opt[field.optionLabelKey] || opt.name || String(opt),
-          }));
+          const transformedOptions = options.map((opt: any) => {
+            let label = opt[field.optionLabelKey] || opt.name || String(opt);
+            // If optionLabelKey2 exists, concatenate both labels
+            if (field.optionLabelKey2) {
+              const label2 = opt[field.optionLabelKey2] || "";
+              label = label2 ? `${label} + ${label2}` : label;
+            }
+            return {
+              value: opt[field.optionValueKey] || opt.id,
+              label: label,
+            };
+          });
 
           setDropdownOptions((prev) => ({
             ...prev,
@@ -596,7 +805,7 @@ const AdvancedSearchDialog = ({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {layout?.search?.fields?.map((field, index) => (
+          {layout?.search?.fields?.map((field: any, index: number) => (
             <div key={index} className="grid gap-2">
               <Label htmlFor={field.value}>
                 {field.label || field.placeholder}
@@ -627,8 +836,8 @@ const AdvancedSearchDialog = ({
                       )
                     ) : field.selectOptions?.length > 0 ? (
                       field.selectOptions
-                        .filter((option) => option.value !== "")
-                        .map((option, idx) => (
+                        .filter((option: any) => option.value !== "")
+                        .map((option: any, idx: number) => (
                           <SelectItem key={idx} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -686,7 +895,16 @@ const AdvancedSearchDialog = ({
 // ============================================
 // 3. SearchBar Component
 // ============================================
-// @ts-ignore
+interface SearchBarProps {
+  layout: any;
+  searchData: any;
+  onSearchDataChange: (data: any) => void;
+  onSearch: () => void;
+  onClear: () => void;
+  isSearching: boolean;
+  onAdvancedSearchOpen: () => void;
+}
+
 const SearchBar = ({
   layout,
   searchData,
@@ -695,7 +913,7 @@ const SearchBar = ({
   onClear,
   isSearching,
   onAdvancedSearchOpen,
-}) => {
+}: SearchBarProps) => {
   const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>(
     {}
   );
@@ -714,7 +932,7 @@ const SearchBar = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
           if (response?.data && Array.isArray(response.data)) {
@@ -723,10 +941,18 @@ const SearchBar = ({
             options = response;
           }
 
-          const transformedOptions = options.map((opt: any) => ({
-            value: opt[field.optionValueKey] || opt.id,
-            label: opt[field.optionLabelKey] || opt.name || String(opt),
-          }));
+          const transformedOptions = options.map((opt: any) => {
+            let label = opt[field.optionLabelKey] || opt.name || String(opt);
+            // If optionLabelKey2 exists, concatenate both labels
+            if (field.optionLabelKey2) {
+              const label2 = opt[field.optionLabelKey2] || "";
+              label = label2 ? `${label} + ${label2}` : label;
+            }
+            return {
+              value: opt[field.optionValueKey] || opt.id,
+              label: label,
+            };
+          });
 
           setDropdownOptions((prev) => ({
             ...prev,
@@ -754,7 +980,7 @@ const SearchBar = ({
   return (
     <CardContent>
       <div className="flex gap-2">
-        {visibleFields.map((field, index) => (
+        {visibleFields.map((field: any, index: number) => (
           <div key={index} className="flex-1">
             {field.type === "select" ? (
               <Select
@@ -773,15 +999,15 @@ const SearchBar = ({
                       Loading...
                     </div>
                   ) : (dropdownOptions[field.value] || []).length > 0 ? (
-                    (dropdownOptions[field.value] || []).map((option, idx) => (
+                    (dropdownOptions[field.value] || []).map((option: any, idx: number) => (
                       <SelectItem key={idx} value={String(option.value)}>
                         {option.label}
                       </SelectItem>
                     ))
                   ) : field.selectOptions?.length > 0 ? (
                     field.selectOptions
-                      .filter((option) => option.value !== "")
-                      .map((option, idx) => (
+                      .filter((option: any) => option.value !== "")
+                      .map((option: any, idx: number) => (
                         <SelectItem key={idx} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -836,13 +1062,17 @@ const SearchBar = ({
 // ============================================
 // 4. ActionButtons Component
 // ============================================
-// @ts-ignore
-const ActionButtons = ({ buttons, onButtonClick }) => {
+interface ActionButtonsProps {
+  buttons: any[];
+  onButtonClick: (button: any) => void;
+}
+
+const ActionButtons = ({ buttons, onButtonClick }: ActionButtonsProps) => {
   if (!buttons || buttons.length === 0) return null;
 
   return (
     <div className="flex gap-2 px-6">
-      {buttons.map((button, index) => (
+      {buttons.map((button: any, index: number) => (
         <Button
           key={index}
           variant={button.type === "icon" ? "outline" : "default"}
@@ -865,7 +1095,15 @@ const ActionButtons = ({ buttons, onButtonClick }) => {
 // ============================================
 // 5. Pagination Component
 // ============================================
-// @ts-ignore
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalItems: number;
+  isSearchResults: boolean;
+  onPageChange: (page: number) => void;
+}
+
 const Pagination = ({
   currentPage,
   totalPages,
@@ -873,7 +1111,7 @@ const Pagination = ({
   totalItems,
   isSearchResults,
   onPageChange,
-}) => {
+}: PaginationProps) => {
   if (totalItems === 0) return null;
 
   const endItem = Math.min((currentPage + 1) * pageSize, totalItems);
@@ -956,6 +1194,12 @@ export default function DynamicContent() {
   }
 
   const [formData, setFormData] = useState({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, any[]>>(
+    {}
+  );
+  const [displayOrderValues, setDisplayOrderValues] = useState<
+    Record<string, Record<string, number>>
+  >({});
   const [searchData, setSearchData] = useState({});
   const [currentPage, setCurrentPage] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
@@ -974,6 +1218,22 @@ export default function DynamicContent() {
   const [tabsData, setTabsData] = useState<Record<string, any[]>>({});
   const [loadingTabs, setLoadingTabs] = useState<Record<string, boolean>>({});
   const [tabErrors, setTabErrors] = useState<Record<string, string>>({});
+  const [tabPagination, setTabPagination] = useState<
+    Record<
+      string,
+      {
+        currentPage: number;
+        totalPages: number;
+        pageSize: number;
+        totalItems: number;
+      }
+    >
+  >({});
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{
+    action: any;
+    rowData: any;
+  } | null>(null);
 
   useEffect(() => {
     // Initialize search data with defaults. If layout defines a status field (commonly 'active' or 'isActive'), default it to 'true'.
@@ -1013,14 +1273,16 @@ export default function DynamicContent() {
       type: layoutData.value?.type,
       hasTabsArray: !!layoutData.value?.tabs,
       tabsLength: layoutData.value?.tabs?.length,
-      fullData: layoutData.value
+      fullData: layoutData.value,
     });
-    
+
     if (
       layoutData.value?.type === "TABS" &&
       layoutData.value?.tabs?.length > 0
     ) {
-      console.log(`[TabsInitEffect] ✅ TABS layout detected, initializing first tab`);
+      console.log(
+        `[TabsInitEffect] ✅ TABS layout detected, initializing first tab`
+      );
       const firstTab = layoutData.value.tabs[0];
       setActiveTab(firstTab.tabId);
       setTabsData({});
@@ -1029,7 +1291,9 @@ export default function DynamicContent() {
       // Fetch first tab data
       handleTabChange(firstTab.tabId, firstTab.getDataUrl);
     } else {
-      console.log(`[TabsInitEffect] ❌ Layout is not TABS type or no tabs array`);
+      console.log(
+        `[TabsInitEffect] ❌ Layout is not TABS type or no tabs array`
+      );
     }
   }, [layoutData.value]);
 
@@ -1173,28 +1437,43 @@ export default function DynamicContent() {
     try {
       const { dynamicRequest } = await import("@/services/apiClient");
       const response = await dynamicRequest(getDataUrl, "GET", undefined, {
-        params: { level: "SYSTEM", pageNo: "0", pageSize: "100" },
+        params: { level: "SYSTEM", pageNo: String(page), pageSize: "10" },
       });
 
-      console.log(`📦 Tab ${tabId} Response:`, response);
+      console.log(`📦 Tab ${tabId} Response (page ${page}):`, response);
 
       // Handle wrapped response
-      let responseData = response;
-      if (response?.data && typeof response.data === "object") {
-        responseData = response.data;
+      let responseData: any = response;
+      if ((response as any)?.data && typeof (response as any).data === "object") {
+        responseData = (response as any).data;
       }
 
       let results = [];
+      let paginationInfo = {
+        currentPage: page,
+        totalPages: 1,
+        pageSize: 10,
+        totalItems: 0,
+      };
 
-      if (responseData?.content && Array.isArray(responseData.content)) {
-        results = responseData.content;
-      } else if (responseData?.data && Array.isArray(responseData.data)) {
-        results = responseData.data;
+      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+        results = (responseData as any).content;
+        paginationInfo = {
+          currentPage: (responseData as any).pageNumber ?? page,
+          totalPages: (responseData as any).totalPages ?? 1,
+          pageSize: (responseData as any).pageSize ?? 10,
+          totalItems: (responseData as any).totalElements ?? results.length,
+        };
+      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+        results = (responseData as any).data;
+        paginationInfo.totalItems = results.length;
       } else if (Array.isArray(responseData)) {
         results = responseData;
+        paginationInfo.totalItems = results.length;
       }
 
       setTabsData((prev) => ({ ...prev, [tabId]: results }));
+      setTabPagination((prev) => ({ ...prev, [tabId]: paginationInfo }));
     } catch (error) {
       console.error(`❌ Error fetching tab ${tabId}:`, error);
       const errorMessage =
@@ -1208,6 +1487,15 @@ export default function DynamicContent() {
     } finally {
       setLoadingTabs((prev) => ({ ...prev, [tabId]: false }));
     }
+  };
+
+  const handleTabPageChange = async (tabId: string, newPage: number) => {
+    const currentTab = layoutData.value?.tabs?.find(
+      (tab: any) => tab.tabId === tabId
+    );
+    if (!currentTab) return;
+
+    await handleTabChange(tabId, currentTab.getDataUrl, newPage);
   };
 
   const handleRowAction = (action: any, rowData: any) => {
@@ -1398,6 +1686,14 @@ export default function DynamicContent() {
       console.log("\n✅ Final form data:", initialData);
       setFormData(initialData);
     }
+
+    // Handle DELETE_CONFIRM action
+    if (action.type === "DELETE_CONFIRM") {
+      // Show confirmation dialog instead of window.confirm
+      setPendingDelete({ action, rowData });
+      setDeleteConfirmOpen(true);
+      return;
+    }
   };
 
   // ============================================
@@ -1408,6 +1704,7 @@ export default function DynamicContent() {
 
     console.log("🔍 Starting payload transformation...");
     console.log("📝 Form Data:", formData);
+    console.log("🎯 Selected Options:", selectedOptions);
 
     // Always include id if present
     if (formData.id !== undefined && formData.id !== null) {
@@ -1430,6 +1727,63 @@ export default function DynamicContent() {
 
       // Determine the API key - check for apiField property, otherwise use form key
       const apiKey = field.apiField || formFieldKey;
+
+      // Handle multi-select fields with object transformation
+      if (
+        field.type === "multi-select" &&
+        Array.isArray(value) &&
+        value.length > 0
+      ) {
+        // Get the selected original objects for this field
+        const selectedObjs = selectedOptions[field.value] || [];
+
+        if (selectedObjs.length > 0) {
+          // Transform selected objects to have gradeId and displayOrder (or other required fields)
+          const transformedObjects = selectedObjs.map((obj: any) => {
+            const idKey = field.optionValueKey || "id";
+
+            // Determine the output ID key name based on the field name
+            // E.g., "gradeDisplayOrderRequests" -> "gradeId"
+            //       "streams" -> "streamId"
+            let outputIdKey = idKey;
+
+            if (apiKey === "gradeDisplayOrderRequests") {
+              outputIdKey = "gradeId";
+            } else if (apiKey === "streams") {
+              outputIdKey = "streamId";
+            } else if (apiKey.endsWith("Ids")) {
+              // Generic fallback: remove "Ids" and add "Id"
+              outputIdKey = apiKey.replace("Ids", "Id");
+            } else if (apiKey.endsWith("s")) {
+              // Remove plural 's' and add 'Id'
+              outputIdKey = apiKey.slice(0, -1) + "Id";
+            }
+
+            const transformed: any = {
+              [outputIdKey]: obj[idKey],
+            };
+
+            // Include displayOrder from the displayOrderValues state
+            const displayOrder = displayOrderValues[field.value]?.[obj[idKey]];
+            if (displayOrder !== undefined && displayOrder !== null) {
+              transformed.displayOrder = displayOrder;
+            } else if (obj.displayOrder !== undefined) {
+              // Fallback to original object's displayOrder if available
+              transformed.displayOrder = obj.displayOrder;
+            }
+
+            return transformed;
+          });
+
+          payload[apiKey] = transformedObjects;
+          console.log(
+            `   ✅ Set ${apiKey} = ${JSON.stringify(
+              transformedObjects
+            )} (multi-select with objects + displayOrder)`
+          );
+          return;
+        }
+      }
 
       // Handle boolean/status fields (active/inactive -> active: true/false)
       if (field.type === "select") {
@@ -1468,6 +1822,11 @@ export default function DynamicContent() {
           console.log(`   ✅ Set couponDiscountType & discountType = ${value}`);
           return;
         }
+
+        // For regular select fields (including those with fetchOptionsUrl), just pass the value as-is
+        payload[apiKey] = value;
+        console.log(`   ✅ Set ${apiKey} = ${value} (select field)`);
+        return;
       }
 
       // Handle dynamic-translations fields (key-value pairs)
@@ -1569,8 +1928,21 @@ export default function DynamicContent() {
     return payload;
   };
 
-  const handlePopupSubmit = async () => {
+  const handlePopupSubmit = async (payloadOrEvent?: any) => {
     if (!currentPopupButton.value) return;
+
+    // Check if the first parameter is an event object and ignore it
+    let dualSectionPayload: any = undefined;
+    if (payloadOrEvent && typeof payloadOrEvent === 'object') {
+      // If it's a React event, ignore it
+      if (payloadOrEvent.nativeEvent || payloadOrEvent.type === 'click' || payloadOrEvent._targetInst !== undefined) {
+        console.log("[handlePopupSubmit] Ignoring click event object");
+        dualSectionPayload = undefined;
+      } else {
+        // It's actual payload data from dual-section popup
+        dualSectionPayload = payloadOrEvent;
+      }
+    }
 
     let submitUrl =
       currentPopupButton.value.popupSubmitUrl ||
@@ -1585,11 +1957,40 @@ export default function DynamicContent() {
       return;
     }
 
-    // 🔥 NEW: Replace URL variables like {id} with actual values from formData
-    submitUrl = submitUrl.replace(/\{(\w+)\}/g, (match, variable) => {
-      const value = formData[variable];
+    // 🔥 NEW: Replace URL variables like {id} with actual values from formData or rowData
+    submitUrl = submitUrl.replace(/\{(\w+)\}/g, (match, variable: string) => {
+      let value = (formData as Record<string, any>)[variable];
+
+      // If exact variable not found in formData, try rowData (for edit operations)
+      if (
+        (value === undefined || value === null) &&
+        (currentPopupButton.value as any)?.rowData
+      ) {
+        value = (currentPopupButton.value as any).rowData[variable];
+      }
+
+      // If still not found, try alternative mappings
       if (value === undefined || value === null) {
-        console.warn(`⚠️ Variable ${variable} not found in formData`);
+        // Try removing "Id" suffix and see if that exists (e.g., examGradeMappingId -> examGradeMapping)
+        if (variable.endsWith("Id")) {
+          const altKey = variable.slice(0, -2); // Remove "Id"
+          value =
+            (formData as Record<string, any>)[altKey] || (currentPopupButton.value as any)?.rowData?.[altKey];
+        }
+
+        // Try looking for just "id" if it's a MappingId pattern
+        if (
+          (value === undefined || value === null) &&
+          variable.endsWith("MappingId")
+        ) {
+          value = (formData as Record<string, any>)["id"] || (currentPopupButton.value as any)?.rowData?.["id"];
+        }
+      }
+
+      if (value === undefined || value === null) {
+        console.warn(
+          `⚠️ Variable ${variable} not found in formData or rowData, keeping placeholder`
+        );
         return match; // Keep the placeholder if value not found
       }
       console.log(`✅ Replacing {${variable}} with "${value}"`);
@@ -1633,10 +2034,10 @@ export default function DynamicContent() {
       console.log("=".repeat(60));
 
       if (
-        currentPopupButton.value?.headers &&
-        Array.isArray(currentPopupButton.value.headers)
+        (currentPopupButton.value as any)?.headers &&
+        Array.isArray((currentPopupButton.value as any).headers)
       ) {
-        currentPopupButton.value.headers.forEach((headerConfig: any) => {
+        (currentPopupButton.value as any).headers.forEach((headerConfig: any) => {
           const headerName = headerConfig.name;
           let headerValue: any;
 
@@ -1646,10 +2047,10 @@ export default function DynamicContent() {
           } else if (headerConfig.field) {
             // Dynamic value from form data or payload
             headerValue =
-              formData[headerConfig.field] || payload[headerConfig.field];
+              (formData as Record<string, any>)[headerConfig.field] || (payload as Record<string, any>)[headerConfig.field];
           } else if (headerConfig.payloadField) {
             // Value from transformed payload
-            headerValue = payload[headerConfig.payloadField];
+            headerValue = (payload as Record<string, any>)[headerConfig.payloadField];
           }
 
           if (headerValue !== undefined && headerValue !== null) {
@@ -1661,11 +2062,42 @@ export default function DynamicContent() {
 
       console.log("=".repeat(60) + "\n");
 
+      // Clean payload - for mapping updates, payload should already be clean
+      // For other operations, remove React internals and non-serializable objects
+      const cleanPayload = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+        if (typeof obj !== 'object') return obj;
+        if (obj instanceof Date) return obj.toISOString();
+        if (obj instanceof Array) return obj.map(cleanPayload);
+        if (typeof obj.toJSON === 'function') return obj.toJSON();
+        
+        const cleaned: any = {};
+        for (const key in obj) {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            // Skip React internals, functions, and DOM elements
+            if (typeof value === 'function' || 
+                key.startsWith('_react') || 
+                key.startsWith('__react') ||
+                value instanceof HTMLElement ||
+                value instanceof EventTarget ||
+                value instanceof Event) {
+              continue;
+            }
+            cleaned[key] = cleanPayload(value);
+          }
+        }
+        return cleaned;
+      };
+
+      const cleanedPayload = cleanPayload(payload);
+      console.log("✅ Final Payload to Send:", safeStringify(cleanedPayload));
+
       // Import the dynamic request helper
       const { dynamicRequest } = await import("@/services/apiClient");
 
-      // Use dynamic method from JSON config with custom headers
-      const response = await dynamicRequest(submitUrl, method, payload, {
+      // Use dynamic method from JSON config with custom headers - pass CLEANED payload
+      const response = await dynamicRequest(submitUrl, method, cleanedPayload, {
         headers: customHeaders,
       });
 
@@ -1673,10 +2105,10 @@ export default function DynamicContent() {
 
       // Check for success - handles both normal responses and 204 No Content
       const isSuccess =
-        response?.success ||
-        response?.status === 204 ||
-        response?.code === 200 ||
-        response?.data !== undefined;
+        (response as any)?.success ||
+        (response as any)?.status === 204 ||
+        (response as any)?.code === 200 ||
+        (response as any)?.data !== undefined;
 
       if (!isSuccess) {
         throw new Error("Unexpected response format from server");
@@ -1720,9 +2152,29 @@ export default function DynamicContent() {
         }
       }
 
+      // If we're in TabsViewer, also refresh the active tab data
+      if (activeTab && layoutData.value?.tabs) {
+        const activeTabConfig = layoutData.value.tabs.find(
+          (t: any) => t.tabId === activeTab
+        );
+        if (activeTabConfig?.getDataUrl) {
+          console.log(`🔄 Refreshing tab data for ${activeTab} after submission`);
+          try {
+            // Use the current page from pagination state, or default to 0
+            const currentPage = tabPagination[activeTab]?.currentPage ?? 0;
+            await handleTabChange(activeTab, activeTabConfig.getDataUrl, currentPage);
+            console.log(`✅ Tab data refreshed for ${activeTab}`);
+          } catch (tabRefreshError) {
+            console.error(`⚠️  Could not refresh tab data:`, tabRefreshError);
+          }
+        }
+      }
+
       closePopup();
       setPopupDesiredStatus(null);
       setFormData({});
+      setSelectedOptions({});
+      setDisplayOrderValues({});
       setSearchResults(null); // Clear search results if any
     } catch (error) {
       console.error("❌ Submit error:", error);
@@ -1760,8 +2212,8 @@ export default function DynamicContent() {
 
     // If in search mode, include all search fields
     if (isSearchMode && layout.search?.fields) {
-      layout.search.fields.forEach((field) => {
-        const value = searchData[field.value];
+      layout.search.fields.forEach((field: any) => {
+        const value = (searchData as Record<string, any>)[field.value];
         params[field.value] = value || "";
       });
     }
@@ -1779,24 +2231,24 @@ export default function DynamicContent() {
       console.log("📦 Pagination response:", response);
 
       // Handle wrapped response
-      let responseData = response;
-      if (response?.data && typeof response.data === "object") {
-        responseData = response.data;
+      let responseData: any = response;
+      if ((response as any)?.data && typeof (response as any).data === "object") {
+        responseData = (response as any).data;
       }
 
       let results = [];
       let paginationInfo: any = {};
 
-      if (responseData?.content && Array.isArray(responseData.content)) {
-        results = responseData.content;
+      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+        results = (responseData as any).content;
         paginationInfo = {
-          currentPage: responseData.number ?? 0,
-          pageSize: responseData.size ?? 10,
-          totalPages: responseData.totalPages ?? 1,
-          totalElements: responseData.totalElements ?? 0,
+          currentPage: (responseData as any).number ?? 0,
+          pageSize: (responseData as any).size ?? 10,
+          totalPages: (responseData as any).totalPages ?? 1,
+          totalElements: (responseData as any).totalElements ?? 0,
         };
-      } else if (responseData?.data && Array.isArray(responseData.data)) {
-        results = responseData.data;
+      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+        results = (responseData as any).data;
       } else if (Array.isArray(responseData)) {
         results = responseData;
       }
@@ -1839,8 +2291,8 @@ export default function DynamicContent() {
 
     // Add ALL search fields (including empty ones)
     if (layout.search.fields) {
-      layout.search.fields.forEach((field) => {
-        const value = searchData[field.value];
+      layout.search.fields.forEach((field: any) => {
+        const value = (searchData as Record<string, any>)[field.value];
         searchParams[field.value] = value || "";
       });
     }
@@ -1871,20 +2323,20 @@ export default function DynamicContent() {
       let results = [];
       let paginationInfo: any = {};
 
-      if (response?.content && Array.isArray(response.content)) {
-        results = response.content;
+      if ((response as any)?.content && Array.isArray((response as any).content)) {
+        results = (response as any).content;
         paginationInfo = {
-          currentPage: response.number ?? 0,
-          pageSize: response.size ?? 10,
-          totalPages: response.totalPages ?? 1,
-          totalElements: response.totalElements ?? 0,
+          currentPage: (response as any).number ?? 0,
+          pageSize: (response as any).size ?? 10,
+          totalPages: (response as any).totalPages ?? 1,
+          totalElements: (response as any).totalElements ?? 0,
         };
-      } else if (response?.data && Array.isArray(response.data)) {
-        results = response.data;
+      } else if ((response as any)?.data && Array.isArray((response as any).data)) {
+        results = (response as any).data;
       } else if (Array.isArray(response)) {
         results = response;
-      } else if (response.results && Array.isArray(response.results)) {
-        results = response.results;
+      } else if ((response as any)?.results && Array.isArray((response as any).results)) {
+        results = (response as any).results;
       }
 
       setSearchResults(results);
@@ -1918,6 +2370,164 @@ export default function DynamicContent() {
     setSearchData({});
     setSearchResults(null);
     setCurrentPage(0);
+  };
+
+  // Tab-specific search handler (supports both TABS view and DROPDOWN_VIEW)
+  const handleTabSearch = async (selectedViewOrTab?: string, searchValue?: string) => {
+    // Determine if this is for DROPDOWN_VIEW or TABS view
+    let activeTabConfig: any;
+    let tabId: string;
+
+    if (layoutData.value?.type === "DROPDOWN_VIEW") {
+      // For DROPDOWN_VIEW, use the selectedViewOrTab parameter (view key)
+      tabId = selectedViewOrTab || activeTab || "";
+      if (!tabId || !layoutData.value?.views) {
+        console.log("❌ No view selected or no views configured");
+        return;
+      }
+      activeTabConfig = layoutData.value.views[tabId];
+    } else {
+      // For TABS view, use activeTab
+      if (!activeTab || !layoutData.value?.tabs) {
+        console.log("❌ No active tab found");
+        return;
+      }
+      tabId = activeTab;
+      activeTabConfig = layoutData.value.tabs.find(
+        (t: any) => t.tabId === activeTab
+      );
+    }
+
+    if (!activeTabConfig?.search?.searchActionUrl) {
+      console.log(`❌ No search action URL configured for ${tabId}`);
+      return;
+    }
+
+    // Build search parameters - INCLUDE ALL FIELDS (even empty ones) + level
+    const searchParams: Record<string, string> = {
+      level: "SYSTEM",
+      pageNo: "0",
+      pageSize: "100",
+    };
+
+    // Add ALL search fields (including empty ones)
+    if (activeTabConfig.search.fields) {
+      activeTabConfig.search.fields.forEach((field: any) => {
+        const value = (searchData as Record<string, any>)[field.value];
+        searchParams[field.value] = value || "";
+      });
+    }
+
+    console.log(`🔍 Search Params for ${tabId}:`, searchParams);
+    console.log(`📍 Search Action URL: ${activeTabConfig.search.searchActionUrl}`);
+    setIsSearching(true);
+
+    try {
+      // Get the HTTP method from config (default to GET)
+      const searchMethod = activeTabConfig.search.method || "GET";
+      console.log(`🔧 Search Method: ${searchMethod}`);
+
+      // Import dynamic request helper
+      const { dynamicRequest } = await import("@/services/apiClient");
+
+      // Use dynamic method from JSON config
+      const response = await dynamicRequest(
+        activeTabConfig.search.searchActionUrl,
+        searchMethod,
+        undefined,
+        {
+          params: searchParams,
+        }
+      );
+
+      console.log(`📦 Search Response for ${tabId}:`, response);
+
+      let results = [];
+      let paginationInfo: any = {};
+
+      // Handle wrapped response with pagination
+      let responseData: any = response;
+      if ((response as any)?.data && typeof (response as any).data === "object") {
+        responseData = (response as any).data;
+      }
+
+      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+        results = (responseData as any).content;
+        paginationInfo = {
+          currentPage: (responseData as any).number ?? 0,
+          pageSize: (responseData as any).size ?? 10,
+          totalPages: (responseData as any).totalPages ?? 1,
+          totalElements: (responseData as any).totalElements ?? 0,
+        };
+      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+        results = (responseData as any).data;
+      } else if (Array.isArray(responseData)) {
+        results = responseData;
+      } else if ((responseData as any)?.results && Array.isArray((responseData as any).results)) {
+        results = (responseData as any).results;
+      }
+
+      // Update the specific tab's data with search results
+      setTabsData((prev) => ({ ...prev, [tabId]: results }));
+      setCurrentPage(0);
+
+      // Update pagination signal with new data
+      if (Object.keys(paginationInfo).length > 0) {
+        pagination.value = paginationInfo;
+      }
+
+      showAlert({
+        title: "Search Complete",
+        description: `Found ${results.length} result${
+          results.length !== 1 ? "s" : ""
+        }`,
+      });
+    } catch (error) {
+      console.error(`❌ Search error for ${tabId}:`, error);
+      showAlert({
+        title: "Search Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to search",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearTabSearch = async (selectedViewOrTab?: string) => {
+    console.log(`🧹 Clear button clicked for view: ${selectedViewOrTab}`);
+    setSearchData({});
+    let activeTabConfig: any;
+    let tabId: string;
+
+    if (layoutData.value?.type === "DROPDOWN_VIEW") {
+      tabId = selectedViewOrTab || activeTab || "";
+      if (tabId && layoutData.value?.views) {
+        activeTabConfig = layoutData.value.views[tabId];
+      }
+    } else {
+      tabId = activeTab || "";
+      if (layoutData.value?.tabs) {
+        activeTabConfig = layoutData.value.tabs.find(
+          (t: any) => t.tabId === tabId
+        );
+      }
+    }
+
+    if (activeTabConfig?.getDataUrl) {
+      // Use handleTabChange to refetch with pagination (page 0)
+      console.log(`🔄 Clearing search and refetching: ${tabId}`);
+      console.log(`📍 Fetching from URL: ${activeTabConfig.getDataUrl}`);
+      await handleTabChange(tabId, activeTabConfig.getDataUrl, 0);
+      
+      showAlert({
+        title: "Search Cleared",
+        description: "Showing all records",
+      });
+    } else {
+      console.warn(`⚠️ No getDataUrl found for ${tabId}`);
+    }
   };
 
   if (layoutLoading.value || tableDataLoading.value) {
@@ -1984,15 +2594,28 @@ export default function DynamicContent() {
         </div>
       )}
       <div className="flex flex-col h-full">
-        <FormPopup
-          open={popupOpen.value}
-          onClose={closePopup}
-          button={currentPopupButton.value}
-          formData={formData}
-          onFormDataChange={setFormData}
-          onSubmit={handlePopupSubmit}
-          isSubmitting={isSubmitting}
-        />
+        {(currentPopupButton.value as any)?.popupLayout === "dual-section" ? (
+          <DualSectionPopup
+            open={popupOpen.value}
+            onClose={closePopup}
+            button={currentPopupButton.value}
+            onSubmit={handlePopupSubmit}
+            isSubmitting={isSubmitting}
+          />
+        ) : (
+          <FormPopup
+            open={popupOpen.value}
+            onClose={closePopup}
+            button={currentPopupButton.value}
+            formData={formData}
+            onFormDataChange={setFormData}
+            onSubmit={handlePopupSubmit}
+            isSubmitting={isSubmitting}
+            onSelectedOptionsChange={setSelectedOptions}
+            displayOrderValues={displayOrderValues}
+            onDisplayOrderValuesChange={setDisplayOrderValues}
+          />
+        )}
 
         <JsonViewPopup
           open={jsonPopupOpen}
@@ -2025,9 +2648,57 @@ export default function DynamicContent() {
         />
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
-          {layoutData.value?.type === "TABS" && layoutData.value?.tabs ? (
+          {layoutData.value?.type === "DUAL_SECTION_VIEW" && layoutData.value?.leftSection && layoutData.value?.rightSection ? (
             <>
-              {console.log(`[Render] 🎯 Rendering TabsViewer with ${layoutData.value.tabs.length} tabs`)}
+              {console.log(
+                `[Render] 🎯 Rendering DualSectionView for ${layoutData.value.title}`
+              )}
+              <DualSectionView
+                title={layoutData.value.title}
+                description={layoutData.value.description}
+                icon={layoutData.value.icon}
+                leftSection={layoutData.value.leftSection}
+                rightSection={layoutData.value.rightSection}
+                actions={layoutData.value.actions}
+                submitUrl={layoutData.value.submitUrl}
+                submitText={layoutData.value.submitText}
+                method={layoutData.value.method}
+                onSuccess={() => {
+                  console.log("[DualSectionView] Mapping created successfully");
+                  // Optional: Refresh any related data if needed
+                }}
+              />
+            </>
+          ) : layoutData.value?.type === "DROPDOWN_VIEW" && layoutData.value?.dropdownSelector && layoutData.value?.views ? (
+            <>
+              {console.log(
+                `[Render] 🎯 Rendering DropdownTableView with dropdown views`
+              )}
+              <DropdownTableView
+                dropdownSelector={layoutData.value.dropdownSelector}
+                views={layoutData.value.views}
+                onTabChange={handleTabChange}
+                onRowAction={handleRowAction}
+                onButtonClick={handleButtonClick}
+                onViewJson={handleViewJson}
+                CellRenderer={CellRenderer}
+                tabPagination={tabPagination}
+                onPageChange={handleTabPageChange}
+                searchData={searchData}
+                onSearchDataChange={setSearchData}
+                onSearch={handleTabSearch}
+                onClear={clearTabSearch}
+                isSearching={isSearching}
+                tabsData={tabsData}
+                loadingTabs={loadingTabs}
+                tabErrors={tabErrors}
+              />
+            </>
+          ) : layoutData.value?.type === "TABS" && layoutData.value?.tabs ? (
+            <>
+              {console.log(
+                `[Render] 🎯 Rendering TabsViewer with ${layoutData.value.tabs.length} tabs`
+              )}
               <TabsViewer
                 tabs={layoutData.value.tabs}
                 activeTab={activeTab}
@@ -2040,11 +2711,22 @@ export default function DynamicContent() {
                 onButtonClick={handleButtonClick}
                 onViewJson={handleViewJson}
                 CellRenderer={CellRenderer}
+                searchData={searchData}
+                onSearchDataChange={setSearchData}
+                onSearch={handleTabSearch}
+                onClear={clearTabSearch}
+                isSearching={isSearching}
+                tabPagination={tabPagination}
+                onPageChange={handleTabPageChange}
               />
             </>
           ) : (
             <>
-              {console.log(`[Render] 📋 Rendering Standard View - type: ${layoutData.value?.type}, has tabs: ${!!layoutData.value?.tabs}`)}
+              {console.log(
+                `[Render] 📋 Rendering Standard View - type: ${
+                  layoutData.value?.type
+                }, has tabs: ${!!layoutData.value?.tabs}`
+              )}
               <SearchBar
                 layout={layout}
                 searchData={searchData}
@@ -2087,9 +2769,9 @@ export default function DynamicContent() {
                           <TableRow>
                             {layout.tableHeaders
                               .sort(
-                                (a, b) => (a.order || 999) - (b.order || 999)
+                                (a: any, b: any) => (a.order || 999) - (b.order || 999)
                               )
-                              .map((header, index) => (
+                              .map((header: any, index: number) => (
                                 <TableHead key={index}>
                                   {header.Header}
                                 </TableHead>
@@ -2112,9 +2794,9 @@ export default function DynamicContent() {
                               </TableCell>
                             </TableRow>
                           ) : tableDataLoading.value ? (
-                            [...Array(5)].map((_, i) => (
+                            [...Array(5)].map((_: any, i: number) => (
                               <TableRow key={i}>
-                                {layout.tableHeaders.map((_, j) => (
+                                {layout.tableHeaders.map((_: any, j: number) => (
                                   <TableCell key={j}>
                                     <Skeleton className="h-4 w-full" />
                                   </TableCell>
@@ -2135,10 +2817,10 @@ export default function DynamicContent() {
                               <TableRow key={rowIndex}>
                                 {layout.tableHeaders
                                   .sort(
-                                    (a, b) =>
+                                    (a: any, b: any) =>
                                       (a.order || 999) - (b.order || 999)
                                   )
-                                  .map((header, colIndex) => {
+                                  .map((header: any, colIndex: number) => {
                                     if (
                                       header.type === "actions" &&
                                       header.actions
@@ -2225,7 +2907,7 @@ export default function DynamicContent() {
 
               {!layout && !layoutLoading.value && !layoutError.value && (
                 <Card className="m-6">
-                  <CardContent className="flex min-h-[200px] items-center justify-center">
+                  <CardContent className="flex min-h-50 items-center justify-center">
                     <div className="text-center">
                       <p className="text-lg font-medium text-muted-foreground">
                         Content will be displayed here
@@ -2241,6 +2923,125 @@ export default function DynamicContent() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingDelete?.action?.confirmTitle || "Confirm Delete"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingDelete?.action?.confirmMessage ||
+                "Are you sure you want to delete this item?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setPendingDelete(null);
+              }}
+              disabled={isSubmitting}
+            >
+              {pendingDelete?.action?.cancelButtonText || "Cancel"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!pendingDelete) return;
+
+                const { action, rowData } = pendingDelete;
+
+                // Replace URL variables like {examGradeMappingId} with actual values from row data
+                let deleteUrl = action.actionUrl;
+                deleteUrl = deleteUrl.replace(
+                  /\{(\w+)\}/g,
+                  (match: string, variable: string) => {
+                    // Try exact match first
+                    let value = rowData[variable];
+
+                    // If not found, try alternative mappings
+                    if (value === undefined || value === null) {
+                      // Try removing "Id" suffix
+                      if (variable.endsWith("Id")) {
+                        const altKey = variable.slice(0, -2);
+                        value = rowData[altKey];
+                      }
+                      // Try looking for "id" if it's a MappingId pattern
+                      if (
+                        (value === undefined || value === null) &&
+                        variable.endsWith("MappingId")
+                      ) {
+                        value = rowData["id"];
+                      }
+                    }
+
+                    if (value === undefined || value === null) {
+                      console.warn(
+                        `⚠️ Variable ${variable} not found in rowData`
+                      );
+                      return match;
+                    }
+                    console.log(
+                      `✅ Replacing {${variable}} with "${value}" from rowData`
+                    );
+                    return String(value);
+                  }
+                );
+
+                console.log(`🗑️ Delete URL: ${deleteUrl}`);
+
+                // Make DELETE request
+                setIsSubmitting(true);
+                try {
+                  const { dynamicRequest } = await import(
+                    "@/services/apiClient"
+                  );
+                  const method = action.method || "DELETE";
+                  console.log(`🔧 Using HTTP Method: ${method}`);
+
+                  const response = await dynamicRequest(deleteUrl, method);
+                  console.log("✅ Delete Response:", response);
+
+                  showAlert({
+                    title: "Success",
+                    description: "Deleted successfully",
+                  });
+
+                  // Close the dialog
+                  setDeleteConfirmOpen(false);
+                  setPendingDelete(null);
+
+                  // Refresh the table data
+                  if (layoutData.value?.getDataUrl) {
+                    await fetchTableData(layoutData.value.getDataUrl);
+                    console.log("✅ Table data refreshed");
+                  }
+                } catch (error: any) {
+                  console.error("❌ Delete error:", error);
+                  showAlert({
+                    title: "Error",
+                    description:
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to delete",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Deleting..."
+                : pendingDelete?.action?.confirmButtonText || "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
