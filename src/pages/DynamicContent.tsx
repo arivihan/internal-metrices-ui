@@ -39,13 +39,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import {
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { MoreVertical, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
+import { apiClient } from "@/services/apiClient";
 import { TabsViewer } from "@/components/TabsViewer";
 import { MappingSelector } from "@/components/MappingSelector";
 import { DropdownTableView } from "@/components/DropdownTableView";
@@ -287,7 +283,10 @@ const FormPopup = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(
+            field.fetchOptionsUrl,
+            "GET"
+          );
 
           let options = [];
           // Handle different response formats
@@ -409,8 +408,12 @@ const FormPopup = ({
                             (item: any, idx: number) => {
                               const itemId = item[field.optionValueKey || "id"];
                               const displayOrder =
-                                (displayOrderValues[field.value] as Record<string, number>)?.[itemId] ??
-                                idx + 1;
+                                (
+                                  displayOrderValues[field.value] as Record<
+                                    string,
+                                    number
+                                  >
+                                )?.[itemId] ?? idx + 1;
                               return (
                                 <div
                                   key={idx}
@@ -474,8 +477,16 @@ const FormPopup = ({
                                       const newDisplayOrderValues = {
                                         ...displayOrderValues,
                                       };
-                                      if ((newDisplayOrderValues[field.value] as Record<string, number>)) {
-                                        delete (newDisplayOrderValues[field.value] as Record<string, number>)[itemId];
+                                      if (
+                                        newDisplayOrderValues[
+                                          field.value
+                                        ] as Record<string, number>
+                                      ) {
+                                        delete (
+                                          newDisplayOrderValues[
+                                            field.value
+                                          ] as Record<string, number>
+                                        )[itemId];
                                       }
                                       onDisplayOrderValuesChange(
                                         newDisplayOrderValues
@@ -564,8 +575,16 @@ const FormPopup = ({
                                       const newDisplayOrderValues = {
                                         ...displayOrderValues,
                                       };
-                                      if ((newDisplayOrderValues[field.value] as Record<string, number>)) {
-                                        delete (newDisplayOrderValues[field.value] as Record<string, number>)[option.value];
+                                      if (
+                                        newDisplayOrderValues[
+                                          field.value
+                                        ] as Record<string, number>
+                                      ) {
+                                        delete (
+                                          newDisplayOrderValues[
+                                            field.value
+                                          ] as Record<string, number>
+                                        )[option.value];
                                       }
                                       onDisplayOrderValuesChange(
                                         newDisplayOrderValues
@@ -755,7 +774,10 @@ const AdvancedSearchDialog = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(
+            field.fetchOptionsUrl,
+            "GET"
+          );
 
           let options = [];
           if (response?.data && Array.isArray(response.data)) {
@@ -932,7 +954,10 @@ const SearchBar = ({
         setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
         try {
           const { dynamicRequest } = await import("@/services/apiClient");
-          const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
+          const response: any = await dynamicRequest(
+            field.fetchOptionsUrl,
+            "GET"
+          );
 
           let options = [];
           if (response?.data && Array.isArray(response.data)) {
@@ -999,11 +1024,13 @@ const SearchBar = ({
                       Loading...
                     </div>
                   ) : (dropdownOptions[field.value] || []).length > 0 ? (
-                    (dropdownOptions[field.value] || []).map((option: any, idx: number) => (
-                      <SelectItem key={idx} value={String(option.value)}>
-                        {option.label}
-                      </SelectItem>
-                    ))
+                    (dropdownOptions[field.value] || []).map(
+                      (option: any, idx: number) => (
+                        <SelectItem key={idx} value={String(option.value)}>
+                          {option.label}
+                        </SelectItem>
+                      )
+                    )
                   ) : field.selectOptions?.length > 0 ? (
                     field.selectOptions
                       .filter((option: any) => option.value !== "")
@@ -1114,15 +1141,10 @@ const Pagination = ({
 }: PaginationProps) => {
   if (totalItems === 0) return null;
 
-  const endItem = Math.min((currentPage + 1) * pageSize, totalItems);
-
   return (
-    <div className="flex items-center justify-between border-t px-4 py-3 mt-4">
+    <div className="flex items-center justify-between border-t px-4 py-3">
       <p className="text-sm text-muted-foreground">
-        Showing {endItem} of {totalItems} results
-        {isSearchResults && (
-          <span className="ml-1 text-cyan-600">(search results)</span>
-        )}
+        {totalItems} {isSearchResults ? "results" : "items"}
       </p>
       {totalPages > 1 && (
         <div className="flex items-center gap-2">
@@ -1444,7 +1466,10 @@ export default function DynamicContent() {
 
       // Handle wrapped response
       let responseData: any = response;
-      if ((response as any)?.data && typeof (response as any).data === "object") {
+      if (
+        (response as any)?.data &&
+        typeof (response as any).data === "object"
+      ) {
         responseData = (response as any).data;
       }
 
@@ -1456,7 +1481,10 @@ export default function DynamicContent() {
         totalItems: 0,
       };
 
-      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+      if (
+        (responseData as any)?.content &&
+        Array.isArray((responseData as any).content)
+      ) {
         results = (responseData as any).content;
         paginationInfo = {
           currentPage: (responseData as any).pageNumber ?? page,
@@ -1464,7 +1492,10 @@ export default function DynamicContent() {
           pageSize: (responseData as any).pageSize ?? 10,
           totalItems: (responseData as any).totalElements ?? results.length,
         };
-      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+      } else if (
+        (responseData as any)?.data &&
+        Array.isArray((responseData as any).data)
+      ) {
         results = (responseData as any).data;
         paginationInfo.totalItems = results.length;
       } else if (Array.isArray(responseData)) {
@@ -1499,8 +1530,33 @@ export default function DynamicContent() {
   };
 
   const handleRowAction = (action: any, rowData: any) => {
-    // Handle VIEW action
-    if (action.type === "link" || action.title?.toLowerCase() === "view") {
+    // Handle VIEW action with viewFetchDetails (fetch and display details)
+    if (action.type === "SHOW_POPUP" && action.viewFetchDetails) {
+      console.log("🔍 Fetching view details from API:", {
+        viewFetchDetails: action.viewFetchDetails,
+        rowId: rowData.id,
+      });
+
+      // Replace {id} placeholder with actual ID
+      const fetchUrl = action.viewFetchDetails.replace("{id}", rowData.id);
+
+      // Fetch the details
+      apiClient(fetchUrl, { method: "GET" })
+        .then((response) => {
+          console.log("✅ View details fetched:", response);
+          setViewDetailsData(response);
+          setViewDetailsOpen(true);
+        })
+        .catch((error) => {
+          console.error("❌ Failed to fetch view details:", error);
+          toast.error("Failed to fetch details");
+        });
+
+      return;
+    }
+
+    // Handle VIEW action (display row data directly)
+    if ((action.type === "link" || action.title?.toLowerCase() === "view") && !action.viewFetchDetails) {
       console.log("🔍 Opening view details for:", rowData);
       setViewDetailsData(rowData);
       setViewDetailsOpen(true);
@@ -1933,9 +1989,13 @@ export default function DynamicContent() {
 
     // Check if the first parameter is an event object and ignore it
     let dualSectionPayload: any = undefined;
-    if (payloadOrEvent && typeof payloadOrEvent === 'object') {
+    if (payloadOrEvent && typeof payloadOrEvent === "object") {
       // If it's a React event, ignore it
-      if (payloadOrEvent.nativeEvent || payloadOrEvent.type === 'click' || payloadOrEvent._targetInst !== undefined) {
+      if (
+        payloadOrEvent.nativeEvent ||
+        payloadOrEvent.type === "click" ||
+        payloadOrEvent._targetInst !== undefined
+      ) {
         console.log("[handlePopupSubmit] Ignoring click event object");
         dualSectionPayload = undefined;
       } else {
@@ -1975,7 +2035,8 @@ export default function DynamicContent() {
         if (variable.endsWith("Id")) {
           const altKey = variable.slice(0, -2); // Remove "Id"
           value =
-            (formData as Record<string, any>)[altKey] || (currentPopupButton.value as any)?.rowData?.[altKey];
+            (formData as Record<string, any>)[altKey] ||
+            (currentPopupButton.value as any)?.rowData?.[altKey];
         }
 
         // Try looking for just "id" if it's a MappingId pattern
@@ -1983,7 +2044,9 @@ export default function DynamicContent() {
           (value === undefined || value === null) &&
           variable.endsWith("MappingId")
         ) {
-          value = (formData as Record<string, any>)["id"] || (currentPopupButton.value as any)?.rowData?.["id"];
+          value =
+            (formData as Record<string, any>)["id"] ||
+            (currentPopupButton.value as any)?.rowData?.["id"];
         }
       }
 
@@ -2037,27 +2100,32 @@ export default function DynamicContent() {
         (currentPopupButton.value as any)?.headers &&
         Array.isArray((currentPopupButton.value as any).headers)
       ) {
-        (currentPopupButton.value as any).headers.forEach((headerConfig: any) => {
-          const headerName = headerConfig.name;
-          let headerValue: any;
+        (currentPopupButton.value as any).headers.forEach(
+          (headerConfig: any) => {
+            const headerName = headerConfig.name;
+            let headerValue: any;
 
-          if (headerConfig.value) {
-            // Static value
-            headerValue = headerConfig.value;
-          } else if (headerConfig.field) {
-            // Dynamic value from form data or payload
-            headerValue =
-              (formData as Record<string, any>)[headerConfig.field] || (payload as Record<string, any>)[headerConfig.field];
-          } else if (headerConfig.payloadField) {
-            // Value from transformed payload
-            headerValue = (payload as Record<string, any>)[headerConfig.payloadField];
-          }
+            if (headerConfig.value) {
+              // Static value
+              headerValue = headerConfig.value;
+            } else if (headerConfig.field) {
+              // Dynamic value from form data or payload
+              headerValue =
+                (formData as Record<string, any>)[headerConfig.field] ||
+                (payload as Record<string, any>)[headerConfig.field];
+            } else if (headerConfig.payloadField) {
+              // Value from transformed payload
+              headerValue = (payload as Record<string, any>)[
+                headerConfig.payloadField
+              ];
+            }
 
-          if (headerValue !== undefined && headerValue !== null) {
-            customHeaders[headerName] = String(headerValue);
-            console.log(`✅ ${headerName}: ${headerValue}`);
+            if (headerValue !== undefined && headerValue !== null) {
+              customHeaders[headerName] = String(headerValue);
+              console.log(`✅ ${headerName}: ${headerValue}`);
+            }
           }
-        });
+        );
       }
 
       console.log("=".repeat(60) + "\n");
@@ -2066,22 +2134,24 @@ export default function DynamicContent() {
       // For other operations, remove React internals and non-serializable objects
       const cleanPayload = (obj: any): any => {
         if (obj === null || obj === undefined) return obj;
-        if (typeof obj !== 'object') return obj;
+        if (typeof obj !== "object") return obj;
         if (obj instanceof Date) return obj.toISOString();
         if (obj instanceof Array) return obj.map(cleanPayload);
-        if (typeof obj.toJSON === 'function') return obj.toJSON();
-        
+        if (typeof obj.toJSON === "function") return obj.toJSON();
+
         const cleaned: any = {};
         for (const key in obj) {
           if (Object.prototype.hasOwnProperty.call(obj, key)) {
             const value = obj[key];
             // Skip React internals, functions, and DOM elements
-            if (typeof value === 'function' || 
-                key.startsWith('_react') || 
-                key.startsWith('__react') ||
-                value instanceof HTMLElement ||
-                value instanceof EventTarget ||
-                value instanceof Event) {
+            if (
+              typeof value === "function" ||
+              key.startsWith("_react") ||
+              key.startsWith("__react") ||
+              value instanceof HTMLElement ||
+              value instanceof EventTarget ||
+              value instanceof Event
+            ) {
               continue;
             }
             cleaned[key] = cleanPayload(value);
@@ -2158,11 +2228,17 @@ export default function DynamicContent() {
           (t: any) => t.tabId === activeTab
         );
         if (activeTabConfig?.getDataUrl) {
-          console.log(`🔄 Refreshing tab data for ${activeTab} after submission`);
+          console.log(
+            `🔄 Refreshing tab data for ${activeTab} after submission`
+          );
           try {
             // Use the current page from pagination state, or default to 0
             const currentPage = tabPagination[activeTab]?.currentPage ?? 0;
-            await handleTabChange(activeTab, activeTabConfig.getDataUrl, currentPage);
+            await handleTabChange(
+              activeTab,
+              activeTabConfig.getDataUrl,
+              currentPage
+            );
             console.log(`✅ Tab data refreshed for ${activeTab}`);
           } catch (tabRefreshError) {
             console.error(`⚠️  Could not refresh tab data:`, tabRefreshError);
@@ -2232,14 +2308,20 @@ export default function DynamicContent() {
 
       // Handle wrapped response
       let responseData: any = response;
-      if ((response as any)?.data && typeof (response as any).data === "object") {
+      if (
+        (response as any)?.data &&
+        typeof (response as any).data === "object"
+      ) {
         responseData = (response as any).data;
       }
 
       let results = [];
       let paginationInfo: any = {};
 
-      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+      if (
+        (responseData as any)?.content &&
+        Array.isArray((responseData as any).content)
+      ) {
         results = (responseData as any).content;
         paginationInfo = {
           currentPage: (responseData as any).number ?? 0,
@@ -2247,7 +2329,10 @@ export default function DynamicContent() {
           totalPages: (responseData as any).totalPages ?? 1,
           totalElements: (responseData as any).totalElements ?? 0,
         };
-      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+      } else if (
+        (responseData as any)?.data &&
+        Array.isArray((responseData as any).data)
+      ) {
         results = (responseData as any).data;
       } else if (Array.isArray(responseData)) {
         results = responseData;
@@ -2323,7 +2408,10 @@ export default function DynamicContent() {
       let results = [];
       let paginationInfo: any = {};
 
-      if ((response as any)?.content && Array.isArray((response as any).content)) {
+      if (
+        (response as any)?.content &&
+        Array.isArray((response as any).content)
+      ) {
         results = (response as any).content;
         paginationInfo = {
           currentPage: (response as any).number ?? 0,
@@ -2331,11 +2419,17 @@ export default function DynamicContent() {
           totalPages: (response as any).totalPages ?? 1,
           totalElements: (response as any).totalElements ?? 0,
         };
-      } else if ((response as any)?.data && Array.isArray((response as any).data)) {
+      } else if (
+        (response as any)?.data &&
+        Array.isArray((response as any).data)
+      ) {
         results = (response as any).data;
       } else if (Array.isArray(response)) {
         results = response;
-      } else if ((response as any)?.results && Array.isArray((response as any).results)) {
+      } else if (
+        (response as any)?.results &&
+        Array.isArray((response as any).results)
+      ) {
         results = (response as any).results;
       }
 
@@ -2373,7 +2467,10 @@ export default function DynamicContent() {
   };
 
   // Tab-specific search handler (supports both TABS view and DROPDOWN_VIEW)
-  const handleTabSearch = async (selectedViewOrTab?: string, searchValue?: string) => {
+  const handleTabSearch = async (
+    selectedViewOrTab?: string,
+    searchValue?: string
+  ) => {
     // Determine if this is for DROPDOWN_VIEW or TABS view
     let activeTabConfig: any;
     let tabId: string;
@@ -2419,7 +2516,9 @@ export default function DynamicContent() {
     }
 
     console.log(`🔍 Search Params for ${tabId}:`, searchParams);
-    console.log(`📍 Search Action URL: ${activeTabConfig.search.searchActionUrl}`);
+    console.log(
+      `📍 Search Action URL: ${activeTabConfig.search.searchActionUrl}`
+    );
     setIsSearching(true);
 
     try {
@@ -2447,11 +2546,17 @@ export default function DynamicContent() {
 
       // Handle wrapped response with pagination
       let responseData: any = response;
-      if ((response as any)?.data && typeof (response as any).data === "object") {
+      if (
+        (response as any)?.data &&
+        typeof (response as any).data === "object"
+      ) {
         responseData = (response as any).data;
       }
 
-      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
+      if (
+        (responseData as any)?.content &&
+        Array.isArray((responseData as any).content)
+      ) {
         results = (responseData as any).content;
         paginationInfo = {
           currentPage: (responseData as any).number ?? 0,
@@ -2459,11 +2564,17 @@ export default function DynamicContent() {
           totalPages: (responseData as any).totalPages ?? 1,
           totalElements: (responseData as any).totalElements ?? 0,
         };
-      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
+      } else if (
+        (responseData as any)?.data &&
+        Array.isArray((responseData as any).data)
+      ) {
         results = (responseData as any).data;
       } else if (Array.isArray(responseData)) {
         results = responseData;
-      } else if ((responseData as any)?.results && Array.isArray((responseData as any).results)) {
+      } else if (
+        (responseData as any)?.results &&
+        Array.isArray((responseData as any).results)
+      ) {
         results = (responseData as any).results;
       }
 
@@ -2520,7 +2631,7 @@ export default function DynamicContent() {
       console.log(`🔄 Clearing search and refetching: ${tabId}`);
       console.log(`📍 Fetching from URL: ${activeTabConfig.getDataUrl}`);
       await handleTabChange(tabId, activeTabConfig.getDataUrl, 0);
-      
+
       showAlert({
         title: "Search Cleared",
         description: "Showing all records",
@@ -2648,7 +2759,9 @@ export default function DynamicContent() {
         />
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
-          {layoutData.value?.type === "DUAL_SECTION_VIEW" && layoutData.value?.leftSection && layoutData.value?.rightSection ? (
+          {layoutData.value?.type === "DUAL_SECTION_VIEW" &&
+          layoutData.value?.leftSection &&
+          layoutData.value?.rightSection ? (
             <>
               {console.log(
                 `[Render] 🎯 Rendering DualSectionView for ${layoutData.value.title}`
@@ -2669,7 +2782,9 @@ export default function DynamicContent() {
                 }}
               />
             </>
-          ) : layoutData.value?.type === "DROPDOWN_VIEW" && layoutData.value?.dropdownSelector && layoutData.value?.views ? (
+          ) : layoutData.value?.type === "DROPDOWN_VIEW" &&
+            layoutData.value?.dropdownSelector &&
+            layoutData.value?.views ? (
             <>
               {console.log(
                 `[Render] 🎯 Rendering DropdownTableView with dropdown views`
@@ -2760,16 +2875,46 @@ export default function DynamicContent() {
               )}
 
               {layout?.tableHeaders && layout.tableHeaders.length > 0 && (
-                <Card>
-                  <CardHeader />
-                  <CardContent>
-                    <div className="border rounded">
+                <div className="rounded-lg border bg-card">
+                  {tableDataLoading.value ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {layout.tableHeaders
+                            .sort(
+                              (a: any, b: any) =>
+                                (a.order || 999) - (b.order || 999)
+                            )
+                            .map((header: any, index: number) => (
+                              <TableHead key={index}>
+                                {header.Header}
+                              </TableHead>
+                            ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...Array(10)].map((_: any, i: number) => (
+                          <TableRow key={i}>
+                            {layout.tableHeaders.map(
+                              (_: any, j: number) => (
+                                <TableCell key={j}>
+                                  <Skeleton className="h-4 w-full" />
+                                </TableCell>
+                              )
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <>
                       <Table>
                         <TableHeader>
                           <TableRow>
                             {layout.tableHeaders
                               .sort(
-                                (a: any, b: any) => (a.order || 999) - (b.order || 999)
+                                (a: any, b: any) =>
+                                  (a.order || 999) - (b.order || 999)
                               )
                               .map((header: any, index: number) => (
                                 <TableHead key={index}>
@@ -2793,16 +2938,6 @@ export default function DynamicContent() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ) : tableDataLoading.value ? (
-                            [...Array(5)].map((_: any, i: number) => (
-                              <TableRow key={i}>
-                                {layout.tableHeaders.map((_: any, j: number) => (
-                                  <TableCell key={j}>
-                                    <Skeleton className="h-4 w-full" />
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))
                           ) : tableDataError.value ? (
                             <TableRow>
                               <TableCell
@@ -2891,18 +3026,45 @@ export default function DynamicContent() {
                           )}
                         </TableBody>
                       </Table>
-                    </div>
 
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      pageSize={pageSize}
-                      totalItems={totalItems}
-                      isSearchResults={searchResults !== null}
-                      onPageChange={handlePageChange}
-                    />
-                  </CardContent>
-                </Card>
+                      {/* Pagination */}
+                      {totalPages > 0 && (
+                        <div className="flex items-center justify-between border-t px-4 py-3">
+                          <p className="text-sm text-muted-foreground">
+                            {totalItems} items
+                          </p>
+                          {totalPages > 1 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                Page {currentPage + 1} of {totalPages}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
+                                  disabled={currentPage === 0}
+                                >
+                                  <ChevronLeft className="size-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  disabled={currentPage >= totalPages - 1}
+                                >
+                                  <ChevronRight className="size-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
 
               {!layout && !layoutLoading.value && !layoutError.value && (

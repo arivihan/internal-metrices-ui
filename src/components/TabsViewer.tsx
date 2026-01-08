@@ -347,199 +347,229 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                     )}
 
                     {/* Table Section */}
-                    <div className="flex-1 overflow-y-auto p-2 w-full">
-                      <Card className="border-0 shadow-sm h-full flex flex-col w-full">
-                        <CardContent className="p-0 flex-1 flex flex-col overflow-hidden w-full">
-                          <div className="rounded border overflow-hidden flex flex-col flex-1 w-full">
-                            <Table>
-                              <TableHeader className="border-b  sticky top-0">
+                    <div className="rounded-lg border bg-card">
+                      {loadingTabs[tab.tabId] ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {tab.tableHeaders
+                                ?.sort(
+                                  (a: any, b: any) =>
+                                    (a.order || 999) - (b.order || 999)
+                                )
+                                .map((header: any, index: number) => (
+                                  <TableHead
+                                    key={index}
+                                    className="font-semibold text-foreground"
+                                  >
+                                    {header.Header}
+                                  </TableHead>
+                                ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {[...Array(10)].map((_: any, i: number) => (
+                              <TableRow key={i}>
+                                {tab.tableHeaders?.map(
+                                  (_: any, j: number) => (
+                                    <TableCell key={j}>
+                                      <Skeleton className="h-4 w-full" />
+                                    </TableCell>
+                                  )
+                                )}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                {tab.tableHeaders
+                                  ?.sort(
+                                    (a: any, b: any) =>
+                                      (a.order || 999) - (b.order || 999)
+                                  )
+                                  .map((header: any, index: number) => (
+                                    <TableHead
+                                      key={index}
+                                      className="font-semibold text-foreground"
+                                    >
+                                      {header.Header}
+                                    </TableHead>
+                                  ))}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {isSearching ? (
                                 <TableRow>
-                                  {tab.tableHeaders
-                                    ?.sort(
-                                      (a: any, b: any) =>
-                                        (a.order || 999) - (b.order || 999)
-                                    )
-                                    .map((header: any, index: number) => (
-                                      <TableHead
-                                        key={index}
-                                        className="font-semibold text-xs uppercase tracking-wider text-muted-foreground "
-                                      >
-                                        {header.Header}
-                                      </TableHead>
-                                    ))}
+                                  <TableCell
+                                    colSpan={tab.tableHeaders?.length || 1}
+                                    className="h-24 text-center"
+                                  >
+                                    <div className="flex items-center justify-center">
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      <p className="text-muted-foreground">
+                                        Searching...
+                                      </p>
+                                    </div>
+                                  </TableCell>
                                 </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {tabsData[tab.tabId] &&
+                              ) : tabsData[tab.tabId] &&
                                 tabsData[tab.tabId].length > 0 ? (
-                                  tabsData[tab.tabId].map(
-                                    (row: any, rowIndex: number) => (
-                                      <TableRow
-                                        key={rowIndex}
-                                        className="border-b transition-colors duration-150"
-                                      >
-                                        {tab.tableHeaders
-                                          ?.sort(
-                                            (a: any, b: any) =>
-                                              (a.order || 999) -
-                                              (b.order || 999)
-                                          )
-                                          .map(
-                                            (header: any, colIndex: number) => {
-                                              if (
-                                                header.type === "actions" &&
-                                                header.actions
-                                              ) {
-                                                return (
-                                                  <TableCell
-                                                    key={colIndex}
-                                                    className="py-3 px-4"
-                                                  >
-                                                    <DropdownMenu>
-                                                      <DropdownMenuTrigger
-                                                        asChild
-                                                      >
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          className="h-8 w-8 p-0 hover:bg-emerald-100 transition-colors"
-                                                        >
-                                                          <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                                        </Button>
-                                                      </DropdownMenuTrigger>
-                                                      <DropdownMenuContent
-                                                        align="end"
-                                                        className="w-48"
-                                                      >
-                                                        {header.actions.map(
-                                                          (
-                                                            action: any,
-                                                            actionIndex: number
-                                                          ) => (
-                                                            <DropdownMenuItem
-                                                              key={actionIndex}
-                                                              onClick={() =>
-                                                                onRowAction(
-                                                                  action,
-                                                                  row
-                                                                )
-                                                              }
-                                                              className="cursor-pointer"
-                                                            >
-                                                              {action.title}
-                                                            </DropdownMenuItem>
-                                                          )
-                                                        )}
-                                                      </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                  </TableCell>
-                                                );
-                                              }
+                                tabsData[tab.tabId].map(
+                                  (row: any, rowIndex: number) => (
+                                    <TableRow
+                                      key={rowIndex}
+                                      className="transition-colors"
+                                    >
+                                      {tab.tableHeaders
+                                        ?.sort(
+                                          (a: any, b: any) =>
+                                            (a.order || 999) -
+                                            (b.order || 999)
+                                        )
+                                        .map(
+                                          (header: any, colIndex: number) => {
+                                            if (
+                                              header.type === "actions" &&
+                                              header.actions
+                                            ) {
                                               return (
                                                 <TableCell
                                                   key={colIndex}
-                                                  className="py-3 px-4"
+                                                  className="text-sm"
                                                 >
-                                                  <CellRenderer
-                                                    header={header}
-                                                    value={row[header.accessor]}
-                                                    onViewJson={onViewJson}
-                                                    rowData={row}
-                                                  />
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                      asChild
+                                                    >
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                      >
+                                                        <MoreVertical className="h-4 w-4" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                      align="end"
+                                                    >
+                                                      {header.actions.map(
+                                                        (
+                                                          action: any,
+                                                          actionIndex: number
+                                                        ) => (
+                                                          <DropdownMenuItem
+                                                            key={actionIndex}
+                                                            onClick={() =>
+                                                              onRowAction(
+                                                                action,
+                                                                row
+                                                              )
+                                                            }
+                                                          >
+                                                            {action.title}
+                                                          </DropdownMenuItem>
+                                                        )
+                                                      )}
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
                                                 </TableCell>
                                               );
                                             }
-                                          )}
-                                      </TableRow>
-                                    )
+                                            return (
+                                              <TableCell
+                                                key={colIndex}
+                                                className="text-sm"
+                                              >
+                                                <CellRenderer
+                                                  header={header}
+                                                  value={row[header.accessor]}
+                                                  onViewJson={onViewJson}
+                                                  rowData={row}
+                                                />
+                                              </TableCell>
+                                            );
+                                          }
+                                        )}
+                                    </TableRow>
                                   )
-                                ) : (
-                                  <TableRow>
-                                    <TableCell
-                                      colSpan={tab.tableHeaders?.length || 1}
-                                      className="h-24 text-center py-8"
-                                    >
-                                      <div className="text-sm">
-                                        <p className="text-muted-foreground font-medium">
-                                          No data available
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          There are no{" "}
-                                          {(tab.tabTitle || tab.title || "mapping").toLowerCase()} mappings
-                                          yet.
-                                        </p>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </div>
+                                )
+                              ) : (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={tab.tableHeaders?.length || 1}
+                                    className="h-24 text-center text-muted-foreground"
+                                  >
+                                    No data available
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
 
-                          {/* Pagination Component */}
+                          {/* Pagination */}
                           {tabPagination[tab.tabId] &&
                             tabPagination[tab.tabId].totalItems > 0 && (
-                              <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
-                                <div className="text-sm text-muted-foreground">
-                                  Showing{" "}
-                                  {tabPagination[tab.tabId].currentPage *
-                                    tabPagination[tab.tabId].pageSize +
-                                    1}{" "}
-                                  to{" "}
-                                  {Math.min(
-                                    (tabPagination[tab.tabId].currentPage + 1) *
-                                      tabPagination[tab.tabId].pageSize,
-                                    tabPagination[tab.tabId].totalItems
-                                  )}{" "}
-                                  of {tabPagination[tab.tabId].totalItems}{" "}
-                                  results
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      onPageChange &&
-                                      onPageChange(
-                                        tab.tabId,
-                                        tabPagination[tab.tabId].currentPage - 1
-                                      )
-                                    }
-                                    disabled={
-                                      tabPagination[tab.tabId].currentPage === 0
-                                    }
-                                  >
-                                    <ChevronLeft className="h-4 w-4 mr-1" />
-                                    Previous
-                                  </Button>
-                                  <span className="text-sm text-muted-foreground">
-                                    Page{" "}
-                                    {tabPagination[tab.tabId].currentPage + 1} of{" "}
-                                    {tabPagination[tab.tabId].totalPages}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      onPageChange &&
-                                      onPageChange(
-                                        tab.tabId,
-                                        tabPagination[tab.tabId].currentPage + 1
-                                      )
-                                    }
-                                    disabled={
-                                      tabPagination[tab.tabId].currentPage >=
-                                      tabPagination[tab.tabId].totalPages - 1
-                                    }
-                                  >
-                                    Next
-                                    <ChevronRight className="h-4 w-4 ml-1" />
-                                  </Button>
-                                </div>
+                              <div className="flex items-center justify-between border-t px-4 py-3">
+                                <p className="text-sm text-muted-foreground">
+                                  {tabPagination[tab.tabId].totalItems} items
+                                </p>
+                                {tabPagination[tab.tabId].totalPages > 1 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">
+                                      Page {tabPagination[tab.tabId].currentPage + 1} of{" "}
+                                      {tabPagination[tab.tabId].totalPages}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        onClick={() =>
+                                          onPageChange?.(
+                                            tab.tabId,
+                                            Math.max(
+                                              0,
+                                              tabPagination[tab.tabId].currentPage - 1
+                                            )
+                                          )
+                                        }
+                                        disabled={
+                                          tabPagination[tab.tabId].currentPage === 0
+                                        }
+                                      >
+                                        <ChevronLeft className="size-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        onClick={() =>
+                                          onPageChange?.(
+                                            tab.tabId,
+                                            Math.min(
+                                              tabPagination[tab.tabId].totalPages - 1,
+                                              tabPagination[tab.tabId].currentPage + 1
+                                            )
+                                          )
+                                        }
+                                        disabled={
+                                          tabPagination[tab.tabId].currentPage >=
+                                          tabPagination[tab.tabId].totalPages - 1
+                                        }
+                                      >
+                                        <ChevronRight className="size-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
-                        </CardContent>
-                      </Card>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

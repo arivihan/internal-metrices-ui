@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -123,14 +123,16 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-background">
-      {/* Header with Dropdown Selector */}
-      <div className="border-b mb-3 p-4 ">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium">{dropdownSelector.label}</label>
+    <div className="w-full h-full flex flex-col bg-background  space-y-3">
+      {/* Header Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {dropdownSelector.label}
+            </label>
             <Select value={selectedView} onValueChange={setSelectedView}>
-              <SelectTrigger className="w-[300px]">
+              <SelectTrigger className="w-[300px] bg-background">
                 <SelectValue placeholder="Select a mapping type" />
               </SelectTrigger>
               <SelectContent>
@@ -142,257 +144,290 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
               </SelectContent>
             </Select>
           </div>
-          <h2 className="text-lg font-semibold">{selectedViewConfig.title}</h2>
+          <h2 className="text-2xl font-bold text-foreground">
+            {selectedViewConfig.title}
+          </h2>
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      {selectedViewConfig.buttons && selectedViewConfig.buttons.length > 0 && (
-        <div className="border-b px-4 py-3 flex items-center gap-2 flex-wrap bg-background">
-          {selectedViewConfig.buttons.map((button: any, idx: number) => (
-            <Button
-              key={idx}
-              onClick={() => onButtonClick(button, selectedView)}
-              className="text-gray-200 font-medium shadow-sm transition-all duration-200"
-            >
-              {button.title}
-            </Button>
-          ))}
-        </div>
-      )}
+        {/* Action Buttons */}
+        {selectedViewConfig.buttons && selectedViewConfig.buttons.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedViewConfig.buttons.map((button: any, idx: number) => (
+              <Button
+                key={idx}
+                onClick={() => onButtonClick(button, selectedView)}
+                className="font-medium shadow-sm transition-all duration-200"
+              >
+                {button.title}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Search/Filter Section */}
       {selectedViewConfig.search && (
-      
-          <CardContent className="px-4" >
-            <div className="flex items-end gap-3 flex-nowrap overflow-x-auto pb-2">
-              {selectedViewConfig.search.fields?.map(
-                (field: any, fieldIndex: number) => (
-                  <div key={fieldIndex} className="flex-shrink-0 min-w-max">
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      {field.label}
-                    </label>
-                    {field.type === "select" ? (
-                      <Select
-                        value={searchData[field.value] || ""}
-                        onValueChange={(value) =>
-                          onSearchDataChange({
-                            ...searchData,
-                            [field.value]: value,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-40 bg-background border border-gray-300">
-                          <SelectValue placeholder={field.placeholder} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background">
-                          {field.selectOptions?.map((opt: any) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        type={field.type}
-                        placeholder={field.placeholder}
-                        value={searchData[field.value] || ""}
-                        onChange={(e) =>
-                          onSearchDataChange({
-                            ...searchData,
-                            [field.value]: e.target.value,
-                          })
-                        }
-                        className="text-sm w-40"
-                      />
-                    )}
-                  </div>
-                )
-              )}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Filters</h3>
+            {Object.keys(searchData).some((k) => searchData[k]) && (
               <Button
-                onClick={() => onSearch(selectedView, "")}
-                disabled={isSearching}
-                className="bg-emerald-600 hover:bg-emerald-700 flex-shrink-0"
+                onClick={() => onClear(selectedView)}
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs ml-auto"
               >
-                {isSearching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  "Search"
-                )}
+                Clear All
               </Button>
-              {Object.keys(searchData).some((k) => searchData[k]) && (
-                <Button
-                  onClick={() => onClear(selectedView)}
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  Clear
-                </Button>
+            )}
+          </div>
+          <div className="flex items-end gap-3 flex-wrap">
+            {selectedViewConfig.search.fields?.map(
+              (field: any, fieldIndex: number) => (
+                <div key={fieldIndex} className="space-y-1.5">
+                  
+                  {field.type === "select" ? (
+                    <Select
+                      value={searchData[field.value] || ""}
+                      onValueChange={(value) =>
+                        onSearchDataChange({
+                          ...searchData,
+                          [field.value]: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-40 h-9 bg-background">
+                        <SelectValue placeholder={field.placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.selectOptions?.map((opt: any) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={searchData[field.value] || ""}
+                      onChange={(e) =>
+                        onSearchDataChange({
+                          ...searchData,
+                          [field.value]: e.target.value,
+                        })
+                      }
+                      className="text-sm w-40 h-9 bg-background"
+                    />
+                  )}
+                </div>
+              )
+            )}
+            <Button
+              onClick={() => onSearch(selectedView, "")}
+              disabled={isSearching}
+              size="sm"
+              className="h-9 gap-2"
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Searching
+                </>
+              ) : (
+                "Search"
               )}
-            </div>
-          </CardContent>
-      
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Table Section */}
-      <div className="flex-1 overflow-y-auto p-4 w-full">
-        <Card className="border-0 shadow-sm h-full flex flex-col w-full">
-          <CardContent className="p-0 flex-1 flex flex-col overflow-hidden w-full">
-            <div className="rounded border overflow-hidden flex flex-col flex-1 w-full">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-                    <p className="text-sm text-muted-foreground">{error}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader className="border-b sticky top-0 ">
-                      <TableRow>
+      <div className="flex-1 rounded-lg border bg-card overflow-hidden flex flex-col">
+        {loading ? (
+          <div className="flex flex-col overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  {selectedViewConfig.tableHeaders
+                    ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
+                    .map((header: any, idx: number) => (
+                      <TableHead
+                        key={idx}
+                        className="font-semibold text-foreground py-3"
+                      >
+                        {header.Header}
+                      </TableHead>
+                    ))}
+                </TableRow>
+              </TableHeader>
+            </Table>
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableBody>
+                  {[...Array(10)].map((_: any, i: number) => (
+                    <TableRow key={i} className="border-b hover:bg-transparent">
+                      {selectedViewConfig.tableHeaders?.map(
+                        (_: any, j: number) => (
+                          <TableCell key={j} className="py-3">
+                            <Skeleton className="h-3 w-full" />
+                          </TableCell>
+                        )
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-destructive font-medium">{error}</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card border-b">
+                  <TableRow>
+                    {selectedViewConfig.tableHeaders
+                      ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
+                      .map((header: any, idx: number) => (
+                        <TableHead
+                          key={idx}
+                          className="font-semibold text-foreground py-3"
+                        >
+                          {header.Header}
+                        </TableHead>
+                      ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isSearching ? (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={selectedViewConfig.tableHeaders?.length || 1}
+                        className="h-32 text-center"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <p className="text-muted-foreground text-sm">
+                            Searching...
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : data.length > 0 ? (
+                    data.map((row: any, rowIndex: number) => (
+                      <TableRow
+                        key={rowIndex}
+                        className="border-b transition-colors hover:bg-accent/5"
+                      >
                         {selectedViewConfig.tableHeaders
                           ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
-                          .map((header: any, idx: number) => (
-                            <TableHead
-                              key={idx}
-                              className="font-semibold text-foreground "
-                            >
-                              {header.Header}
-                            </TableHead>
+                          .map((header: any, colIndex: number) => (
+                            <TableCell key={colIndex} className="text-sm py-3">
+                              {header.type === "actions" ? (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {header.actions?.map((action: any, aIdx: number) => (
+                                      <DropdownMenuItem
+                                        key={aIdx}
+                                        onClick={() =>
+                                          onRowAction(action, row.id, selectedView)
+                                        }
+                                      >
+                                        {action.title}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              ) : (
+                                <CellRenderer
+                                  header={header}
+                                  value={row[header.accessor]}
+                                  onViewJson={() => onViewJson(row)}
+                                  rowData={row}
+                                />
+                              )}
+                            </TableCell>
                           ))}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.length > 0 ? (
-                        data.map((row: any, rowIndex: number) => (
-                          <TableRow
-                            key={rowIndex}
-                            className=" transition-colors"
-                          >
-                            {selectedViewConfig.tableHeaders
-                              ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
-                              .map((header: any, colIndex: number) => (
-                                <TableCell key={colIndex} className="text-sm">
-                                  {header.type === "actions" ? (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm">
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        {header.actions?.map((action: any, aIdx: number) => (
-                                          <DropdownMenuItem
-                                            key={aIdx}
-                                            onClick={() =>
-                                              onRowAction(action, row.id, selectedView)
-                                            }
-                                          >
-                                            {action.title}
-                                          </DropdownMenuItem>
-                                        ))}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  ) : (
-                                    <CellRenderer
-                                      header={header}
-                                      value={row[header.accessor]}
-                                      onViewJson={() => onViewJson(row)}
-                                      rowData={row}
-                                    />
-                                  )}
-                                </TableCell>
-                              ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={selectedViewConfig.tableHeaders?.length || 1}
-                            className="h-24 text-center py-8"
-                          >
-                            <div className="text-sm">
-                              <p className="text-muted-foreground font-medium">
-                                No data available
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                No {selectedViewConfig.title?.toLowerCase()} records found
-                              </p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-
-                  {/* Pagination */}
-                  {paginationData && (
-                    <div className="border-t px-4 py-4  flex items-center justify-between text-sm">
-                      <div className="text-muted-foreground">
-                        Showing{" "}
-                        {Math.min(
-                          paginationData.currentPage * paginationData.pageSize + 1,
-                          paginationData.totalElements
-                        )}{" "}
-                        to{" "}
-                        {Math.min(
-                          (paginationData.currentPage + 1) * paginationData.pageSize,
-                          paginationData.totalElements
-                        )}{" "}
-                        of {paginationData.totalElements} results
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            onPageChange(
-                              selectedView,
-                              Math.max(0, paginationData.currentPage - 1)
-                            )
-                          }
-                          disabled={paginationData.currentPage === 0}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="text-sm font-medium px-2">
-                          Page {paginationData.currentPage + 1} of {paginationData.totalPages}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            onPageChange(
-                              selectedView,
-                              Math.min(
-                                paginationData.totalPages - 1,
-                                paginationData.currentPage + 1
-                              )
-                            )
-                          }
-                          disabled={
-                            paginationData.currentPage >= paginationData.totalPages - 1
-                          }
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    ))
+                  ) : (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={selectedViewConfig.tableHeaders?.length || 1}
+                        className="h-32 text-center text-muted-foreground"
+                      >
+                        <p className="text-sm">No data available</p>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </>
-              )}
+                </TableBody>
+              </Table>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Pagination Footer */}
+            {paginationData && (
+              <div className="border-t bg-card/50 px-4 py-3 flex items-center justify-between mt-auto">
+                <p className="text-xs text-muted-foreground font-medium">
+                  {paginationData.totalElements} items
+                </p>
+                {paginationData.totalPages > 1 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      Page {paginationData.currentPage + 1} of {paginationData.totalPages}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 h-8 w-8"
+                        onClick={() =>
+                          onPageChange(
+                            selectedView,
+                            Math.max(0, paginationData.currentPage - 1)
+                          )
+                        }
+                        disabled={paginationData.currentPage === 0}
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 h-8 w-8"
+                        onClick={() =>
+                          onPageChange(
+                            selectedView,
+                            Math.min(
+                              paginationData.totalPages - 1,
+                              paginationData.currentPage + 1
+                            )
+                          )
+                        }
+                        disabled={
+                          paginationData.currentPage >= paginationData.totalPages - 1
+                        }
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

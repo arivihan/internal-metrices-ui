@@ -9,7 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader2, Plus, Copy, X } from "lucide-react";
 import { dynamicRequest } from "@/services/apiClient";
 
@@ -33,14 +39,18 @@ export function DualSectionPopup({
   const [selectedExam, setSelectedExam] = useState<string>("");
   const [selectedGrades, setSelectedGrades] = useState<any[]>([]);
   const [gradeOptions, setGradeOptions] = useState<any[]>([]);
-  const [displayOrders, setDisplayOrders] = useState<Record<string, number>>({});
+  const [displayOrders, setDisplayOrders] = useState<Record<string, number>>(
+    {}
+  );
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [loadingAllGrades, setLoadingAllGrades] = useState(false);
   const [showGradesModal, setShowGradesModal] = useState(false);
   const [searchExam, setSearchExam] = useState("");
   const [searchGrade, setSearchGrade] = useState("");
-  const [modalSelectedGradeIds, setModalSelectedGradeIds] = useState<Set<string>>(new Set());
+  const [modalSelectedGradeIds, setModalSelectedGradeIds] = useState<
+    Set<string>
+  >(new Set());
 
   if (!button) return null;
 
@@ -55,9 +65,12 @@ export function DualSectionPopup({
       if (leftSection?.fetchUrl) {
         setLoadingExams(true);
         try {
-          const response: any = await dynamicRequest(leftSection.fetchUrl, "GET");
+          const response: any = await dynamicRequest(
+            leftSection.fetchUrl,
+            "GET"
+          );
           console.log("[DualSectionPopup] response:", response);
-          
+
           let data: any[] = [];
           if (Array.isArray(response)) {
             data = response;
@@ -66,7 +79,7 @@ export function DualSectionPopup({
           } else if (response?.data && Array.isArray(response.data)) {
             data = response.data;
           }
-          
+
           console.log("[DualSectionPopup] Parsed exams:", data);
           setExams(data);
         } catch (error) {
@@ -91,7 +104,7 @@ export function DualSectionPopup({
           "GET"
         );
         console.log("[DualSectionPopup] Grades response:", response);
-        
+
         let data: any[] = [];
         if (Array.isArray(response)) {
           data = response;
@@ -100,19 +113,19 @@ export function DualSectionPopup({
         } else if (response?.data && Array.isArray(response.data)) {
           data = response.data;
         }
-        
+
         console.log("[DualSectionPopup] Parsed grades:", data);
-        
+
         // Set the already-mapped grades for display
         setGradeOptions(data);
         setSelectedGrades(data);
-        
+
         // Initialize display orders for already-mapped grades
         const orders: Record<string, number> = {};
         data.forEach((grade: any, idx: number) => {
           const gradeId = String(grade[rightSection.optionValueKey]);
           // Use existing displayOrder if available, otherwise use index
-          orders[gradeId] = grade.displayOrder || (idx + 1);
+          orders[gradeId] = grade.displayOrder || idx + 1;
         });
         setDisplayOrders(orders);
       } catch (error) {
@@ -130,9 +143,12 @@ export function DualSectionPopup({
     if (modalConfig?.modalFetchUrl) {
       setLoadingAllGrades(true);
       try {
-        const response: any = await dynamicRequest(modalConfig.modalFetchUrl, "GET");
+        const response: any = await dynamicRequest(
+          modalConfig.modalFetchUrl,
+          "GET"
+        );
         console.log("[DualSectionPopup] All grades response:", response);
-        
+
         let data: any[] = [];
         if (Array.isArray(response)) {
           data = response;
@@ -141,7 +157,7 @@ export function DualSectionPopup({
         } else if (response?.data && Array.isArray(response.data)) {
           data = response.data;
         }
-        
+
         console.log("[DualSectionPopup] Parsed all grades:", data);
         setAllGrades(data);
         setShowGradesModal(true);
@@ -157,7 +173,7 @@ export function DualSectionPopup({
     const modalConfig = actions.find((a: any) => a.id === "add-grades");
     const modalValueKey = modalConfig?.modalOptionValueKey || "id";
     const modalLabelKey = modalConfig?.modalOptionLabelKey || "name";
-    
+
     // Get selected grades from the modal (they come from allGrades which is fetched from modalFetchUrl)
     const newGrades = allGrades.filter((g) =>
       selectedGradeIds.includes(String(g[modalValueKey]))
@@ -171,7 +187,9 @@ export function DualSectionPopup({
     }));
 
     // Add new grades to selected (avoid duplicates based on rightSection.optionValueKey)
-    const existingIds = selectedGrades.map((g) => g[rightSection.optionValueKey]);
+    const existingIds = selectedGrades.map(
+      (g) => g[rightSection.optionValueKey]
+    );
     const uniqueNewGrades = transformedGrades.filter(
       (g) => !existingIds.includes(g[rightSection.optionValueKey])
     );
@@ -201,18 +219,30 @@ export function DualSectionPopup({
   const handleRemoveGrade = (gradeId: string, isNewlyAdded: boolean) => {
     // Only allow removing newly added grades
     if (!isNewlyAdded) {
-      console.warn("[DualSectionPopup] Cannot remove originally mapped grade:", gradeId);
+      console.warn(
+        "[DualSectionPopup] Cannot remove originally mapped grade:",
+        gradeId
+      );
       return;
     }
-    
-    console.log("[DualSectionPopup] Removing grade:", { gradeId, isNewlyAdded });
-    
+
+    console.log("[DualSectionPopup] Removing grade:", {
+      gradeId,
+      isNewlyAdded,
+    });
+
     setSelectedGrades((prev) => {
-      const filtered = prev.filter((g) => String(g[rightSection.optionValueKey]) !== gradeId);
-      console.log("[DualSectionPopup] Filtered grades:", { before: prev.length, after: filtered.length, removed: gradeId });
+      const filtered = prev.filter(
+        (g) => String(g[rightSection.optionValueKey]) !== gradeId
+      );
+      console.log("[DualSectionPopup] Filtered grades:", {
+        before: prev.length,
+        after: filtered.length,
+        removed: gradeId,
+      });
       return filtered;
     });
-    
+
     setDisplayOrders((prev) => {
       const updated = { ...prev };
       delete updated[gradeId];
@@ -223,7 +253,12 @@ export function DualSectionPopup({
   const handleSubmit = () => {
     // Filter only newly added grades (not in original gradeOptions)
     const newlyAddedGrades = selectedGrades.filter(
-      (g) => !gradeOptions.some((og) => String(og[rightSection.optionValueKey]) === String(g[rightSection.optionValueKey]))
+      (g) =>
+        !gradeOptions.some(
+          (og) =>
+            String(og[rightSection.optionValueKey]) ===
+            String(g[rightSection.optionValueKey])
+        )
     );
 
     // Create a CLEAN payload with only necessary fields (no circular references)
@@ -237,21 +272,37 @@ export function DualSectionPopup({
         };
       }),
     };
-    
-    console.log("[DualSectionPopup] Final payload:", JSON.stringify(payload, null, 2));
-    console.log("[DualSectionPopup] Newly added count:", newlyAddedGrades.length);
+
+    console.log(
+      "[DualSectionPopup] Final payload:",
+      JSON.stringify(payload, null, 2)
+    );
+    console.log(
+      "[DualSectionPopup] Newly added count:",
+      newlyAddedGrades.length
+    );
     console.log("[DualSectionPopup] Sending clean payload:", payload);
     onSubmit(payload);
   };
 
   const filteredExams = exams.filter((e) => {
-    const displayText = e[leftSection.optionLabelKey] || e["displayName"] || e["name"] || `Exam ${e[leftSection.optionValueKey]}`;
+    const displayText =
+      e[leftSection.optionLabelKey] ||
+      e["displayName"] ||
+      e["name"] ||
+      `Exam ${e[leftSection.optionValueKey]}`;
     return String(displayText).toLowerCase().includes(searchExam.toLowerCase());
   });
 
   const filteredGrades = selectedGrades.filter((g) => {
-    const displayText = g[rightSection.optionLabelKey] || g["gradeName"] || g["name"] || `Grade ${g[rightSection.optionValueKey]}`;
-    return String(displayText).toLowerCase().includes(searchGrade.toLowerCase());
+    const displayText =
+      g[rightSection.optionLabelKey] ||
+      g["gradeName"] ||
+      g["name"] ||
+      `Grade ${g[rightSection.optionValueKey]}`;
+    return String(displayText)
+      .toLowerCase()
+      .includes(searchGrade.toLowerCase());
   });
 
   return (
@@ -285,13 +336,22 @@ export function DualSectionPopup({
                       </div>
                     ) : (
                       filteredExams.map((exam) => {
-                        const examLabel = exam[leftSection.optionLabelKey] || exam["displayName"] || exam["name"] || `Exam ${exam[leftSection.optionValueKey]}`;
+                        const examLabel =
+                          exam[leftSection.optionLabelKey] ||
+                          exam["displayName"] ||
+                          exam["name"] ||
+                          `Exam ${exam[leftSection.optionValueKey]}`;
                         return (
                           <button
                             key={exam[leftSection.optionValueKey]}
-                            onClick={() => setSelectedExam(String(exam[leftSection.optionValueKey]))}
+                            onClick={() =>
+                              setSelectedExam(
+                                String(exam[leftSection.optionValueKey])
+                              )
+                            }
                             className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                              String(exam[leftSection.optionValueKey]) === selectedExam
+                              String(exam[leftSection.optionValueKey]) ===
+                              selectedExam
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-accent hover:bg-accent/80"
                             }`}
@@ -310,7 +370,9 @@ export function DualSectionPopup({
             <div className="flex-1 flex flex-col">
               <Card className="flex-1 flex flex-col">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">{rightSection.title}</CardTitle>
+                  <CardTitle className="text-lg">
+                    {rightSection.title}
+                  </CardTitle>
                   <CardDescription>{rightSection.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col gap-3">
@@ -331,10 +393,20 @@ export function DualSectionPopup({
                       </div>
                     ) : filteredGrades.length > 0 ? (
                       filteredGrades.map((grade, idx) => {
-                        const gradeId = String(grade[rightSection.optionValueKey]);
-                        const gradeLabel = grade[rightSection.optionLabelKey] || grade["displayName"] || grade["gradeName"] || grade["name"] || `Grade ${gradeId}`;
+                        const gradeId = String(
+                          grade[rightSection.optionValueKey]
+                        );
+                        const gradeLabel =
+                          grade[rightSection.optionLabelKey] ||
+                          grade["displayName"] ||
+                          grade["gradeName"] ||
+                          grade["name"] ||
+                          `Grade ${gradeId}`;
                         // Check if this grade is newly added (not in original gradeOptions)
-                        const isNewlyAdded = !gradeOptions.some((g) => String(g[rightSection.optionValueKey]) === gradeId);
+                        const isNewlyAdded = !gradeOptions.some(
+                          (g) =>
+                            String(g[rightSection.optionValueKey]) === gradeId
+                        );
                         return (
                           <div
                             key={gradeId}
@@ -372,11 +444,15 @@ export function DualSectionPopup({
                               }}
                               disabled={!isNewlyAdded}
                               className={`p-1 rounded transition-colors ${
-                                isNewlyAdded 
-                                  ? "text-destructive hover:bg-destructive/10 cursor-pointer" 
+                                isNewlyAdded
+                                  ? "text-destructive hover:bg-destructive/10 cursor-pointer"
                                   : "text-gray-400 cursor-not-allowed opacity-50"
                               }`}
-                              title={isNewlyAdded ? "Remove grade" : "Cannot remove originally mapped grades"}
+                              title={
+                                isNewlyAdded
+                                  ? "Remove grade"
+                                  : "Cannot remove originally mapped grades"
+                              }
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -418,12 +494,18 @@ export function DualSectionPopup({
               ))}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !selectedExam || selectedGrades.length === 0}
+                disabled={
+                  isSubmitting || !selectedExam || selectedGrades.length === 0
+                }
               >
                 {isSubmitting ? (
                   <>
@@ -440,19 +522,25 @@ export function DualSectionPopup({
       </Dialog>
 
       {/* Grades Selection Modal */}
-      <Dialog open={showGradesModal} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setModalSelectedGradeIds(new Set());
-        }
-        setShowGradesModal(isOpen);
-      }}>
+      <Dialog
+        open={showGradesModal}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setModalSelectedGradeIds(new Set());
+          }
+          setShowGradesModal(isOpen);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {actions.find((a: any) => a.id === "add-grades")?.modalTitle}
             </DialogTitle>
             <DialogDescription>
-              {actions.find((a: any) => a.id === "add-grades")?.modalDescription}
+              {
+                actions.find((a: any) => a.id === "add-grades")
+                  ?.modalDescription
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -464,18 +552,30 @@ export function DualSectionPopup({
             ) : (
               <div className="space-y-2">
                 {allGrades.map((grade) => {
-                  const modalConfig = actions.find((a: any) => a.id === "add-grades");
+                  const modalConfig = actions.find(
+                    (a: any) => a.id === "add-grades"
+                  );
                   const gradeIdKey = modalConfig?.modalOptionValueKey || "id";
-                  const gradeLabelKey = modalConfig?.modalOptionLabelKey || "name";
+                  const gradeLabelKey =
+                    modalConfig?.modalOptionLabelKey || "name";
                   const gradeId = String(grade[gradeIdKey]);
-                  const gradeLabel = grade[gradeLabelKey] || grade["displayName"] || grade["gradeName"] || grade["name"] || `Grade ${gradeId}`;
-                  
+                  const gradeLabel =
+                    grade[gradeLabelKey] ||
+                    grade["displayName"] ||
+                    grade["gradeName"] ||
+                    grade["name"] ||
+                    `Grade ${gradeId}`;
+
                   // Check if grade is already mapped (from initial fetch)
-                  const isMapped = gradeOptions.some((g) => String(g[rightSection.optionValueKey]) === gradeId);
+                  const isMapped = gradeOptions.some(
+                    (g) => String(g[rightSection.optionValueKey]) === gradeId
+                  );
                   // Check if grade is selected in modal
                   const isModalSelected = modalSelectedGradeIds.has(gradeId);
                   // Check if grade is already in selectedGrades
-                  const isAlreadyAdded = selectedGrades.some((g) => String(g[rightSection.optionValueKey]) === gradeId);
+                  const isAlreadyAdded = selectedGrades.some(
+                    (g) => String(g[rightSection.optionValueKey]) === gradeId
+                  );
 
                   return (
                     <button
@@ -508,7 +608,9 @@ export function DualSectionPopup({
                               Already Mapped
                             </span>
                           )}
-                          {isModalSelected && <span className="text-primary font-bold">✓</span>}
+                          {isModalSelected && (
+                            <span className="text-primary font-bold">✓</span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -519,10 +621,13 @@ export function DualSectionPopup({
           </div>
 
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => {
-              setModalSelectedGradeIds(new Set());
-              setShowGradesModal(false);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalSelectedGradeIds(new Set());
+                setShowGradesModal(false);
+              }}
+            >
               Cancel
             </Button>
             <Button
