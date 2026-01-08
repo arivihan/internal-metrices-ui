@@ -85,26 +85,46 @@ export default function ServiceStatusPage() {
         // eslint-disable-next-line
     }, []);
 
-    // Simulate 90-day status bar (green = up, orange = down)
-    const getStatusBar = (status: "online" | "offline" | "unknown") => {
-        // 45 bars for 90 days (2 days per bar)
-        const bars = Array.from({ length: 45 }, (_, i) => {
-            // Simulate: mostly green, some orange if offline
+    // Animated 90-day status bar (green = up, orange = down)
+    const AnimatedStatusBar = ({ status }: { status: "online" | "offline" | "unknown" }) => {
+        const BAR_COUNT = 45;
+        const [visibleBars, setVisibleBars] = useState(0);
+        // Generate color array for bars
+        const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
             if (status === "offline" && i % 13 === 0) return "orange";
             if (status === "unknown" && i % 17 === 0) return "gray";
             return "green";
         });
+
+        useEffect(() => {
+            setVisibleBars(0);
+            let timeout: number;
+            let i = 0;
+            function animate() {
+                if (i <= BAR_COUNT) {
+                    setVisibleBars(i);
+                    i++;
+                    timeout = setTimeout(animate, 18); // fast animation
+                }
+            }
+            animate();
+            return () => clearTimeout(timeout);
+        }, [status]);
+
         return (
             <div className="flex gap-[4px] mt-2 mb-1">
                 {bars.map((color, i) => (
                     <div
                         key={i}
-                        className={`h-8 w-1.5 rounded-xs ${color === "green"
-                                ? "bg-green-500"
-                                : color === "orange"
+                        className={`h-8 w-1.5 rounded-xs transition-all duration-100 ${
+                            i < visibleBars
+                                ? color === "green"
+                                    ? "bg-green-500"
+                                    : color === "orange"
                                     ? "bg-orange-400"
                                     : "bg-gray-300"
-                            }`}
+                                : "bg-gray-200 opacity-0"
+                        }`}
                         title={color === "green" ? "Operational" : color === "orange" ? "Issue" : "Unknown"}
                     />
                 ))}
@@ -161,7 +181,7 @@ export default function ServiceStatusPage() {
                                 </Badge>
                             </CardHeader>
                             <CardContent>
-                                {getStatusBar(service.status)}
+                                <AnimatedStatusBar status={service.status} />
                                 <div className="text-xs text-muted-foreground mb-1">Status over the past 90 Days</div>
                                 <div className="text-sm text-muted-foreground">No recent incidents</div>
                             </CardContent>
