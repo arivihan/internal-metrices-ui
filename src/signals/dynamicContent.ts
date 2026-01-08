@@ -25,6 +25,9 @@ export const pagination = signal<{
   totalElements: number
 }>({ currentPage: 0, pageSize: 10, totalPages: 0, totalElements: 0 })
 
+// Entity name reported by the last table response (used for audit lookups)
+export const currentEntityName = signal<string | null>(null)
+
 // Open popup
 export const openPopup = (button: Button) => {
   currentPopupButton.value = button
@@ -102,7 +105,7 @@ export const setCurrentContentItem = (item: DrawerItem | SubMenuItem | null) => 
 }
 
 // Fetch table data from URL (handles both absolute and relative URLs)
-export const fetchTableData = async (url: string, pageNo: number = 0, pageSize: number = 10) => {
+export const fetchTableData = async (url: string, pageNo: number = 0, pageSize: number = 10, extraParams: Record<string,string> = {}) => {
   try {
     tableDataLoading.value = true;
     tableDataError.value = null;
@@ -114,6 +117,13 @@ export const fetchTableData = async (url: string, pageNo: number = 0, pageSize: 
     urlObj.searchParams.set('level', 'SYSTEM');
     urlObj.searchParams.set('pageNo', String(pageNo));
     urlObj.searchParams.set('pageSize', String(pageSize));
+
+    // Attach any extra params (e.g., active=true) provided by caller
+    Object.keys(extraParams || {}).forEach((k) => {
+      if (extraParams[k] !== undefined && extraParams[k] !== null) {
+        urlObj.searchParams.set(k, String(extraParams[k]));
+      }
+    });
     
     const finalUrl = urlObj.toString().replace(window.location.origin, '');
     console.log(`[fetchTableData] 📡 Final URL with params: ${finalUrl}`);
@@ -128,7 +138,19 @@ export const fetchTableData = async (url: string, pageNo: number = 0, pageSize: 
 
     const data = extractArrayData(responseData);
     const paginationInfo = extractPaginationInfo(responseData);
-
+    // If backend provides entityName in the response, store it for other components
+    try {
+      const reportedEntity = responseData?.entityName || response?.entityName || null;
+      if (reportedEntity) {
+        currentEntityName.value = String(reportedEntity);
+        console.log(`[fetchTableData] ℹ️ Detected entityName from response: ${currentEntityName.value}`);
+      } else {
+        // clear if not present
+        currentEntityName.value = null;
+      }
+    } catch (e) {
+      // ignore
+    }
     tableData.value = data;
     pagination.value = paginationInfo;
     console.log(`[fetchTableData] 📊 Table data set to:`, data);
@@ -191,7 +213,27 @@ export const fetchLayoutData = async (url: string) => {
     // If the layout response includes a getDataUrl, fetch the table data
     if (layoutContent?.getDataUrl) {
       console.log(`[fetchLayoutData] Found getDataUrl in response: ${layoutContent.getDataUrl}, fetching table data`);
-      await fetchTableData(layoutContent.getDataUrl, 0, 10); // Pass initial page params
+
+      // Determine if layout defines a status/search field that should default to active
+      const extraParams: Record<string,string> = {};
+      try {
+        const searchFields = layoutContent?.search?.fields;
+        if (Array.isArray(searchFields)) {
+          searchFields.forEach((f: any) => {
+            const key = String(f?.value || "");
+            if (!key) return;
+            const lower = key.toLowerCase();
+            if (key === "active" || key === "isActive" || lower.includes("status")) {
+              // default to active=true on initial load
+              extraParams[key] = "true";
+            }
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      await fetchTableData(layoutContent.getDataUrl, 0, 10, extraParams); // Pass initial page params and any defaults
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Failed to fetch layout data'

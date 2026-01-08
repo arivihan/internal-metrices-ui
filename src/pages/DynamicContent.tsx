@@ -60,6 +60,7 @@ import {
   tableDataError,
   pagination,
   fetchTableData,
+  currentEntityName,
   popupOpen,
   currentPopupButton,
   openPopup,
@@ -104,6 +105,23 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
       );
     }
     return <div>{String(value)}</div>;
+  }
+
+  // If this column represents a status (by Header or accessor), display friendly text
+  const isStatusColumn =
+    (header.accessor && /(^|\.)?(isActive|active|status)$/i.test(String(header.accessor))) ||
+    /(^|\s)?status(\s|$)?/i.test(String(header.Header));
+
+  if (isStatusColumn) {
+    const normalized =
+      typeof value === "boolean"
+        ? value
+        : String(value).toLowerCase() === "true";
+    return (
+      <div className="font-normal text-sm">
+        {normalized ? "Active" : "Inactive"}
+      </div>
+    );
   }
 
   const isImageUrl = (str) => {
@@ -905,6 +923,19 @@ const Pagination = ({
 export default function DynamicContent() {
   useSignals();
 
+  // Sync entityName from signal (set by fetchTableData when backend returns entityName)
+  useEffect(() => {
+    // When the signal `currentEntityName` updates, sync into local state so audit requests use it
+    try {
+      // @ts-ignore - currentEntityName is a signal imported below
+      if (currentEntityName?.value) {
+        setEntityName(currentEntityName.value);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [/* triggers via signals library re-render */ currentEntityName?.value]);
+
   const [alert, setAlert] = useState<{
     title: string;
     description?: string;
@@ -930,7 +961,7 @@ export default function DynamicContent() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
-    const [entityName, setEntityName] = useState("AcademicYearEntity");
+  const [entityName, setEntityName] = useState("AcademicYearEntity");
   const [jsonPopupOpen, setJsonPopupOpen] = useState(false);
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
@@ -938,13 +969,29 @@ export default function DynamicContent() {
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
     const [auditPopupOpen, setAuditPopupOpen] = useState(false);
   const [auditData, setAuditData] = useState<any>(null);
+    const [popupDesiredStatus, setPopupDesiredStatus] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<string>("");
   const [tabsData, setTabsData] = useState<Record<string, any[]>>({});
   const [loadingTabs, setLoadingTabs] = useState<Record<string, boolean>>({});
   const [tabErrors, setTabErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setSearchData({});
+    // Initialize search data with defaults. If layout defines a status field (commonly 'active' or 'isActive'), default it to 'true'.
+    const initialSearch: Record<string, any> = {};
+    const searchFields = layoutData.value?.search?.fields;
+    if (searchFields && Array.isArray(searchFields)) {
+      searchFields.forEach((field: any) => {
+        if (field && field.value) {
+          const key = field.value;
+          if (key === "active" || key === "isActive" || key.toLowerCase().includes("status")) {
+            initialSearch[key] = "true";
+          } else {
+            initialSearch[key] = "";
+          }
+        }
+      });
+    }
+    setSearchData(initialSearch);
     setSearchResults(null);
     setCurrentPage(0);
   }, [currentContentItem.value?.title]);
@@ -952,6 +999,13 @@ export default function DynamicContent() {
   useEffect(() => {
     setCurrentPage(0);
   }, [searchData]);
+
+  // Clear desired status when popup is closed
+  useEffect(() => {
+    if (!popupOpen.value) {
+      setPopupDesiredStatus(null);
+    }
+  }, [popupOpen.value]);
 
   // Initialize first tab when layout type is TABS
   useEffect(() => {
@@ -986,8 +1040,22 @@ export default function DynamicContent() {
 
   const handleButtonClick = (button: any) => {
     if (button.type === "SHOW_POPUP" && button.popupFields) {
+      // Build default form data for creation popups: if a status field exists, default it to active ('true')
+      const defaultData: Record<string, any> = {};
+      try {
+        (button.popupFields || []).forEach((field: any) => {
+          if (!field || !field.value) return;
+          const key = field.value;
+          if (key === "isActive" || key === "active" || key.toLowerCase().includes("status")) {
+            defaultData[key] = defaultData[key] ?? "true";
+          }
+        });
+      } catch (e) {
+        // ignore
+      }
+
       openPopup(button);
-      setFormData({});
+      setFormData(defaultData);
     } else if (button.action === "link") {
       console.log("Navigate to:", button.actionUrl);
     } else if (button.action === "download") {
@@ -1185,15 +1253,36 @@ export default function DynamicContent() {
 
     // Handle SHOW_POPUP action (Edit)
     if (action.type === "SHOW_POPUP" && action.popupFields) {
-      openPopup(action);
+      // If this action uses the {active} placeholder, clone and replace based on row's isActive
+      let actionToOpen = action;
+      try {
+        const currentIsActive = rowData.isActive === true;
+        const desiredLabel = currentIsActive ? "Inactive" : "Active";
+        const desiredBool = !currentIsActive;
+
+        // Clone action to avoid mutating original layout config
+        actionToOpen = { ...action };
+        if (typeof actionToOpen.title === "string") actionToOpen.title = actionToOpen.title.replace(/\{active\}/gi, desiredLabel);
+        if (typeof actionToOpen.popupSubmitText === "string") actionToOpen.popupSubmitText = actionToOpen.popupSubmitText.replace(/\{active\}/gi, desiredLabel);
+        if (typeof actionToOpen.popupTitle === "string") actionToOpen.popupTitle = actionToOpen.popupTitle.replace(/\{active\}/gi, desiredLabel);
+
+        // Store desired status for submit handler
+        setPopupDesiredStatus(desiredBool);
+      } catch (e) {
+        // ignore and open plain action
+        actionToOpen = action;
+        setPopupDesiredStatus(null);
+      }
+
+      openPopup(actionToOpen);
       const initialData: any = {
         id: rowData.id || null,
       };
 
       console.log("📋 Populating form from row data:", rowData);
-      console.log("📝 Action popup fields:", action.popupFields);
+      console.log("📝 Action popup fields:", actionToOpen.popupFields);
 
-      action.popupFields.forEach((field: any) => {
+      actionToOpen.popupFields.forEach((field: any) => {
         const formFieldKey = field.value; // Form field key (e.g., "discountType", "status")
         const apiFieldKey = field.apiField || field.value; // API field key (e.g., "couponDiscountType", "active")
         const rowValue = rowData[apiFieldKey]; // Get value from API response
@@ -1512,10 +1601,17 @@ export default function DynamicContent() {
     setIsSubmitting(true);
 
     try {
-      const payload = transformFormDataToPayload(
+      let payload = transformFormDataToPayload(
         formData,
         currentPopupButton.value.popupFields || []
       );
+
+      // If this is a status toggle endpoint, override payload to send { isActive: <desired> }
+      const submitUrlLower = (currentPopupButton.value.popupSubmitUrl || "" ).toLowerCase();
+      if (submitUrlLower.includes("/status") && typeof popupDesiredStatus === "boolean") {
+        payload = { isActive: popupDesiredStatus };
+        console.log(`🔁 Overriding payload for status update: ${JSON.stringify(payload)}`);
+      }
 
       console.log("📦 Payload Being Sent:", JSON.stringify(payload, null, 2));
 
@@ -1598,7 +1694,25 @@ export default function DynamicContent() {
           layoutData.value.getDataUrl
         );
         try {
-          await fetchTableData(layoutData.value.getDataUrl);
+          // Recompute any initial extra params (like active=true) from layout search fields
+          const extraParams: Record<string, string> = {};
+          try {
+            const searchFields = layoutData.value?.search?.fields;
+            if (Array.isArray(searchFields)) {
+              searchFields.forEach((f: any) => {
+                const key = String(f?.value || "");
+                if (!key) return;
+                const lower = key.toLowerCase();
+                if (key === "active" || key === "isActive" || lower.includes("status")) {
+                  extraParams[key] = "true";
+                }
+              });
+            }
+          } catch (e) {
+            // ignore
+          }
+
+          await fetchTableData(layoutData.value.getDataUrl, 0, pagination.value.pageSize, extraParams);
           console.log("✅ Table data refreshed");
         } catch (refreshError) {
           console.error("⚠️  Could not refresh table data:", refreshError);
@@ -1607,6 +1721,7 @@ export default function DynamicContent() {
       }
 
       closePopup();
+      setPopupDesiredStatus(null);
       setFormData({});
       setSearchResults(null); // Clear search results if any
     } catch (error) {
@@ -2042,19 +2157,25 @@ export default function DynamicContent() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                               {header.actions.map(
-                                                (action, actionIndex) => (
-                                                  <DropdownMenuItem
-                                                    key={actionIndex}
-                                                    onClick={() =>
-                                                      handleRowAction(
-                                                        action,
-                                                        row
-                                                      )
-                                                    }
-                                                  >
-                                                    {action.title}
-                                                  </DropdownMenuItem>
-                                                )
+                                                (action, actionIndex) => {
+                                                  const titleTemplate = action.title || "";
+                                                  const displayTitle = titleTemplate.includes("{active}")
+                                                    ? titleTemplate.replace(/\{active\}/gi, row.isActive === true ? "Inactive" : "Active")
+                                                    : titleTemplate;
+                                                  return (
+                                                    <DropdownMenuItem
+                                                      key={actionIndex}
+                                                      onClick={() =>
+                                                        handleRowAction(
+                                                          action,
+                                                          row
+                                                        )
+                                                      }
+                                                    >
+                                                      {displayTitle}
+                                                    </DropdownMenuItem>
+                                                  );
+                                                }
                                               )}
                                             </DropdownMenuContent>
                                           </DropdownMenu>
