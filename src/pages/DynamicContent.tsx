@@ -930,11 +930,14 @@ export default function DynamicContent() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
+    const [entityName, setEntityName] = useState("AcademicYearEntity");
   const [jsonPopupOpen, setJsonPopupOpen] = useState(false);
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [viewDetailsData, setViewDetailsData] = useState<any>(null);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+    const [auditPopupOpen, setAuditPopupOpen] = useState(false);
+  const [auditData, setAuditData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("");
   const [tabsData, setTabsData] = useState<Record<string, any[]>>({});
   const [loadingTabs, setLoadingTabs] = useState<Record<string, boolean>>({});
@@ -995,6 +998,85 @@ export default function DynamicContent() {
   const handleViewJson = (data: any) => {
     setJsonPopupData(data);
     setJsonPopupOpen(true);
+  };
+
+  // Audit popup component (per-entry change tables for readability)
+  // @ts-ignore
+  const AuditPopup = ({ open, onClose, data, title }) => {
+    if (!data) return null;
+
+    const rows = Array.isArray(data.content) ? data.content : [];
+
+    const formatValueForCell = (val: any) => {
+      if (val === null || val === undefined) return "-";
+      if (typeof val === "object") return JSON.stringify(val, null, 2);
+      return String(val);
+    };
+
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="w-[70vw] max-w-[70vw] max-h-[85vh] p-0 flex flex-col">
+          <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+            <DialogTitle className="text-xl font-semibold">{title || "Audit Trail"}</DialogTitle>
+            <DialogDescription>
+              Showing {rows.length} audit entr{rows.length === 1 ? "y" : "ies"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {rows.length > 0 ? (
+              rows.map((r: any, idx: number) => {
+                const keys = Array.from(new Set([...(r.oldValue ? Object.keys(r.oldValue) : []), ...(r.newValue ? Object.keys(r.newValue) : [])]));
+                return (
+                  <div key={idx} className="border rounded-lg bg-card">
+                    <div className="px-4 py-3 border-b flex items-start justify-between">
+                      <div>
+                        <div className="text-sm text-muted-foreground">{r.actionType || "-"}</div>
+                        <div className="font-medium">{r.performedBy || r.userId || "-"}</div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">{r.timestamp ? String(r.timestamp) : "-"}</div>
+                    </div>
+
+                    <div className="px-4 py-3">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="w-[40%]">Field</TableHead>
+                            <TableHead className="w-[30%]">Old Value</TableHead>
+                            <TableHead className="w-[30%]">New Value</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {keys.length > 0 ? (
+                            keys.map((key) => (
+                              <TableRow key={key} className="hover:bg-muted/30">
+                                <TableCell className="font-medium text-muted-foreground py-3">{key}</TableCell>
+                                <TableCell className="py-3"><pre className="text-xs whitespace-pre-wrap">{formatValueForCell(r.oldValue ? r.oldValue[key] : undefined)}</pre></TableCell>
+                                <TableCell className="py-3"><pre className="text-xs whitespace-pre-wrap">{formatValueForCell(r.newValue ? r.newValue[key] : undefined)}</pre></TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-6">No field changes recorded</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center text-muted-foreground py-8">No audit logs available</div>
+            )}
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t bg-muted/20">
+            <Button variant="outline" onClick={onClose} className="min-w-[100px]">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   const handleTabChange = async (tabId: string, getDataUrl: string) => {
@@ -1066,6 +1148,38 @@ export default function DynamicContent() {
       console.log("🔍 Opening view details for:", rowData);
       setViewDetailsData(rowData);
       setViewDetailsOpen(true);
+      return;
+    }
+
+    // Handle audit view action: fetch row-wise audit logs and show popup
+    if (action.viewFetchDetails) {
+      (async () => {
+        try {
+          const { dynamicRequest } = await import("@/services/apiClient");
+
+          // Build base URL (strip existing query) and attach entityName and entityId
+          const base = String(action.viewFetchDetails).split("?")[0];
+          const idValue = rowData.id ?? rowData.entityId ?? rowData._id ?? rowData["id"];
+          const url = `${base}?entityName=${encodeURIComponent(entityName)}&entityId=${encodeURIComponent(String(idValue))}`;
+
+          console.log("📡 Fetching audit logs from:", url);
+          const response = await dynamicRequest(url, "GET");
+
+          let responseData = response;
+          if (response?.data && typeof response.data === "object") responseData = response.data;
+
+          setAuditData(responseData);
+          setAuditPopupOpen(true);
+        } catch (error) {
+          console.error("❌ Failed to fetch audit logs:", error);
+          showAlert({
+            title: "Failed to load audit logs",
+            description: error instanceof Error ? error.message : String(error),
+            variant: "destructive",
+          });
+        }
+      })();
+
       return;
     }
 
@@ -1775,6 +1889,12 @@ export default function DynamicContent() {
           onClose={() => setViewDetailsOpen(false)}
           data={viewDetailsData}
           title="View Coupon Details"
+        />
+        <AuditPopup
+          open={auditPopupOpen}
+          onClose={() => setAuditPopupOpen(false)}
+          data={auditData}
+          title="Audit Trail"
         />
 
         {/* Advanced Search Dialog */}
