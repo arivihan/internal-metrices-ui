@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DynamicIcon } from "@/lib/icon-map";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, GripVertical } from "lucide-react";
 import { apiClient } from "@/services/apiClient";
 import { toast } from "sonner";
 
@@ -27,6 +27,7 @@ interface Section {
   placeholder?: string;
   includeDisplayOrder?: boolean;
   displayOrderPlaceholder?: string;
+  deleteFetchUrl?: string;
 }
 
 interface Action {
@@ -76,11 +77,14 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   const [leftOptions, setLeftOptions] = useState<SelectionItem[]>([]);
   const [rightOptions, setRightOptions] = useState<SelectionItem[]>([]);
   const [allModalOptions, setAllModalOptions] = useState<SelectionItem[]>([]);
-  const [addedItems, setAddedItems] = useState<Record<string, SelectionItem>>({});
+  const [addedItems, setAddedItems] = useState<Record<string, SelectionItem>>(
+    {}
+  );
   const [leftLoading, setLeftLoading] = useState(false);
   const [rightLoading, setRightLoading] = useState(false);
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
-  const [selectedLeftObject, setSelectedLeftObject] = useState<SelectionItem | null>(null);
+  const [selectedLeftObject, setSelectedLeftObject] =
+    useState<SelectionItem | null>(null);
   const [selectedRight, setSelectedRight] = useState<string[]>([]);
   const [rightDisplayOrders, setRightDisplayOrders] = useState<
     Record<string, number>
@@ -89,9 +93,22 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   const [searchLeft, setSearchLeft] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [modalSelectedItems, setModalSelectedItems] = useState<Set<string>>(new Set());
-  const [originalRightOptions, setOriginalRightOptions] = useState<SelectionItem[]>([]);
-  
+  const [modalSelectedItems, setModalSelectedItems] = useState<Set<string>>(
+    new Set()
+  );
+  const [originalRightOptions, setOriginalRightOptions] = useState<
+    SelectionItem[]
+  >([]);
+
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Drag and drop state
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+
   // Pagination states for left section
   const [leftPageNumber, setLeftPageNumber] = useState(0);
   const [leftPageSize, setLeftPageSize] = useState(10);
@@ -106,36 +123,48 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   // Fetch right section options when left selection changes
   useEffect(() => {
     if (selectedLeft) {
-      console.log(`[DualSectionView] Selected left: ${selectedLeft}, fetching right options`);
+      console.log(
+        `[DualSectionView] Selected left: ${selectedLeft}, fetching right options`
+      );
       fetchRightOptions();
     } else {
-      console.log("[DualSectionView] No left selection, clearing right options");
+      console.log(
+        "[DualSectionView] No left selection, clearing right options"
+      );
       setRightOptions([]);
       setSelectedRight([]);
       setRightDisplayOrders({});
       setOriginalRightOptions([]);
     }
-  }, [selectedLeft, selectedLeftObject, rightSection.fetchUrl, rightSection.searchParam, (rightSection as any).searchParams]);
+  }, [
+    selectedLeft,
+    selectedLeftObject,
+    rightSection.fetchUrl,
+    rightSection.searchParam,
+    (rightSection as any).searchParams,
+  ]);
 
   const fetchLeftOptions = async (pageNumber: number = 0) => {
     try {
       setLeftLoading(true);
       setLeftPageNumber(pageNumber);
-      console.log(`[DualSectionView] Fetching left options from: ${leftSection.fetchUrl} - Page: ${pageNumber}`);
+      console.log(
+        `[DualSectionView] Fetching left options from: ${leftSection.fetchUrl} - Page: ${pageNumber}`
+      );
       const response = await apiClient<any>(leftSection.fetchUrl, {
         method: "GET",
-        params: { 
+        params: {
           level: "SYSTEM",
           pageNo: pageNumber,
           pageSize: leftPageSize,
         },
       });
       console.log("[DualSectionView] Left options response:", response);
-      
+
       // Handle paginated response
       let data = [];
       let totalElements = 0;
-      
+
       if (response?.content && Array.isArray(response.content)) {
         data = response.content;
         totalElements = response.totalElements || 0;
@@ -149,10 +178,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         totalElements = response.length;
         setLeftTotalElements(totalElements);
       }
-      
+
       console.log("[DualSectionView] Parsed left data:", data);
       setLeftOptions(data || []);
-      
+
       // Auto-select first item on initial load (page 0) or if no selection exists
       if (data && data.length > 0 && (pageNumber === 0 || !selectedLeft)) {
         const firstItem = data[0];
@@ -173,11 +202,14 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     try {
       setRightLoading(true);
       const params: Record<string, string> = { level: "SYSTEM" };
-      
+
       // Check if we need extracted fields for search params
       if ((rightSection as any).searchParams && selectedLeftObject) {
         const searchParams = (rightSection as any).searchParams;
-        console.log("[DualSectionView] Using extracted searchParams:", searchParams);
+        console.log(
+          "[DualSectionView] Using extracted searchParams:",
+          searchParams
+        );
         for (const [paramKey, objectKey] of Object.entries(searchParams)) {
           params[paramKey] = String(selectedLeftObject[objectKey] || "");
         }
@@ -185,8 +217,11 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         // Fallback to old searchParam (single param)
         params[rightSection.searchParam] = String(selectedLeft);
       }
-      
-      console.log(`[DualSectionView] Fetching right options from: ${rightSection.fetchUrl}`, params);
+
+      console.log(
+        `[DualSectionView] Fetching right options from: ${rightSection.fetchUrl}`,
+        params
+      );
       const response = await apiClient<any>(rightSection.fetchUrl, {
         method: "GET",
         params,
@@ -202,12 +237,14 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       console.log("[DualSectionView] Parsed right data:", data);
       setRightOptions(data || []);
       setOriginalRightOptions(data || []);
-      
+
       // Auto-populate selectedRight with the IDs from fetched items so they display as selected
-      const selectedIds = (data || []).map((item: any) => String(item[rightSection.optionValueKey]));
+      const selectedIds = (data || []).map((item: any) =>
+        String(item[rightSection.optionValueKey])
+      );
       console.log("[DualSectionView] Auto-selected right items:", selectedIds);
       setSelectedRight(selectedIds);
-      
+
       // Auto-populate display orders from fetched items
       const orders: Record<string, number> = {};
       (data || []).forEach((item: any) => {
@@ -230,7 +267,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     if (addAction?.modalFetchUrl) {
       setModalLoading(true);
       try {
-        console.log(`[DualSectionView] Fetching modal options from: ${addAction.modalFetchUrl}`);
+        console.log(
+          `[DualSectionView] Fetching modal options from: ${addAction.modalFetchUrl}`
+        );
         const response = await apiClient<any>(addAction.modalFetchUrl, {
           method: "GET",
           params: { level: "SYSTEM" },
@@ -247,7 +286,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         setAllModalOptions(data || []);
         setShowAddModal(true);
       } catch (error) {
-        console.error("[DualSectionView] Failed to fetch modal options:", error);
+        console.error(
+          "[DualSectionView] Failed to fetch modal options:",
+          error
+        );
       } finally {
         setModalLoading(false);
       }
@@ -271,10 +313,20 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     const newAddedItems: Record<string, SelectionItem> = {};
     newItems.forEach((item) => {
       const itemId = String(item[modalValueKey]);
-      const itemLabel = item[modalLabelKey] || item.displayName || item.name || item.gradeName || `Item ${itemId}`;
-      
-      console.log("[DualSectionView] Adding item:", { itemId, modalLabelKey, itemLabel, originalItem: item });
-      
+      const itemLabel =
+        item[modalLabelKey] ||
+        item.displayName ||
+        item.name ||
+        item.gradeName ||
+        `Item ${itemId}`;
+
+      console.log("[DualSectionView] Adding item:", {
+        itemId,
+        modalLabelKey,
+        itemLabel,
+        originalItem: item,
+      });
+
       newAddedItems[itemId] = {
         ...item, // Keep all original fields
         [rightSection.optionValueKey]: itemId,
@@ -321,22 +373,157 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     setModalSelectedItems(new Set());
   };
 
-  const handleRemoveRightItem = (itemId: string) => {
+  const handleRemoveRightItem = async (itemId: string) => {
     // Check if this is a newly added item (not in original)
-    const isNewlyAdded = !originalRightOptions.some((item) => String(item[rightSection.optionValueKey]) === itemId);
-    
+    const isNewlyAdded = !originalRightOptions.some(
+      (item) => String(item[rightSection.optionValueKey]) === itemId
+    );
+
+    console.log("[DualSectionView] Removing item:", { itemId, isNewlyAdded });
+
+    // For existing items, show confirmation dialog
     if (!isNewlyAdded) {
-      console.warn("[DualSectionView] Cannot remove originally mapped item:", itemId);
+      setDeleteItemId(itemId);
+      setDeleteConfirmOpen(true);
       return;
     }
 
-    console.log("[DualSectionView] Removing item:", { itemId, isNewlyAdded });
+    // For newly added items, just remove from selection
     setSelectedRight((prev) => prev.filter((id) => id !== itemId));
     setRightDisplayOrders((prev) => {
       const updated = { ...prev };
       delete updated[itemId];
       return updated;
     });
+    setAddedItems((prev) => {
+      const updated = { ...prev };
+      delete updated[itemId];
+      return updated;
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteItemId || !rightSection.deleteFetchUrl) {
+      setDeleteConfirmOpen(false);
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+
+      // Find the full item to get the mapping ID
+      const itemToDelete = originalRightOptions.find(
+        (item) => String(item[rightSection.optionValueKey]) === deleteItemId
+      );
+
+      if (!itemToDelete) {
+        console.error("[DualSectionView] Item not found for deletion:", deleteItemId);
+        toast.error("Item not found");
+        setDeleteConfirmOpen(false);
+        return;
+      }
+
+      // Get the mapping ID - look for common ID field names
+      const mappingId = itemToDelete.id || itemToDelete.examGradeMappingId || itemToDelete.mappingId || deleteItemId;
+
+      // Replace placeholder in delete URL
+      const deleteUrl = rightSection.deleteFetchUrl.replace("{examGradeMappingId}", String(mappingId));
+
+      console.log("[DualSectionView] Calling delete API:", {
+        deleteUrl,
+        deleteItemId,
+        mappingId,
+        itemToDelete,
+      });
+
+      await apiClient(deleteUrl, {
+        method: "DELETE",
+      });
+
+      toast.success("Item deleted successfully");
+      console.log("[DualSectionView] Item deleted successfully");
+
+      // Remove from state
+      setSelectedRight((prev) => prev.filter((id) => id !== deleteItemId));
+      setRightDisplayOrders((prev) => {
+        const updated = { ...prev };
+        delete updated[deleteItemId];
+        return updated;
+      });
+
+      // Update original options to reflect deletion
+      setOriginalRightOptions((prev) =>
+        prev.filter((item) => String(item[rightSection.optionValueKey]) !== deleteItemId)
+      );
+
+      setDeleteConfirmOpen(false);
+      setDeleteItemId(null);
+    } catch (error) {
+      console.error("[DualSectionView] Failed to delete item:", error);
+      toast.error("Failed to delete item");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDragStart = (itemId: string) => {
+    setDraggedItemId(itemId);
+    console.log("[DualSectionView] Drag started:", itemId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverItemId(itemId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverItemId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetItemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedItemId || draggedItemId === targetItemId) {
+      setDraggedItemId(null);
+      setDragOverItemId(null);
+      return;
+    }
+
+    console.log("[DualSectionView] Drop triggered:", {
+      draggedItemId,
+      targetItemId,
+    });
+
+    // Reorder items
+    const oldIndex = selectedRight.indexOf(draggedItemId);
+    const newIndex = selectedRight.indexOf(targetItemId);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      setDraggedItemId(null);
+      setDragOverItemId(null);
+      return;
+    }
+
+    const newSelectedRight = Array.from(selectedRight);
+    newSelectedRight.splice(oldIndex, 1);
+    newSelectedRight.splice(newIndex, 0, draggedItemId);
+
+    console.log("[DualSectionView] New order:", newSelectedRight);
+    setSelectedRight(newSelectedRight);
+
+    // Auto-update display orders from 1 onwards
+    const newDisplayOrders: Record<string, number> = {};
+    newSelectedRight.forEach((itemId, idx) => {
+      newDisplayOrders[itemId] = idx + 1;
+    });
+
+    console.log("[DualSectionView] Updated display orders:", newDisplayOrders);
+    setRightDisplayOrders(newDisplayOrders);
+
+    setDraggedItemId(null);
+    setDragOverItemId(null);
   };
 
   const handleRightSelection = (id: string, isSelected: boolean) => {
@@ -377,10 +564,13 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
     try {
       setSubmitting(true);
-      
+
       // Send only newly added items (filter out original items)
       const newlyAddedItems = selectedRight.filter(
-        (id) => !originalRightOptions.some((item) => String(item[rightSection.optionValueKey]) === id)
+        (id) =>
+          !originalRightOptions.some(
+            (item) => String(item[rightSection.optionValueKey]) === id
+          )
       );
 
       const payload: Record<string, any> = {};
@@ -392,7 +582,11 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
           payload[payloadKey] = selectedLeftObject[objectKey];
         }
-        console.log(`[DualSectionView] Extracted fields from left section:`, extractFields, payload);
+        console.log(
+          `[DualSectionView] Extracted fields from left section:`,
+          extractFields,
+          payload
+        );
       } else {
         // Default behavior: use fieldName
         payload[leftSection.fieldName] = selectedLeft;
@@ -445,10 +639,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   const rightValue = rightSection.optionValueKey;
 
   return (
-    <div className="w-full h-full flex flex-col bg-background">
+    <div className="w-full  h-full flex flex-col bg-background">
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-2 gap-6">
+      <div className="flex-1 overflow-y-auto ">
+        <div className="grid grid-cols-2  gap-6">
           {/* Left Section */}
           <Card>
             <CardHeader>
@@ -465,7 +659,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
               ) : (
                 <div className="space-y-2">
                   <Input
-                    placeholder={`Search ${leftSection.placeholder || "items"}...`}
+                    placeholder={`Search ${
+                      leftSection.placeholder || "items"
+                    }...`}
                     value={searchLeft}
                     onChange={(e) => {
                       setSearchLeft(e.target.value);
@@ -482,13 +678,26 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                     ) : (
                       leftOptions
                         .filter((item) => {
-                          const label = String(item[leftLabel] || item.displayName || item.name || "");
-                          return label.toLowerCase().includes(searchLeft.toLowerCase());
+                          const label = String(
+                            item[leftLabel] ||
+                              item.displayName ||
+                              item.name ||
+                              ""
+                          );
+                          return label
+                            .toLowerCase()
+                            .includes(searchLeft.toLowerCase());
                         })
                         .map((item) => {
-                          const label = item[leftLabel] || item.displayName || item.name || "Untitled";
+                          const label =
+                            item[leftLabel] ||
+                            item.displayName ||
+                            item.name ||
+                            "Untitled";
                           const value = String(item[leftValue]);
-                          const isSelected = selectedLeft === value || selectedLeft === String(item[leftValue]);
+                          const isSelected =
+                            selectedLeft === value ||
+                            selectedLeft === String(item[leftValue]);
                           return (
                             <div
                               key={value}
@@ -508,12 +717,14 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                         })
                     )}
                   </div>
-                  
+
                   {/* Pagination Controls for Left Section */}
                   {leftTotalElements > leftPageSize && (
                     <div className="flex items-center justify-between mt-4 pt-4 border-t">
                       <div className="text-xs text-muted-foreground">
-                        Page {leftPageNumber + 1} of {Math.ceil(leftTotalElements / leftPageSize)} ({leftTotalElements} total)
+                        Page {leftPageNumber + 1} of{" "}
+                        {Math.ceil(leftTotalElements / leftPageSize)} (
+                        {leftTotalElements} total)
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -528,7 +739,11 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                           variant="outline"
                           size="sm"
                           onClick={() => fetchLeftOptions(leftPageNumber + 1)}
-                          disabled={leftPageNumber >= Math.ceil(leftTotalElements / leftPageSize) - 1 || leftLoading}
+                          disabled={
+                            leftPageNumber >=
+                              Math.ceil(leftTotalElements / leftPageSize) - 1 ||
+                            leftLoading
+                          }
                         >
                           Next
                         </Button>
@@ -562,17 +777,46 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                   ) : (
                     selectedRight.map((value) => {
                       // First check if it's in rightOptions (original items), then check in addedItems (newly added)
-                      const item = rightOptions.find((opt) => String(opt[rightValue]) === value) || addedItems[value];
-                      const label = item ? (item[rightLabel] || item.gradeName || item.name || "Untitled") : "Untitled";
-                      const isNewlyAdded = !originalRightOptions.some((opt) => String(opt[rightValue]) === value);
-                      
-                      console.log("[DualSectionView] Rendering right item:", { value, item, label, isNewlyAdded });
-                      
+                      const item =
+                        rightOptions.find(
+                          (opt) => String(opt[rightValue]) === value
+                        ) || addedItems[value];
+                      const label = item
+                        ? item[rightLabel] ||
+                          item.gradeName ||
+                          item.name ||
+                          "Untitled"
+                        : "Untitled";
+                      const isNewlyAdded = !originalRightOptions.some(
+                        (opt) => String(opt[rightValue]) === value
+                      );
+
+                      console.log("[DualSectionView] Rendering right item:", {
+                        value,
+                        item,
+                        label,
+                        isNewlyAdded,
+                      });
+
                       return (
                         <div
                           key={value}
-                          className="flex items-center gap-3 p-2 rounded bg-primary/5 border border-primary/20"
+                          draggable
+                          onDragStart={() => handleDragStart(value)}
+                          onDragOver={(e) => handleDragOver(e, value)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, value)}
+                          className={`flex items-center gap-3 p-2 rounded border transition-all ${
+                            draggedItemId === value
+                              ? "opacity-50 bg-muted"
+                              : dragOverItemId === value
+                              ? "bg-primary/15 border-primary"
+                              : "bg-primary/5 border-primary/20"
+                          } cursor-grab active:cursor-grabbing`}
                         >
+                          <div className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                            <GripVertical className="h-4 w-4" />
+                          </div>
                           <div className="flex-1 flex items-center gap-2">
                             <span className="text-sm font-medium">{label}</span>
                             {isNewlyAdded && (
@@ -584,10 +828,13 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                           {rightSection.includeDisplayOrder && (
                             <input
                               type="number"
-                              min="0"
+                              min="1"
                               value={rightDisplayOrders[value] || 0}
                               onChange={(e) =>
-                                handleDisplayOrderChange(value, parseInt(e.target.value))
+                                handleDisplayOrderChange(
+                                  value,
+                                  parseInt(e.target.value)
+                                )
                               }
                               placeholder="Order"
                               className="w-16 px-2 py-1 border rounded text-sm"
@@ -598,13 +845,8 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                               e.stopPropagation();
                               handleRemoveRightItem(value);
                             }}
-                            disabled={!isNewlyAdded}
-                            className={`p-1 rounded transition-colors ${
-                              isNewlyAdded
-                                ? "text-destructive hover:bg-destructive/10 cursor-pointer"
-                                : "text-gray-400 cursor-not-allowed opacity-50"
-                            }`}
-                            title={isNewlyAdded ? "Remove item" : "Cannot remove originally mapped items"}
+                            className="p-1 rounded transition-colors text-destructive hover:bg-destructive/10 cursor-pointer"
+                            title="Remove item"
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -625,7 +867,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
       {/* Action Buttons */}
       <div className="border-t p-6">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex ml-auto gap-3 items-center justify-end-safe">
           {actions.map((action) => (
             <Button
               key={action.id}
@@ -650,20 +892,27 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       </div>
 
       {/* Add Items Modal */}
-      <Dialog open={showAddModal} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setModalSelectedItems(new Set());
-        }
-        setShowAddModal(isOpen);
-      }}>
+      <Dialog
+        open={showAddModal}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setModalSelectedItems(new Set());
+          }
+          setShowAddModal(isOpen);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             {(() => {
               const addAction = actions.find((a) => a.type === "modal");
               return (
                 <>
-                  <DialogTitle>{addAction?.modalTitle || "Select Items to Add"}</DialogTitle>
-                  <DialogDescription>{addAction?.modalDescription}</DialogDescription>
+                  <DialogTitle>
+                    {addAction?.modalTitle || "Select Items to Add"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {addAction?.modalDescription}
+                  </DialogDescription>
                 </>
               );
             })()}
@@ -679,13 +928,19 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                 {allModalOptions.map((item) => {
                   const addAction = actions.find((a) => a.type === "modal");
                   const modalValueKey = addAction?.modalOptionValueKey || "id";
-                  const modalLabelKey = addAction?.modalOptionLabelKey || "name";
+                  const modalLabelKey =
+                    addAction?.modalOptionLabelKey || "name";
                   const itemId = String(item[modalValueKey]);
-                  const itemLabel = item[modalLabelKey] || item.displayName || item.name || `Item ${itemId}`;
+                  const itemLabel =
+                    item[modalLabelKey] ||
+                    item.displayName ||
+                    item.name ||
+                    `Item ${itemId}`;
 
                   // Check if already mapped in original
                   const isMapped = originalRightOptions.some(
-                    (rItem) => String(rItem[rightSection.optionValueKey]) === itemId
+                    (rItem) =>
+                      String(rItem[rightSection.optionValueKey]) === itemId
                   );
                   // Check if selected in modal
                   const isSelected = modalSelectedItems.has(itemId);
@@ -723,7 +978,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                               Already Added
                             </span>
                           )}
-                          {isSelected && <span className="text-primary font-bold">✓</span>}
+                          {isSelected && (
+                            <span className="text-primary font-bold">✓</span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -751,6 +1008,51 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
               disabled={modalSelectedItems.size === 0}
             >
               Add Selected ({modalSelectedItems.size})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Existing Item</DialogTitle>
+            <DialogDescription>
+              This item already exists in the system. Are you sure you want to delete it? 
+              You can recover it by re-adding it later if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            <p className="text-sm text-muted-foreground">
+              This action will remove the item from the mapping and cannot be undone immediately. 
+              However, you can always re-add it if you change your mind.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setDeleteItemId(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Yes, Delete It"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

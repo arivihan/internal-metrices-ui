@@ -63,16 +63,21 @@ export function FormPopup({
         ) {
           setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
           try {
-            const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
+            const response: any = await dynamicRequest(
+              field.fetchOptionsUrl,
+              "GET"
+            );
             const options = Array.isArray(response)
               ? response
               : (response?.data as any) || (response?.content as any) || [];
 
             const transformed = options.map((opt: any) => ({
               label: (field.optionLabelKey2 as any)
-                ? `${opt[(field.optionLabelKey as any)]} + ${opt[(field.optionLabelKey2 as any)]}`
-                : opt[(field.optionLabelKey as any)],
-              value: opt[(field.optionValueKey as any)],
+                ? `${opt[field.optionLabelKey as any]} + ${
+                    opt[field.optionLabelKey2 as any]
+                  }`
+                : opt[field.optionLabelKey as any],
+              value: opt[field.optionValueKey as any],
               original: opt,
             }));
 
@@ -143,43 +148,45 @@ export function FormPopup({
                   <div className="border rounded-md p-2 min-h-10 bg-background">
                     {/* Selected items display */}
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {(selectedOptions[field.value] || []).map((item: any, idx: number) => {
-                        const label = (field.optionLabelKey2 as any)
-                          ? `${item[(field.optionLabelKey as any)]} + ${
-                              item[(field.optionLabelKey2 as any)]
-                            }`
-                          : item[(field.optionLabelKey as any)];
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-1 bg-primary/20 text-primary px-2 py-1 rounded text-sm"
-                          >
-                            <span>{label}</span>
-                            <button
-                              onClick={() => {
-                                const newSelected = selectedOptions[
-                                  field.value
-                                ].filter((_: any, i: number) => i !== idx);
-                                const newOptions = {
-                                  ...selectedOptions,
-                                  [field.value]: newSelected,
-                                };
-                                onSelectedOptionsChange?.(newOptions);
-                                // Update formData with selected IDs
-                                onFormDataChange({
-                                  ...formData,
-                                  [field.value]: newSelected.map(
-                                    (o: any) => o[(field.optionValueKey as any)]
-                                  ),
-                                });
-                              }}
-                              className="hover:text-destructive"
+                      {(selectedOptions[field.value] || []).map(
+                        (item: any, idx: number) => {
+                          const label = (field.optionLabelKey2 as any)
+                            ? `${item[field.optionLabelKey as any]} + ${
+                                item[field.optionLabelKey2 as any]
+                              }`
+                            : item[field.optionLabelKey as any];
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-1 bg-primary/20 text-primary px-2 py-1 rounded text-sm"
                             >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
+                              <span>{label}</span>
+                              <button
+                                onClick={() => {
+                                  const newSelected = selectedOptions[
+                                    field.value
+                                  ].filter((_: any, i: number) => i !== idx);
+                                  const newOptions = {
+                                    ...selectedOptions,
+                                    [field.value]: newSelected,
+                                  };
+                                  onSelectedOptionsChange?.(newOptions);
+                                  // Update formData with selected IDs
+                                  onFormDataChange({
+                                    ...formData,
+                                    [field.value]: newSelected.map(
+                                      (o: any) => o[field.optionValueKey as any]
+                                    ),
+                                  });
+                                }}
+                                className="hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        }
+                      )}
                     </div>
 
                     {/* Dropdown for selection */}
@@ -204,7 +211,7 @@ export function FormPopup({
                           onFormDataChange({
                             ...formData,
                             [field.value]: newSelected.map(
-                              (o: any) => o[(field.optionValueKey as any)]
+                              (o: any) => o[field.optionValueKey as any]
                             ),
                           });
                         }

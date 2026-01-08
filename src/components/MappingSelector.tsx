@@ -72,7 +72,7 @@ export const MappingSelector: React.FC<Props> = ({
   );
 
   const selectedViewConfig = views[selectedView];
-  
+
   // Fetch data when selected view changes or component mounts
   useEffect(() => {
     if (selectedView && selectedViewConfig?.getDataUrl) {
@@ -94,8 +94,9 @@ export const MappingSelector: React.FC<Props> = ({
   // Create a single-tab configuration for TabsViewer
   const singleTab = {
     tabId: selectedView,
-    tabTitle: dropdownSelector.selectOptions.find((opt) => opt.value === selectedView)
-      ?.label,
+    tabTitle: dropdownSelector.selectOptions.find(
+      (opt) => opt.value === selectedView
+    )?.label,
     ...selectedViewConfig,
   };
 
