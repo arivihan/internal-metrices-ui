@@ -1433,9 +1433,15 @@ export default function DynamicContent() {
     );
   };
 
-  const handleTabChange = async (tabId: string, getDataUrl: string) => {
-    // Check if we already have the data cached
-    if (tabsData[tabId]) {
+ const handleTabChange = async (
+    tabId: string,
+    getDataUrl: string,
+    page: number = 0
+  ) => {
+    // Check if we already have the data cached and it's the same page
+    const currentPageForTab = tabPagination[tabId]?.currentPage ?? 0;
+    if (tabsData[tabId] && currentPageForTab === page && page === 0) {
+      // Only use cache for first page on initial tab change
       setActiveTab(tabId);
       // Clear any previous errors
       setTabErrors((prev) => {
@@ -1445,7 +1451,6 @@ export default function DynamicContent() {
       });
       return;
     }
-
     // Set loading state and fetch data
     setLoadingTabs((prev) => ({ ...prev, [tabId]: true }));
     setActiveTab(tabId);
@@ -1455,24 +1460,17 @@ export default function DynamicContent() {
       delete updated[tabId];
       return updated;
     });
-
     try {
       const { dynamicRequest } = await import("@/services/apiClient");
       const response = await dynamicRequest(getDataUrl, "GET", undefined, {
         params: { level: "SYSTEM", pageNo: String(page), pageSize: "10" },
       });
-
-      console.log(`📦 Tab ${tabId} Response (page ${page}):`, response);
-
+      console.log(`:package: Tab ${tabId} Response (page ${page}):`, response);
       // Handle wrapped response
       let responseData: any = response;
-      if (
-        (response as any)?.data &&
-        typeof (response as any).data === "object"
-      ) {
+      if ((response as any)?.data && typeof (response as any).data === "object") {
         responseData = (response as any).data;
       }
-
       let results = [];
       let paginationInfo = {
         currentPage: page,
@@ -1480,11 +1478,7 @@ export default function DynamicContent() {
         pageSize: 10,
         totalItems: 0,
       };
-
-      if (
-        (responseData as any)?.content &&
-        Array.isArray((responseData as any).content)
-      ) {
+      if ((responseData as any)?.content && Array.isArray((responseData as any).content)) {
         results = (responseData as any).content;
         paginationInfo = {
           currentPage: (responseData as any).pageNumber ?? page,
@@ -1492,21 +1486,17 @@ export default function DynamicContent() {
           pageSize: (responseData as any).pageSize ?? 10,
           totalItems: (responseData as any).totalElements ?? results.length,
         };
-      } else if (
-        (responseData as any)?.data &&
-        Array.isArray((responseData as any).data)
-      ) {
+      } else if ((responseData as any)?.data && Array.isArray((responseData as any).data)) {
         results = (responseData as any).data;
         paginationInfo.totalItems = results.length;
       } else if (Array.isArray(responseData)) {
         results = responseData;
         paginationInfo.totalItems = results.length;
       }
-
       setTabsData((prev) => ({ ...prev, [tabId]: results }));
       setTabPagination((prev) => ({ ...prev, [tabId]: paginationInfo }));
     } catch (error) {
-      console.error(`❌ Error fetching tab ${tabId}:`, error);
+      console.error(`:x: Error fetching tab ${tabId}:`, error);
       const errorMessage =
         error instanceof Error ? error.message : "Request failed";
       setTabErrors((prev) => ({ ...prev, [tabId]: errorMessage }));
@@ -1519,7 +1509,6 @@ export default function DynamicContent() {
       setLoadingTabs((prev) => ({ ...prev, [tabId]: false }));
     }
   };
-
   const handleTabPageChange = async (tabId: string, newPage: number) => {
     const currentTab = layoutData.value?.tabs?.find(
       (tab: any) => tab.tabId === tabId
@@ -2161,7 +2150,7 @@ export default function DynamicContent() {
       };
 
       const cleanedPayload = cleanPayload(payload);
-      console.log("✅ Final Payload to Send:", safeStringify(cleanedPayload));
+      console.log("✅ Final Payload to Send:", JSON.stringify(cleanedPayload));
 
       // Import the dynamic request helper
       const { dynamicRequest } = await import("@/services/apiClient");
