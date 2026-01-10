@@ -51,7 +51,7 @@ export default function AppConfigs() {
     try {
       const response = await fetchDashboardUIConfigs({
         configName: '',
-        pageNumber: currentPage, // 1-based
+        pageNumber: currentPage - 1, // Convert 1-based to 0-based for API
         pageSize: pageSize,
       });
       if (response.data) {
@@ -59,22 +59,18 @@ export default function AppConfigs() {
         setTotalPages(response.totalPages || 1);
         setTotalItems(response.totalElements || 0);
         setPageSize(response.size || PAGE_SIZE);
-        if (typeof response.page === 'number' && response.page !== currentPage) {
-          setCurrentPage(response.page);
-        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Failed to load configs');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-
-
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, pageSize]);
 
   const handleView = (item: DashboardUiConfig) => {
     setSelectedItem(item);

@@ -171,20 +171,33 @@ export const ViewDetailsPopup = ({ open, onClose, data, title }) => {
   // Helper function to flatten nested objects into parent.child format
   const flattenObject = (obj: any, prefix = ""): Array<[string, any]> => {
     const result: Array<[string, any]> = [];
-    
+
     // Fields to exclude from display (API response metadata)
     const excludeFields = ["message", "code", "status", "success", "error"];
 
     Object.entries(obj).forEach(([key, value]) => {
       // Skip internal fields and API metadata
-      if (key.startsWith("_") || key === "id" || excludeFields.includes(key.toLowerCase())) return;
+      if (
+        key.startsWith("_") ||
+        key === "id" ||
+        excludeFields.includes(key.toLowerCase())
+      )
+        return;
 
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
       // If value is an object or array, flatten it recursively
-      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         result.push(...flattenObject(value, fullKey));
-      } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
+      } else if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        typeof value[0] === "object"
+      ) {
         // For array of objects, show count and expand each item
         result.push([fullKey, value.length]);
         value.forEach((item, index) => {

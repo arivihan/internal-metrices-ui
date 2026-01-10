@@ -56,6 +56,7 @@ import {
   tableDataLoading,
   tableDataError,
   pagination,
+  entityName,
   fetchTableData,
   popupOpen,
   currentPopupButton,
@@ -64,6 +65,7 @@ import {
 } from "@/signals/dynamicContent";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ViewDetailsPopup } from "@/components/ViewDetailsPopup";
+import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 import { DualSectionPopup } from "@/components/DualSectionPopup";
 
 // ============================================
@@ -153,6 +155,26 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
   }
 
   switch (header.type) {
+    case "boolean":
+      const boolValue =
+        typeof value === "boolean"
+          ? value
+          : String(value).toLowerCase() === "true";
+      
+      // Check if this is a status column (isActive, active, status, Status header)
+      const isStatusBooleanColumn =
+        (header.accessor && /(^|\.)?(isActive|active|status)$/i.test(String(header.accessor))) ||
+        /(^|\s)?status(\s|$)?/i.test(String(header.Header));
+      
+      return (
+        <div className="font-normal text-sm">
+          {isStatusBooleanColumn 
+            ? (boolValue ? "Active" : "Inactive")
+            : (boolValue ? "True" : "False")
+          }
+        </div>
+      );
+
     case "text":
       if (
         typeof value === "string" &&
@@ -1200,6 +1222,9 @@ export default function DynamicContent() {
   const [jsonPopupData, setJsonPopupData] = useState<any>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [viewDetailsData, setViewDetailsData] = useState<any>(null);
+  const [isAuditTrailPopup, setIsAuditTrailPopup] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogData, setConfirmDialogData] = useState<any>(null);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("");
   const [tabsData, setTabsData] = useState<Record<string, any[]>>({});
@@ -1395,7 +1420,85 @@ export default function DynamicContent() {
     await handleTabChange(tabId, currentTab.getDataUrl, newPage);
   };
 
+  const confirmStatusToggle = async () => {
+    if (!confirmDialogData) return;
+    
+    const { action, rowData, statusField, newStatus, activeLabel, inactiveLabel } = confirmDialogData;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Replace {id} placeholder with actual ID
+      const toggleUrl = action.popupSubmitUrl.replace("{id}", rowData.id);
+
+      // Build request body with the new status
+      const requestBody: any = {};
+      requestBody[statusField] = newStatus;
+
+      console.log("📤 Sending status toggle request:", { url: toggleUrl, body: requestBody });
+
+      // Send API request to toggle status
+      const response = await apiClient(toggleUrl, { 
+        method: action.method || "PATCH",
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("✅ Status toggled successfully:", response);
+      
+      // Update the row data in the table
+      const updatedData = tableData.value.map((item) =>
+        item.id === rowData.id
+          ? { ...item, [statusField]: newStatus }
+          : item
+      );
+      tableData.value = updatedData;
+
+      showAlert({
+        title: "Success",
+        description: `Status changed to ${newStatus ? activeLabel : inactiveLabel}`,
+        variant: "default",
+      });
+
+      // Close confirmation dialog
+      setConfirmDialogOpen(false);
+      setConfirmDialogData(null);
+    } catch (error) {
+      console.error("❌ Failed to toggle status:", error);
+      showAlert({
+        title: "Error",
+        description: "Failed to change status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleRowAction = (action: any, rowData: any) => {
+    // Handle STATUS_TOGGLE action (show confirmation dialog first)
+    if (action.type === "STATUS_TOGGLE") {
+      const statusField = action.statusField || "isActive";
+      const currentStatus = rowData[statusField];
+      const newStatus = !currentStatus;
+      
+      const activeLabel = action.activeLabel || "Active";
+      const inactiveLabel = action.inactiveLabel || "Inactive";
+      
+      // Store data for confirmation
+      setConfirmDialogData({
+        action,
+        rowData,
+        statusField,
+        currentStatus,
+        newStatus,
+        activeLabel,
+        inactiveLabel,
+        message: `Are you sure you want to change status to ${newStatus ? activeLabel : inactiveLabel}?`
+      });
+      setConfirmDialogOpen(true);
+      return;
+    }
+
     // Handle VIEW action with viewFetchDetails (fetch and display details)
     if (action.type === "SHOW_POPUP" && action.viewFetchDetails) {
       console.log("🔍 Fetching view details from API:", {
@@ -1403,19 +1506,59 @@ export default function DynamicContent() {
         rowId: rowData.id,
       });
 
-      // Replace {id} placeholder with actual ID
-      const fetchUrl = action.viewFetchDetails.replace("{id}", rowData.id);
+      // Check if this is an audit trail action
+      const isAuditTrail = 
+        action.title === "Audit Trail" ||
+        action.popupTitle?.includes("Audit") ||
+        action.viewFetchDetails?.includes("audit-logs");
+
+      // Get entityName - use signal value first, then fallback to derived name
+      let entityNameToUse = entityName.value || layoutData.value?.entityName || null;
+      
+      // If still no entityName, derive it from the layout title or current content
+      if (!entityNameToUse) {
+        const title = currentContentItem.value?.title || "";
+        // Convert "Academic Year" to "AcademicYear"
+        entityNameToUse = title
+          .split(" ")
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join("") || null;
+      }
+
+      console.log("📍 Using entityName:", entityNameToUse);
+
+      // Replace placeholders in URL
+      let fetchUrl = action.viewFetchDetails
+        .replace("{id}", String(rowData.id))
+        .replace("{entityId}", String(rowData.id))
+        .replace("{entityName}", entityNameToUse || "");
+
+      console.log("🔗 Final fetch URL:", fetchUrl);
 
       // Fetch the details
       apiClient(fetchUrl, { method: "GET" })
-        .then((response) => {
-          console.log("✅ View details fetched:", response);
-          setViewDetailsData(response);
+        .then((response: any) => {
+          console.log("✅ Details fetched:", response);
+          
+          if (isAuditTrail) {
+            // For audit trail, extract content array from response
+            const auditData = Array.isArray(response?.content) ? response.content : response;
+            console.log("📊 Audit trail data:", auditData);
+            setViewDetailsData(auditData);
+            setIsAuditTrailPopup(true);
+          } else {
+            setViewDetailsData(response);
+            setIsAuditTrailPopup(false);
+          }
           setViewDetailsOpen(true);
         })
         .catch((error) => {
-          console.error("❌ Failed to fetch view details:", error);
-          toast.error("Failed to fetch details");
+          console.error("❌ Failed to fetch details:", error);
+          showAlert({
+            title: "Error",
+            description: "Failed to fetch details",
+            variant: "destructive",
+          });
         });
 
       return;
@@ -2577,12 +2720,24 @@ export default function DynamicContent() {
           onClose={() => setJsonPopupOpen(false)}
           data={jsonPopupData}
         />
-        <ViewDetailsPopup
-          open={viewDetailsOpen}
-          onClose={() => setViewDetailsOpen(false)}
-          data={viewDetailsData}
-          title="View Coupon Details"
-        />
+        {isAuditTrailPopup ? (
+          <AuditTrailPopup
+            open={viewDetailsOpen}
+            onClose={() => {
+              setViewDetailsOpen(false);
+              setIsAuditTrailPopup(false);
+            }}
+            data={viewDetailsData}
+            title="Audit Trail"
+          />
+        ) : (
+          <ViewDetailsPopup
+            open={viewDetailsOpen}
+            onClose={() => setViewDetailsOpen(false)}
+            data={viewDetailsData}
+            title="View Details"
+          />
+        )}
 
         {/* Advanced Search Dialog */}
         <AdvancedSearchDialog
@@ -2815,19 +2970,44 @@ export default function DynamicContent() {
                                                 (
                                                   action: any,
                                                   actionIndex: number
-                                                ) => (
-                                                  <DropdownMenuItem
-                                                    key={actionIndex}
-                                                    onClick={() =>
-                                                      handleRowAction(
-                                                        action,
-                                                        row
-                                                      )
+                                                ) => {
+                                                  // Handle STATUS_TOGGLE placeholder replacement
+                                                  let displayTitle = action.title;
+                                                  let buttonClassName = "";
+                                                  
+                                                  if (action.type === "STATUS_TOGGLE") {
+                                                    const statusField = action.statusField || "isActive";
+                                                    const currentStatus = row[statusField];
+                                                    const oppositeStatus = !currentStatus;
+                                                    const activeLabel = action.activeLabel || "Active";
+                                                    const inactiveLabel = action.inactiveLabel || "Inactive";
+                                                    displayTitle = oppositeStatus ? activeLabel : inactiveLabel;
+                                                    
+                                                    // Add color based on what the button will do (opposite of current status)
+                                                    if (oppositeStatus) {
+                                                      // Will activate - show green
+                                                      buttonClassName = "text-green-600 hover:text-green-700 hover:bg-green-50";
+                                                    } else {
+                                                      // Will deactivate - show red
+                                                      buttonClassName = "text-red-500 hover:text-red-700 hover:bg-red-50";
                                                     }
-                                                  >
-                                                    {action.title}
-                                                  </DropdownMenuItem>
-                                                )
+                                                  }
+                                                  
+                                                  return (
+                                                    <DropdownMenuItem
+                                                      key={actionIndex}
+                                                      className={buttonClassName}
+                                                      onClick={() =>
+                                                        handleRowAction(
+                                                          action,
+                                                          row
+                                                        )
+                                                      }
+                                                    >
+                                                      {displayTitle}
+                                                    </DropdownMenuItem>
+                                                  );
+                                                }
                                               )}
                                             </DropdownMenuContent>
                                           </DropdownMenu>
@@ -2920,6 +3100,78 @@ export default function DynamicContent() {
           )}
         </div>
       </div>
+
+      {/* Status Toggle Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to change the status?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {confirmDialogData && (
+              <>
+                {/* Item Details */}
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                  {confirmDialogData.rowData.code && (
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm font-medium text-muted-foreground">Code:</span>
+                      <span className="text-sm font-semibold">{confirmDialogData.rowData.code}</span>
+                    </div>
+                  )}
+                  {confirmDialogData.rowData.name && (
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm font-medium text-muted-foreground">Name:</span>
+                      <span className="text-sm font-semibold">{confirmDialogData.rowData.name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-start pt-2 border-t">
+                    <span className="text-sm font-medium text-muted-foreground">New Status:</span>
+                    <span className={`text-sm font-bold ${confirmDialogData.newStatus ? 'text-green-600' : 'text-red-600'}`}>
+                      {confirmDialogData.newStatus ? confirmDialogData.activeLabel : confirmDialogData.inactiveLabel}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Warning Message */}
+                <p className="text-sm text-muted-foreground">
+                  This action will {confirmDialogData.newStatus ? 'activate' : 'deactivate'} the item.
+                </p>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDialogOpen(false);
+                setConfirmDialogData(null);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmStatusToggle}
+              disabled={isSubmitting}
+              className={confirmDialogData?.newStatus ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Changing...
+                </>
+              ) : (
+                "Confirm"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

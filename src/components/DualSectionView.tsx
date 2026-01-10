@@ -565,13 +565,8 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     try {
       setSubmitting(true);
 
-      // Send only newly added items (filter out original items)
-      const newlyAddedItems = selectedRight.filter(
-        (id) =>
-          !originalRightOptions.some(
-            (item) => String(item[rightSection.optionValueKey]) === id
-          )
-      );
+      // Send ALL selected items (including original ones)
+      const allSelectedItems = selectedRight;
 
       const payload: Record<string, any> = {};
 
@@ -593,7 +588,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       }
 
       if (rightSection.selectionType === "multi-select") {
-        const rightData = newlyAddedItems.map((id) => {
+        const rightData = allSelectedItems.map((id) => {
           const item: SelectedData = {
             [rightSection.optionValueKey]: parseInt(id, 10),
           };
@@ -608,7 +603,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       }
 
       console.log(`[DualSectionView] Submitting to ${submitUrl}:`, payload);
-      console.log("[DualSectionView] Newly added items:", newlyAddedItems);
+      console.log("[DualSectionView] All selected items:", allSelectedItems);
       const response = await apiClient<any>(submitUrl, {
         method,
         body: JSON.stringify(payload),
