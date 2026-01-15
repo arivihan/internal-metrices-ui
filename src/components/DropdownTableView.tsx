@@ -55,7 +55,7 @@ interface DropdownTableViewProps {
   onViewJson: (data: any) => void;
   CellRenderer: React.ComponentType<any>;
   tabPagination: Record<string, any>;
-  onPageChange: (tabId: string, page: number) => void;
+  onPageChange?: (tabId: string, page: number) => void;
   tabsData: Record<string, any[]>;
   loadingTabs: Record<string, boolean>;
   tabErrors: Record<string, string | null>;
@@ -97,9 +97,10 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
       console.log(
         `[DropdownTableView] Fetching data for ${selectedView} from ${selectedViewConfig.getDataUrl}`
       );
+      // Start from page 0 (0-based indexing for API)
       onTabChange(selectedView, selectedViewConfig.getDataUrl, 0);
     }
-  }, [selectedView]);
+  }, [selectedView, selectedViewConfig?.getDataUrl]);
 
   if (!selectedViewConfig) {
     return (
@@ -118,8 +119,8 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
   const paginationData = {
     currentPage: pagination?.currentPage ?? 0,
     pageSize: pagination?.pageSize ?? 10,
-    totalElements: pagination?.totalElements ?? data.length,
-    totalPages: pagination?.totalPages ?? Math.ceil((pagination?.totalElements ?? data.length) / (pagination?.pageSize ?? 10)),
+    totalElements: pagination?.totalElements ?? 0,
+    totalPages: pagination?.totalPages ?? 1,
   };
 
   return (
@@ -392,12 +393,12 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                         variant="ghost"
                         size="icon"
                         className="size-8 h-8 w-8"
-                        onClick={() =>
-                          onPageChange(
-                            selectedView,
-                            Math.max(0, paginationData.currentPage - 1)
-                          )
-                        }
+                        onClick={() => {
+                          const newPage = Math.max(0, paginationData.currentPage - 1);
+                          console.log(`[DropdownTableView] Pagination - Previous page: ${newPage}`);
+                          // Call onTabChange with the new page number to trigger API request
+                          onTabChange(selectedView, selectedViewConfig?.getDataUrl || '', newPage);
+                        }}
                         disabled={paginationData.currentPage === 0}
                       >
                         <ChevronLeft className="size-4" />
@@ -406,15 +407,15 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                         variant="ghost"
                         size="icon"
                         className="size-8 h-8 w-8"
-                        onClick={() =>
-                          onPageChange(
-                            selectedView,
-                            Math.min(
-                              paginationData.totalPages - 1,
-                              paginationData.currentPage + 1
-                            )
-                          )
-                        }
+                        onClick={() => {
+                          const newPage = Math.min(
+                            paginationData.totalPages - 1,
+                            paginationData.currentPage + 1
+                          );
+                          console.log(`[DropdownTableView] Pagination - Next page: ${newPage}`);
+                          // Call onTabChange with the new page number to trigger API request
+                          onTabChange(selectedView, selectedViewConfig?.getDataUrl || '', newPage);
+                        }}
                         disabled={
                           paginationData.currentPage >= paginationData.totalPages - 1
                         }

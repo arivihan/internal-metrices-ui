@@ -114,6 +114,13 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   const [leftPageSize, setLeftPageSize] = useState(10);
   const [leftTotalElements, setLeftTotalElements] = useState(0);
 
+  // Pagination states for modal
+  const [modalPageNumber, setModalPageNumber] = useState(0);
+  const [modalPageSize, setModalPageSize] = useState(10);
+  const [modalTotalElements, setModalTotalElements] = useState(0);
+  const [modalTotalPages, setModalTotalPages] = useState(0);
+
+
   // Fetch left section options on mount
   useEffect(() => {
     console.log("[DualSectionView] Mounted, fetching left options");
@@ -262,17 +269,22 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
     }
   };
 
-  const handleAddItemsClick = async () => {
+  const handleAddItemsClick = async (pageNum: number = 0) => {
     const addAction = actions.find((a) => a.type === "modal");
     if (addAction?.modalFetchUrl) {
       setModalLoading(true);
+      setModalPageNumber(pageNum);
       try {
         console.log(
-          `[DualSectionView] Fetching modal options from: ${addAction.modalFetchUrl}`
+          `[DualSectionView] Fetching modal options from: ${addAction.modalFetchUrl} (page ${pageNum})`
         );
         const response = await apiClient<any>(addAction.modalFetchUrl, {
           method: "GET",
-          params: { level: "SYSTEM" },
+          params: { 
+            level: "SYSTEM",
+            pageNo: String(pageNum),
+            pageSize: String(modalPageSize),
+          },
         });
         console.log("[DualSectionView] Modal options response:", response);
         const data = Array.isArray(response?.content)
@@ -282,8 +294,15 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
           : Array.isArray(response)
           ? response
           : [];
+        
+        // Extract pagination info
+        const totalElements = (response as any)?.totalElements ?? data.length;
+        const totalPages = (response as any)?.totalPages ?? Math.ceil(totalElements / modalPageSize);
+        
         console.log("[DualSectionView] Parsed modal data:", data);
         setAllModalOptions(data || []);
+        setModalTotalElements(totalElements);
+        setModalTotalPages(totalPages);
         setShowAddModal(true);
       } catch (error) {
         console.error(
@@ -573,9 +592,21 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       // Check if we need to extract additional fields from left section
       if ((leftSection as any).extractFields && selectedLeftObject) {
         const extractFields = (leftSection as any).extractFields;
+        const fieldTypes = (leftSection as any)?.fieldTypes || {};
+        
         // Extract examId, gradeId, etc. from the selected left object
         for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
-          payload[payloadKey] = selectedLeftObject[objectKey];
+          const value = (selectedLeftObject as any)[objectKey];
+          const fieldType = fieldTypes[payloadKey] || "string";
+          
+          // Convert value based on fieldType
+          if (fieldType === "number") {
+            payload[payloadKey] = Number(value);
+          } else if (fieldType === "boolean") {
+            payload[payloadKey] = value === "true" || value === true;
+          } else {
+            payload[payloadKey] = String(value);
+          }
         }
         console.log(
           `[DualSectionView] Extracted fields from left section:`,
@@ -589,17 +620,42 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
       if (rightSection.selectionType === "multi-select") {
         const rightData = allSelectedItems.map((id) => {
-          const item: SelectedData = {
-            [rightSection.optionValueKey]: parseInt(id, 10),
-          };
+          const item: SelectedData = {};
+          
+          // Get the field type from config, default to "string"
+          const fieldType = (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] || "string";
+          
+          // Convert value based on fieldType
+          if (fieldType === "number") {
+            item[rightSection.optionValueKey] = parseInt(id, 10);
+          } else if (fieldType === "boolean") {
+            item[rightSection.optionValueKey] = id === "true" || (id as any) === true;
+          } else {
+            item[rightSection.optionValueKey] = String(id);
+          }
+          
           if (rightSection.includeDisplayOrder) {
-            item.displayOrder = rightDisplayOrders[id] || 0;
+            const displayOrderType = (rightSection as any)?.fieldTypes?.displayOrder || "number";
+            const displayOrderValue = rightDisplayOrders[id] || 0;
+            
+            if (displayOrderType === "string") {
+              (item as any).displayOrder = String(displayOrderValue);
+            } else {
+              (item as any).displayOrder = Number(displayOrderValue);
+            }
           }
           return item;
         });
         payload[rightSection.fieldName] = rightData;
       } else {
-        payload[rightSection.fieldName] = parseInt(selectedRight[0], 10);
+        const fieldType = (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] || "string";
+        if (fieldType === "number") {
+          payload[rightSection.fieldName] = parseInt(selectedRight[0], 10);
+        } else if (fieldType === "boolean") {
+          payload[rightSection.fieldName] = selectedRight[0] === "true" || (selectedRight[0] as any) === true;
+        } else {
+          payload[rightSection.fieldName] = String(selectedRight[0]);
+        }
       }
 
       console.log(`[DualSectionView] Submitting to ${submitUrl}:`, payload);
@@ -892,11 +948,12 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setModalSelectedItems(new Set());
+            setModalPageNumber(0);
           }
           setShowAddModal(isOpen);
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl flex flex-col max-h-[80vh]">
           <DialogHeader>
             {(() => {
               const addAction = actions.find((a) => a.type === "modal");
@@ -913,13 +970,13 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
             })()}
           </DialogHeader>
 
-          <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {modalLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide">
                 {allModalOptions.map((item) => {
                   const addAction = actions.find((a) => a.type === "modal");
                   const modalValueKey = addAction?.modalOptionValueKey || "id";
@@ -985,12 +1042,45 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
             )}
           </div>
 
-          <DialogFooter className="flex gap-2">
+          {/* Pagination Controls */}
+          {!modalLoading && modalTotalPages > 1 && (
+            <div className="border-t pt-3 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {modalTotalElements} items
+              </span>
+              <div className="flex gap-2 items-center">
+                <span className="text-muted-foreground">
+                  Page {modalPageNumber + 1} of {modalTotalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAddItemsClick(Math.max(0, modalPageNumber - 1))}
+                  disabled={modalPageNumber === 0}
+                  className="h-8 w-8 p-0"
+                >
+                  ←
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAddItemsClick(Math.min(modalTotalPages - 1, modalPageNumber + 1))}
+                  disabled={modalPageNumber >= modalTotalPages - 1}
+                  className="h-8 w-8 p-0"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2 border-t pt-4 mt-4">
             <Button
               variant="outline"
               onClick={() => {
                 setModalSelectedItems(new Set());
                 setShowAddModal(false);
+                setModalPageNumber(0);
               }}
             >
               Cancel

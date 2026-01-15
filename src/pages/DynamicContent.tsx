@@ -1318,6 +1318,36 @@ export default function DynamicContent() {
     setJsonPopupOpen(true);
   };
 
+  const handleAuditButtonClick = async (auditButton: any) => {
+    if (auditButton.type === "AUDIT_TRAIL") {
+      try {
+        // Construct the URL with query parameters for audit logs table view
+        const url = `${auditButton.auditFetchUrl}?entityName=${auditButton.entityName}&pageNo=0&pageSize=10`;
+        console.log("[DynamicContent] Opening audit trail:", url);
+        
+        // Fetch audit data
+        const { dynamicRequest } = await import("@/services/apiClient");
+        const response = await dynamicRequest(url, "GET");
+        
+        console.log("[DynamicContent] Audit data received:", response);
+        
+        // Extract content array from response
+        const auditData = Array.isArray((response as any)?.content) ? (response as any).content : response;
+        console.log("[DynamicContent] Parsed audit data:", auditData);
+        
+        setViewDetailsData(auditData);
+        setIsAuditTrailPopup(true);
+        setViewDetailsOpen(true);
+      } catch (error) {
+        console.error("[DynamicContent] Failed to fetch audit trail:", error);
+        showAlert({
+          title: "Error",
+          description: "Failed to fetch audit trail",
+          variant: "destructive",
+        });
+      }
+    }
+  };
   const handleTabChange = async (
     tabId: string,
     getDataUrl: string,
@@ -1369,7 +1399,7 @@ export default function DynamicContent() {
         currentPage: page,
         totalPages: 1,
         pageSize: 10,
-        totalItems: 0,
+        totalElements: 0,
       };
 
       if (
@@ -1381,17 +1411,17 @@ export default function DynamicContent() {
           currentPage: (responseData as any).pageNumber ?? page,
           totalPages: (responseData as any).totalPages ?? 1,
           pageSize: (responseData as any).pageSize ?? 10,
-          totalItems: (responseData as any).totalElements ?? results.length,
+          totalElements: (responseData as any).totalElements ?? results.length,
         };
       } else if (
         (responseData as any)?.data &&
         Array.isArray((responseData as any).data)
       ) {
         results = (responseData as any).data;
-        paginationInfo.totalItems = results.length;
+        paginationInfo.totalElements = results.length;
       } else if (Array.isArray(responseData)) {
         results = responseData;
-        paginationInfo.totalItems = results.length;
+        paginationInfo.totalElements = results.length;
       }
 
       setTabsData((prev) => ({ ...prev, [tabId]: results }));
@@ -2849,6 +2879,22 @@ export default function DynamicContent() {
                 buttons={layout?.buttons}
                 onButtonClick={handleButtonClick}
               />
+
+              {layout?.auditButton && (
+                <div className="px-6 py-3 flex items-center gap-2">
+                  <Button
+                    onClick={() => handleAuditButtonClick(layout.auditButton)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {layout.auditButton.icon && (
+                      <DynamicIcon name={layout.auditButton.icon} />
+                    )}
+                    {layout.auditButton.label}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
