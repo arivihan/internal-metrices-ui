@@ -70,7 +70,7 @@ const staticNavItems: DrawerItem[] = [
     icon: "Settings",
     accessibleToRoles: ["ADMIN"],
   },
-    {
+  {
     title: "Dashboard UI Configs",
     type: "getData",
     getDataUrl: "/dashboard-ui-configs",
@@ -200,7 +200,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       // const staticItems = getStaticItems(section);
       const dynamicItems = getDynamicSectionItems(section);
       // ...staticItems,
-      return [ ...dynamicItems];
+      return [...dynamicItems];
     },
     [getStaticItems, getDynamicSectionItems]
   );

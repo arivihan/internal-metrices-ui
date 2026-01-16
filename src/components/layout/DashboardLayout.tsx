@@ -126,32 +126,31 @@ export function DashboardLayout() {
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-           
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink asChild>
-                      <Link to="/dashboard">Internal Metrics</Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  {breadcrumbs.map((segment, index) => (
-                    <span key={index} className="contents">
-                      <BreadcrumbSeparator className="hidden md:block" />
-                      <BreadcrumbItem>
-                        {segment.path ? (
-                          <BreadcrumbLink asChild>
-                            <Link to={segment.path}>{segment.label}</Link>
-                          </BreadcrumbLink>
-                        ) : (
-                          <BreadcrumbPage>{segment.label}</BreadcrumbPage>
-                        )}
-                      </BreadcrumbItem>
-                    </span>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          
+
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink asChild>
+                    <Link to="/dashboard">Internal Metrics</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {breadcrumbs.map((segment, index) => (
+                  <span key={index} className="contents">
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      {segment.path ? (
+                        <BreadcrumbLink asChild>
+                          <Link to={segment.path}>{segment.label}</Link>
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage>{segment.label}</BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                  </span>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
         </header>
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 pt-0">
           <Outlet />

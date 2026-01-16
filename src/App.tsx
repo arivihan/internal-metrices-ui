@@ -19,7 +19,7 @@ import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
 import NotesUploadPage from "./pages/notes-upload";
-
+import ViralVideosPage from "./pages/viral-videos";
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
   useAuthInit();
@@ -83,8 +83,10 @@ function App() {
 
             <Route path="/dashboard/chapters" element={<Chapters />} />
             <Route path="/dashboard/notes" element={<NotesUploadPage />} />
-            
-   
+            <Route
+              path="/dashboard/viral-videos"
+              element={<ViralVideosPage />}
+            />
             <Route path="/dashboard/rbac" element={<RBAC />} />
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -6,8 +6,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from './ui/table'
-import { Button } from './ui/button'
+} from "./ui/table";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,17 +15,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu'
-import { Skeleton } from './ui/skeleton'
-import type { TableHeader as TableHeaderType, Action } from '../types/sidebar'
-import { MoreHorizontal } from 'lucide-react'
+} from "./ui/dropdown-menu";
+import { Skeleton } from "./ui/skeleton";
+import type { TableHeader as TableHeaderType, Action } from "../types/sidebar";
+import { MoreHorizontal } from "lucide-react";
 
 interface DataTableProps {
-  columns: TableHeaderType[]
-  data: Record<string, any>[]
-  loading?: boolean
-  onActionClick?: (action: Action, rowData: Record<string, any>) => void
-  onRowClick?: (rowData: Record<string, any>) => void
+  columns: TableHeaderType[];
+  data: Record<string, any>[];
+  loading?: boolean;
+  onActionClick?: (action: Action, rowData: Record<string, any>) => void;
+  onRowClick?: (rowData: Record<string, any>) => void;
 }
 
 /**
@@ -41,8 +41,8 @@ export default function DataTable({
 }: DataTableProps) {
   // Sort columns by order
   const sortedColumns = useMemo(() => {
-    return [...columns].sort((a, b) => (a.order || 999) - (b.order || 999))
-  }, [columns])
+    return [...columns].sort((a, b) => (a.order || 999) - (b.order || 999));
+  }, [columns]);
 
   if (loading) {
     return (
@@ -51,7 +51,7 @@ export default function DataTable({
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
-    )
+    );
   }
 
   if (!data || data.length === 0) {
@@ -79,7 +79,7 @@ export default function DataTable({
           </TableBody>
         </Table>
       </div>
-    )
+    );
   }
 
   return (
@@ -102,10 +102,10 @@ export default function DataTable({
               onClick={() => onRowClick?.(row)}
             >
               {sortedColumns.map((column) => {
-                const value = row[column.accessor]
+                const value = row[column.accessor];
 
                 // Render actions column
-                if (column.type === 'actions' && column.actions) {
+                if (column.type === "actions" && column.actions) {
                   return (
                     <TableCell key={column.accessor} className="w-10">
                       <DropdownMenu>
@@ -122,8 +122,8 @@ export default function DataTable({
                             <DropdownMenuItem
                               key={actionIndex}
                               onClick={(e) => {
-                                e.stopPropagation()
-                                onActionClick?.(action, row)
+                                e.stopPropagation();
+                                onActionClick?.(action, row);
                               }}
                             >
                               {action.title}
@@ -132,11 +132,11 @@ export default function DataTable({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                  )
+                  );
                 }
 
                 // Render link column
-                if (column.type === 'link' && value) {
+                if (column.type === "link" && value) {
                   return (
                     <TableCell
                       key={column.accessor}
@@ -147,11 +147,11 @@ export default function DataTable({
                         {value}
                       </a>
                     </TableCell>
-                  )
+                  );
                 }
 
                 // Render image column
-                if (column.type === 'image' && value) {
+                if (column.type === "image" && value) {
                   return (
                     <TableCell key={column.accessor} className="text-center">
                       <img
@@ -160,22 +160,24 @@ export default function DataTable({
                         className="h-10 w-10 rounded-md object-cover mx-auto"
                       />
                     </TableCell>
-                  )
+                  );
                 }
 
                 // Render text column (default)
                 return (
                   <TableCell key={column.accessor} className="max-w-xs">
                     <div className="line-clamp-2">
-                      {value === null || value === undefined ? '-' : String(value)}
+                      {value === null || value === undefined
+                        ? "-"
+                        : String(value)}
                     </div>
                   </TableCell>
-                )
+                );
               })}
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

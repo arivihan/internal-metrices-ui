@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
-import { Upload, Loader2, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useRef, useEffect } from "react";
+import { Upload, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Sheet,
@@ -8,36 +8,36 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from '@/components/ui/sheet'
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 
-import { uploadNotes, fetchAllBatchesForNotes } from '@/services/notes'
-import type { BatchOption } from '@/types/notes'
+import { uploadNotes, fetchAllBatchesForNotes } from "@/services/notes";
+import type { BatchOption } from "@/types/notes";
 
 interface AddNotesDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
 interface FormData {
-  file: File | null
-  batchId: number | null
+  file: File | null;
+  batchId: number | null;
 }
 
 export function AddNotesDialog({
@@ -45,49 +45,56 @@ export function AddNotesDialog({
   onOpenChange,
   onSuccess,
 }: AddNotesDialogProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [showFullDetails, setShowFullDetails] = useState(false)
-  const [uploadPreview, setUploadPreview] = useState<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showFullDetails, setShowFullDetails] = useState(false);
+  const [uploadPreview, setUploadPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
     file: null,
     batchId: null,
-  })
+  });
 
   // Batch options
-  const [batches, setBatches] = useState<BatchOption[]>([])
+  const [batches, setBatches] = useState<BatchOption[]>([]);
 
   // Load batch options
   useEffect(() => {
     if (open) {
-      loadBatchOptions()
+      loadBatchOptions();
     }
-  }, [open])
+  }, [open]);
 
   const loadBatchOptions = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      console.log('[AddNotesDialog] Loading batch options...')
-      const batchesRes = await fetchAllBatchesForNotes({ activeFlag: true })
-      console.log('[AddNotesDialog] Batch options loaded:', batchesRes)
-      setBatches(batchesRes)
-      
+      console.log("[AddNotesDialog] Loading batch options...");
+      const batchesRes = await fetchAllBatchesForNotes({ activeFlag: true });
+      console.log("[AddNotesDialog] Batch options loaded:", batchesRes);
+      setBatches(batchesRes);
+
       if (batchesRes.length === 0) {
-        toast.warning('No active batches found')
+        toast.warning("No active batches found");
       } else {
-        console.log('[AddNotesDialog] Set batches:', batchesRes.length, 'items')
+        console.log(
+          "[AddNotesDialog] Set batches:",
+          batchesRes.length,
+          "items"
+        );
       }
     } catch (error) {
-      console.error('[AddNotesDialog] Failed to load batch options:', error)
-      toast.error('Failed to load batch options: ' + (error instanceof Error ? error.message : 'Unknown error'))
-      setBatches([])
+      console.error("[AddNotesDialog] Failed to load batch options:", error);
+      toast.error(
+        "Failed to load batch options: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
+      setBatches([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Reset form when sheet opens
   useEffect(() => {
@@ -95,175 +102,187 @@ export function AddNotesDialog({
       setFormData({
         file: null,
         batchId: null,
-      })
+      });
     }
-  }, [open])
+  }, [open]);
 
   const handleClose = () => {
     if (!isSubmitting) {
-      onOpenChange(false)
+      onOpenChange(false);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       // Accept common document formats
       const validTypes = [
         // PDF
-        'application/pdf',
-        
+        "application/pdf",
+
         // Excel formats
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        
-        // Word formats  
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+        // Word formats
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
         // PowerPoint formats
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+
         // Images
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+
         // Text formats
-        'text/plain',
-        'text/csv',
-        
+        "text/plain",
+        "text/csv",
+
         // Generic binary
-        'application/octet-stream',
-      ]
-      
-      const validExtensions = /\.(pdf|xlsx?|docx?|pptx?|jpe?g|png|gif|webp|txt|csv)$/i
-      const hasValidType = validTypes.includes(file.type)
-      const hasValidExtension = validExtensions.test(file.name)
-      
+        "application/octet-stream",
+      ];
+
+      const validExtensions =
+        /\.(pdf|xlsx?|docx?|pptx?|jpe?g|png|gif|webp|txt|csv)$/i;
+      const hasValidType = validTypes.includes(file.type);
+      const hasValidExtension = validExtensions.test(file.name);
+
       // File must have either valid MIME type OR valid extension
       if (!hasValidType && !hasValidExtension) {
-        toast.error('Please upload a valid document file (PDF, Word, Excel, PowerPoint, or Image)')
+        toast.error(
+          "Please upload a valid document file (PDF, Word, Excel, PowerPoint, or Image)"
+        );
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+          fileInputRef.current.value = "";
         }
-        return
+        return;
       }
 
       // Additional validation for file size (max 100MB)
-      const maxSize = 100 * 1024 * 1024 // 100MB in bytes
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
       if (file.size > maxSize) {
-        toast.error('File size must be less than 100MB')
+        toast.error("File size must be less than 100MB");
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+          fileInputRef.current.value = "";
         }
-        return
+        return;
       }
 
-      console.log('Selected file:', {
+      console.log("Selected file:", {
         name: file.name,
         type: file.type,
         size: file.size,
         hasValidType,
         hasValidExtension,
-      })
+      });
 
       // Show info about file type
-      if (file.type === 'application/pdf') {
-        toast.info('PDF file detected')
-      } else if (file.type.includes('excel') || file.name.toLowerCase().endsWith('.xlsx')) {
-        toast.info('Excel file detected')
-      } else if (file.type.includes('word') || file.name.toLowerCase().endsWith('.docx')) {
-        toast.info('Word document detected')
-      } else if (file.type.includes('powerpoint') || file.name.toLowerCase().endsWith('.pptx')) {
-        toast.info('PowerPoint presentation detected')
-      } else if (file.type.startsWith('image/')) {
-        toast.info('Image file detected')
+      if (file.type === "application/pdf") {
+        toast.info("PDF file detected");
+      } else if (
+        file.type.includes("excel") ||
+        file.name.toLowerCase().endsWith(".xlsx")
+      ) {
+        toast.info("Excel file detected");
+      } else if (
+        file.type.includes("word") ||
+        file.name.toLowerCase().endsWith(".docx")
+      ) {
+        toast.info("Word document detected");
+      } else if (
+        file.type.includes("powerpoint") ||
+        file.name.toLowerCase().endsWith(".pptx")
+      ) {
+        toast.info("PowerPoint presentation detected");
+      } else if (file.type.startsWith("image/")) {
+        toast.info("Image file detected");
       }
 
-      setFormData((prev) => ({ ...prev, file }))
+      setFormData((prev) => ({ ...prev, file }));
     }
-  }
+  };
 
   const handleDropzoneClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleRemoveFile = () => {
-    setFormData((prev) => ({ ...prev, file: null }))
+    setFormData((prev) => ({ ...prev, file: null }));
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const validateForm = (): boolean => {
     if (!formData.file) {
-      toast.error('Please select a file to upload')
-      return false
+      toast.error("Please select a file to upload");
+      return false;
     }
 
     if (!formData.batchId) {
-      toast.error('Please select a batch')
-      return false
+      toast.error("Please select a batch");
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       // Upload notes and get response
       const response = await uploadNotes({
         file: formData.file!,
         batchId: formData.batchId!,
-      })
+      });
 
       // Always show confirmation popup regardless of success/failure
-      console.log('Upload response received:', response)
-      setUploadPreview(response)
-      setShowConfirmation(true)
-      
+      console.log("Upload response received:", response);
+      setUploadPreview(response);
+      setShowConfirmation(true);
     } catch (error) {
-      console.error('Upload error:', error)
+      console.error("Upload error:", error);
       // Even on error, show the confirmation with error details
       const errorResponse = {
         success: false,
         error: true,
-        message: error instanceof Error ? error.message : 'Failed to upload notes',
-        errors: [error instanceof Error ? error.message : 'Unknown error'],
-      }
-      setUploadPreview(errorResponse)
-      setShowConfirmation(true)
+        message:
+          error instanceof Error ? error.message : "Failed to upload notes",
+        errors: [error instanceof Error ? error.message : "Unknown error"],
+      };
+      setUploadPreview(errorResponse);
+      setShowConfirmation(true);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleConfirmSave = async () => {
     // For notes, the upload API directly saves the notes
     // So we just need to show success and close
     if (uploadPreview?.success || uploadPreview?.message) {
-      toast.success(uploadPreview.message || 'Notes uploaded successfully')
-      onSuccess()
-      handleClose()
-      setShowConfirmation(false)
-      setShowFullDetails(false)
-      setUploadPreview(null)
+      toast.success(uploadPreview.message || "Notes uploaded successfully");
+      onSuccess();
+      handleClose();
+      setShowConfirmation(false);
+      setShowFullDetails(false);
+      setUploadPreview(null);
     } else {
-      toast.error(uploadPreview?.message || 'Upload failed')
+      toast.error(uploadPreview?.message || "Upload failed");
     }
-  }
+  };
 
   const handleCancelConfirmation = () => {
-    setShowConfirmation(false)
-    setShowFullDetails(false)
-    setUploadPreview(null)
-  }
+    setShowConfirmation(false);
+    setShowFullDetails(false);
+    setUploadPreview(null);
+  };
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -325,9 +344,12 @@ export function AddNotesDialog({
               Select Batch <span className="text-destructive">*</span>
             </Label>
             <Select
-              value={formData.batchId?.toString() || ''}
+              value={formData.batchId?.toString() || ""}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, batchId: value ? Number(value) : null }))
+                setFormData((prev) => ({
+                  ...prev,
+                  batchId: value ? Number(value) : null,
+                }))
               }
               disabled={loading}
             >
@@ -341,7 +363,8 @@ export function AddNotesDialog({
                       <span className="font-medium">{batch.name}</span>
                       {batch.examName && batch.gradeName && (
                         <span className="text-xs text-muted-foreground">
-                          {batch.examName} • {batch.gradeName} • {batch.language}
+                          {batch.examName} • {batch.gradeName} •{" "}
+                          {batch.language}
                         </span>
                       )}
                     </div>
@@ -365,34 +388,58 @@ export function AddNotesDialog({
       </SheetContent>
 
       {/* Confirmation Dialog */}
-      <Dialog open={showConfirmation} onOpenChange={() => !isSubmitting && handleCancelConfirmation()}>
+      <Dialog
+        open={showConfirmation}
+        onOpenChange={() => !isSubmitting && handleCancelConfirmation()}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>📝 Confirm Notes Upload</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Upload processing completed. Review the summary and click "Confirm" to finalize.
+              Upload processing completed. Review the summary and click
+              "Confirm" to finalize.
             </p>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Minimal Summary */}
             <div className="rounded-lg border p-4">
               <h4 className="font-medium mb-3 flex items-center gap-2">
-                {uploadPreview?.error ? 
-                  <span className="text-red-600">❌ Upload Issues Detected</span> : 
+                {uploadPreview?.error ? (
+                  <span className="text-red-600">
+                    ❌ Upload Issues Detected
+                  </span>
+                ) : (
                   <span className="text-green-600">✅ Upload Processed</span>
-                }
+                )}
               </h4>
-              
+
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><strong>File:</strong> {formData.file?.name}</div>
-                <div><strong>Size:</strong> {formData.file ? (formData.file.size / 1024).toFixed(1) + ' KB' : 'N/A'}</div>
-                <div><strong>Batch:</strong> {batches.find(b => b.id === formData.batchId)?.name || 'Unknown'}</div>
-                <div><strong>Status:</strong> 
-                  {uploadPreview?.error ? 
-                    <span className="text-red-600 font-medium">Needs Review</span> : 
-                    <span className="text-green-600 font-medium">Ready to Save</span>
-                  }
+                <div>
+                  <strong>File:</strong> {formData.file?.name}
+                </div>
+                <div>
+                  <strong>Size:</strong>{" "}
+                  {formData.file
+                    ? (formData.file.size / 1024).toFixed(1) + " KB"
+                    : "N/A"}
+                </div>
+                <div>
+                  <strong>Batch:</strong>{" "}
+                  {batches.find((b) => b.id === formData.batchId)?.name ||
+                    "Unknown"}
+                </div>
+                <div>
+                  <strong>Status:</strong>
+                  {uploadPreview?.error ? (
+                    <span className="text-red-600 font-medium">
+                      Needs Review
+                    </span>
+                  ) : (
+                    <span className="text-green-600 font-medium">
+                      Ready to Save
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -404,8 +451,10 @@ export function AddNotesDialog({
 
               {uploadPreview?.errors && uploadPreview.errors.length > 0 && (
                 <div className="mt-3 p-2 bg-red-50 rounded text-sm text-red-700">
-                  <strong>Issues:</strong> {uploadPreview.errors.slice(0, 2).join(', ')}
-                  {uploadPreview.errors.length > 2 && ` (and ${uploadPreview.errors.length - 2} more)`}
+                  <strong>Issues:</strong>{" "}
+                  {uploadPreview.errors.slice(0, 2).join(", ")}
+                  {uploadPreview.errors.length > 2 &&
+                    ` (and ${uploadPreview.errors.length - 2} more)`}
                 </div>
               )}
             </div>
@@ -416,12 +465,14 @@ export function AddNotesDialog({
                 onClick={() => setShowFullDetails(!showFullDetails)}
                 className="w-full p-3 text-left hover:bg-gray-50 flex items-center justify-between"
               >
-                <span className="font-medium text-sm">🔍 View Full Response Details</span>
+                <span className="font-medium text-sm">
+                  🔍 View Full Response Details
+                </span>
                 <span className="text-xs text-gray-500">
-                  {showFullDetails ? '▼ Hide' : '▶ Show'}
+                  {showFullDetails ? "▼ Hide" : "▶ Show"}
                 </span>
               </button>
-              
+
               {showFullDetails && (
                 <div className="border-t p-4 max-h-96 overflow-y-auto">
                   <pre className="text-xs bg-gray-100 p-3 rounded whitespace-pre-wrap break-words">
@@ -433,14 +484,14 @@ export function AddNotesDialog({
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancelConfirmation}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmSave}
               disabled={isSubmitting}
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -452,5 +503,5 @@ export function AddNotesDialog({
         </DialogContent>
       </Dialog>
     </Sheet>
-  )
+  );
 }

@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Download, MoreHorizontal, Copy } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Copy,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -12,118 +19,127 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { AddNotesDialog } from './AddNotesDialog'
-import { DuplicateNotesDialog } from './DuplicateNotesDialog'
-import { fetchNotes } from '@/services/notes'
-import type { NotesResponseDto, NotesFilters } from '@/types/notes'
+import { AddNotesDialog } from "./AddNotesDialog";
+import { DuplicateNotesDialog } from "./DuplicateNotesDialog";
+import { fetchNotes } from "@/services/notes";
+import type { NotesResponseDto, NotesFilters } from "@/types/notes";
 
 const NOTES_TYPES = {
-  PREVIOUS_YEAR_PAPER: 'Previous Year Paper',
-  NOTES: 'Notes',
-  SAMPLE_PAPER: 'Sample Paper',
-  PRACTICE_SET: 'Practice Set',
-}
+  PREVIOUS_YEAR_PAPER: "Previous Year Paper",
+  NOTES: "Notes",
+  SAMPLE_PAPER: "Sample Paper",
+  PRACTICE_SET: "Practice Set",
+};
 
 export default function NotesUploadPage() {
-  const [notes, setNotes] = useState<NotesResponseDto[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
-  const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([])
+  const [notes, setNotes] = useState<NotesResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([]);
   const [filters, setFilters] = useState<NotesFilters>({
     pageNo: 0,
     pageSize: 20,
-    sortBy: 'position',
-    sortDir: 'ASC',
+    sortBy: "position",
+    sortDir: "ASC",
     active: true,
-  })
-  const [totalElements, setTotalElements] = useState(0)
-  const [searchQuery, setSearchQuery] = useState('')
+  });
+  const [totalElements, setTotalElements] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    loadNotes()
-  }, [filters])
+    loadNotes();
+  }, [filters]);
 
   const loadNotes = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      console.log('[NotesUploadPage] Loading notes with filters:', filters)
-      const response = await fetchNotes(filters)
-      console.log('[NotesUploadPage] Notes response:', response)
-      
-      setNotes(response.content || [])
-      setTotalElements(response.totalElements || 0)
-      
-      console.log('[NotesUploadPage] Set notes:', response.content?.length || 0, 'items')
+      console.log("[NotesUploadPage] Loading notes with filters:", filters);
+      const response = await fetchNotes(filters);
+      console.log("[NotesUploadPage] Notes response:", response);
+
+      setNotes(response.content || []);
+      setTotalElements(response.totalElements || 0);
+
+      console.log(
+        "[NotesUploadPage] Set notes:",
+        response.content?.length || 0,
+        "items"
+      );
     } catch (error) {
-      console.error('[NotesUploadPage] Failed to load notes:', error)
-      toast.error('Failed to load notes: ' + (error instanceof Error ? error.message : 'Unknown error'))
-      setNotes([])
-      setTotalElements(0)
+      console.error("[NotesUploadPage] Failed to load notes:", error);
+      toast.error(
+        "Failed to load notes: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
+      setNotes([]);
+      setTotalElements(0);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query)
+    setSearchQuery(query);
     // You can implement search logic here
     // For now, just trigger a reload
-    loadNotes()
-  }
+    loadNotes();
+  };
 
   const handleUploadSuccess = () => {
-    toast.success('Notes uploaded successfully!')
-    loadNotes() // Refresh the list
-  }
+    toast.success("Notes uploaded successfully!");
+    loadNotes(); // Refresh the list
+  };
 
   const handleSelectNote = (note: NotesResponseDto, checked: boolean) => {
     if (checked) {
-      setSelectedNotes(prev => [...prev, note])
+      setSelectedNotes((prev) => [...prev, note]);
     } else {
-      setSelectedNotes(prev => prev.filter(n => n.id !== note.id))
+      setSelectedNotes((prev) => prev.filter((n) => n.id !== note.id));
     }
-  }
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedNotes([...notes])
+      setSelectedNotes([...notes]);
     } else {
-      setSelectedNotes([])
+      setSelectedNotes([]);
     }
-  }
+  };
 
   const isNoteSelected = (noteId: string) => {
-    return selectedNotes.some(n => n.id === noteId)
-  }
+    return selectedNotes.some((n) => n.id === noteId);
+  };
 
-  const isAllSelected = notes.length > 0 && selectedNotes.length === notes.length
-  const isIndeterminate = selectedNotes.length > 0 && selectedNotes.length < notes.length
+  const isAllSelected =
+    notes.length > 0 && selectedNotes.length === notes.length;
+  const isIndeterminate =
+    selectedNotes.length > 0 && selectedNotes.length < notes.length;
 
   const handleDuplicateSuccess = () => {
-    toast.success('Notes duplicated successfully!')
-    setSelectedNotes([]) // Clear selections
-    loadNotes() // Refresh the list
-  }
+    toast.success("Notes duplicated successfully!");
+    setSelectedNotes([]); // Clear selections
+    loadNotes(); // Refresh the list
+  };
 
   const getNotesTypeDisplay = (type: string) => {
-    return NOTES_TYPES[type as keyof typeof NOTES_TYPES] || type
-  }
+    return NOTES_TYPES[type as keyof typeof NOTES_TYPES] || type;
+  };
 
   const formatFileSize = (url: string) => {
     // Since we don't have file size info, just show a placeholder
-    return 'Unknown'
-  }
+    return "Unknown";
+  };
 
   return (
     <div className="flex h-full flex-col space-y-6">
@@ -134,15 +150,16 @@ export default function NotesUploadPage() {
             Manage and upload notes for different batches
             {selectedNotes.length > 0 && (
               <span className="ml-2 text-cyan-600">
-                • {selectedNotes.length} note{selectedNotes.length > 1 ? 's' : ''} selected
+                • {selectedNotes.length} note
+                {selectedNotes.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
           {selectedNotes.length > 0 && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowDuplicateDialog(true)}
               className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
             >
@@ -188,19 +205,19 @@ export default function NotesUploadPage() {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {notes.filter(n => n.isActive).length}
+            {notes.filter((n) => n.isActive).length}
           </div>
           <p className="text-xs text-muted-foreground">Active Notes</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {notes.filter(n => n.locked).length}
+            {notes.filter((n) => n.locked).length}
           </div>
           <p className="text-xs text-muted-foreground">Locked Notes</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {new Set(notes.map(n => n.batchId)).size}
+            {new Set(notes.map((n) => n.batchId)).size}
           </div>
           <p className="text-xs text-muted-foreground">Unique Batches</p>
         </div>
@@ -234,15 +251,33 @@ export default function NotesUploadPage() {
               // Loading skeleton
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[90px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[70px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-[40px]" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[120px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[80px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[100px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[90px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[60px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[70px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[50px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-[40px]" />
+                  </TableCell>
                 </TableRow>
               ))
             ) : notes.length === 0 ? (
@@ -266,7 +301,9 @@ export default function NotesUploadPage() {
                   <TableCell>
                     <Checkbox
                       checked={isNoteSelected(note.id)}
-                      onCheckedChange={(checked) => handleSelectNote(note, checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleSelectNote(note, checked as boolean)
+                      }
                       aria-label={`Select note ${note.title}`}
                     />
                   </TableCell>
@@ -288,16 +325,16 @@ export default function NotesUploadPage() {
                   <TableCell>{note.batchId}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Badge 
+                      <Badge
                         variant={note.isActive ? "default" : "secondary"}
-                        className={note.isActive ? "bg-green-100 text-green-800" : ""}
+                        className={
+                          note.isActive ? "bg-green-100 text-green-800" : ""
+                        }
                       >
                         {note.isActive ? "Active" : "Inactive"}
                       </Badge>
                       {note.locked && (
-                        <Badge variant="destructive">
-                          Locked
-                        </Badge>
+                        <Badge variant="destructive">Locked</Badge>
                       )}
                     </div>
                   </TableCell>
@@ -311,13 +348,11 @@ export default function NotesUploadPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => window.open(note.notesUrl, '_blank')}
+                          onClick={() => window.open(note.notesUrl, "_blank")}
                         >
                           View Notes
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          Edit
-                        </DropdownMenuItem>
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">
                           Delete
                         </DropdownMenuItem>
@@ -341,7 +376,12 @@ export default function NotesUploadPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFilters(prev => ({ ...prev, pageNo: Math.max(0, prev.pageNo! - 1) }))}
+              onClick={() =>
+                setFilters((prev) => ({
+                  ...prev,
+                  pageNo: Math.max(0, prev.pageNo! - 1),
+                }))
+              }
               disabled={filters.pageNo === 0}
             >
               Previous
@@ -349,7 +389,9 @@ export default function NotesUploadPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFilters(prev => ({ ...prev, pageNo: prev.pageNo! + 1 }))}
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
+              }
               disabled={notes.length < filters.pageSize!}
             >
               Next
@@ -373,5 +415,5 @@ export default function NotesUploadPage() {
         onSuccess={handleDuplicateSuccess}
       />
     </div>
-  )
+  );
 }

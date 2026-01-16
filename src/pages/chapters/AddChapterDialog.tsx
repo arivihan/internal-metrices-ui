@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
-import { Upload, Loader2, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useRef, useEffect } from "react";
+import { Upload, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Sheet,
@@ -8,23 +8,23 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from '@/components/ui/sheet'
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 
 import {
   uploadChapter,
@@ -39,23 +39,23 @@ import {
   fetchExamGradeStreamMappings,
   fetchAllBatches,
   fetchAllBatchAddOns,
-} from '@/services/chapters'
-import type { FilterOption } from '@/types/chapters'
+} from "@/services/chapters";
+import type { FilterOption } from "@/types/chapters";
 
 interface AddChapterDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
 interface FormData {
-  file: File | null
-  examId: number | null
-  gradeId: number | null
-  streamId: number | null
-  batchId: number | null
-  batchAddOnId: number | null
-  language: string
+  file: File | null;
+  examId: number | null;
+  gradeId: number | null;
+  streamId: number | null;
+  batchId: number | null;
+  batchAddOnId: number | null;
+  language: string;
 }
 
 export function AddChapterDialog({
@@ -63,12 +63,12 @@ export function AddChapterDialog({
   onOpenChange,
   onSuccess,
 }: AddChapterDialogProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [showFullDetails, setShowFullDetails] = useState(false)
-  const [uploadPreview, setUploadPreview] = useState<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showFullDetails, setShowFullDetails] = useState(false);
+  const [uploadPreview, setUploadPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
     file: null,
@@ -77,130 +77,174 @@ export function AddChapterDialog({
     streamId: null,
     batchId: null,
     batchAddOnId: null,
-    language: 'English',
-  })
+    language: "English",
+  });
 
   // Filter options - All data fetched upfront
-  const [exams, setExams] = useState<FilterOption[]>([])
-  const [grades, setGrades] = useState<FilterOption[]>([])
-  const [streams, setStreams] = useState<FilterOption[]>([])
-  const [batches, setBatches] = useState<FilterOption[]>([])
-  const [batchAddOns, setBatchAddOns] = useState<FilterOption[]>([])
-  const [languages, setLanguages] = useState<FilterOption[]>([])
+  const [exams, setExams] = useState<FilterOption[]>([]);
+  const [grades, setGrades] = useState<FilterOption[]>([]);
+  const [streams, setStreams] = useState<FilterOption[]>([]);
+  const [batches, setBatches] = useState<FilterOption[]>([]);
+  const [batchAddOns, setBatchAddOns] = useState<FilterOption[]>([]);
+  const [languages, setLanguages] = useState<FilterOption[]>([]);
 
   // Mapping data for filtering
-  const [examGradeMappings, setExamGradeMappings] = useState<any[]>([])
-  const [examGradeStreamMappings, setExamGradeStreamMappings] = useState<any[]>([])
-  const [allBatches, setAllBatches] = useState<FilterOption[]>([])
-  const [allBatchAddOns, setAllBatchAddOns] = useState<FilterOption[]>([])
+  const [examGradeMappings, setExamGradeMappings] = useState<any[]>([]);
+  const [examGradeStreamMappings, setExamGradeStreamMappings] = useState<any[]>(
+    []
+  );
+  const [allBatches, setAllBatches] = useState<FilterOption[]>([]);
+  const [allBatchAddOns, setAllBatchAddOns] = useState<FilterOption[]>([]);
 
   // Filtered options based on selections
-  const [filteredGrades, setFilteredGrades] = useState<FilterOption[]>([])
-  const [filteredStreams, setFilteredStreams] = useState<FilterOption[]>([])
-  const [filteredBatches, setFilteredBatches] = useState<FilterOption[]>([])
-  const [filteredBatchAddOns, setFilteredBatchAddOns] = useState<FilterOption[]>([])
+  const [filteredGrades, setFilteredGrades] = useState<FilterOption[]>([]);
+  const [filteredStreams, setFilteredStreams] = useState<FilterOption[]>([]);
+  const [filteredBatches, setFilteredBatches] = useState<FilterOption[]>([]);
+  const [filteredBatchAddOns, setFilteredBatchAddOns] = useState<
+    FilterOption[]
+  >([]);
 
   // Load filter options - Fetch ALL data upfront
   useEffect(() => {
     if (open) {
-      loadAllFilterOptions()
+      loadAllFilterOptions();
     }
-  }, [open])
+  }, [open]);
 
   // Filter grades based on selected exam
   useEffect(() => {
     if (formData.examId && examGradeMappings.length > 0) {
-      const examGrades = examGradeMappings.filter(mapping => mapping.examId === formData.examId)
-      const gradeIds = examGrades.map(mapping => mapping.gradeId)
-      const filtered = grades.filter(grade => gradeIds.includes(grade.id))
-      setFilteredGrades(filtered)
+      const examGrades = examGradeMappings.filter(
+        (mapping) => mapping.examId === formData.examId
+      );
+      const gradeIds = examGrades.map((mapping) => mapping.gradeId);
+      const filtered = grades.filter((grade) => gradeIds.includes(grade.id));
+      setFilteredGrades(filtered);
     } else {
-      setFilteredGrades([])
-      setFormData((prev) => ({ ...prev, gradeId: null, streamId: null, batchId: null, batchAddOnId: null }))
+      setFilteredGrades([]);
+      setFormData((prev) => ({
+        ...prev,
+        gradeId: null,
+        streamId: null,
+        batchId: null,
+        batchAddOnId: null,
+      }));
     }
-  }, [formData.examId, examGradeMappings, grades])
+  }, [formData.examId, examGradeMappings, grades]);
 
   // Filter streams based on selected exam and grade
   useEffect(() => {
-    if (formData.examId && formData.gradeId && examGradeStreamMappings.length > 0) {
+    if (
+      formData.examId &&
+      formData.gradeId &&
+      examGradeStreamMappings.length > 0
+    ) {
       const examGradeStreams = examGradeStreamMappings.filter(
-        mapping => mapping.examId === formData.examId && mapping.gradeId === formData.gradeId
-      )
-      const streamIds = examGradeStreams.map(mapping => mapping.streamId)
-      const filtered = streams.filter(stream => streamIds.includes(stream.id))
-      setFilteredStreams(filtered)
+        (mapping) =>
+          mapping.examId === formData.examId &&
+          mapping.gradeId === formData.gradeId
+      );
+      const streamIds = examGradeStreams.map((mapping) => mapping.streamId);
+      const filtered = streams.filter((stream) =>
+        streamIds.includes(stream.id)
+      );
+      setFilteredStreams(filtered);
     } else {
-      setFilteredStreams([])
-      setFormData((prev) => ({ ...prev, streamId: null, batchId: null, batchAddOnId: null }))
+      setFilteredStreams([]);
+      setFormData((prev) => ({
+        ...prev,
+        streamId: null,
+        batchId: null,
+        batchAddOnId: null,
+      }));
     }
-  }, [formData.examId, formData.gradeId, examGradeStreamMappings, streams])
+  }, [formData.examId, formData.gradeId, examGradeStreamMappings, streams]);
 
   // Filter batches based on exam, grade, stream
   useEffect(() => {
-    if (formData.examId && formData.gradeId && formData.streamId && allBatches.length > 0) {
+    if (
+      formData.examId &&
+      formData.gradeId &&
+      formData.streamId &&
+      allBatches.length > 0
+    ) {
       // Filter batches that match exam, grade, stream combination
-      const filtered = allBatches.filter(batch => {
+      const filtered = allBatches.filter((batch) => {
         // Assuming batch has examId, gradeId, streamId properties
-        return batch.examId === formData.examId && 
-               batch.gradeId === formData.gradeId && 
-               batch.streamId === formData.streamId
-      })
-      setFilteredBatches(filtered)
+        return (
+          batch.examId === formData.examId &&
+          batch.gradeId === formData.gradeId &&
+          batch.streamId === formData.streamId
+        );
+      });
+      setFilteredBatches(filtered);
     } else {
-      setFilteredBatches([])
-      setFormData((prev) => ({ ...prev, batchId: null, batchAddOnId: null }))
+      setFilteredBatches([]);
+      setFormData((prev) => ({ ...prev, batchId: null, batchAddOnId: null }));
     }
-  }, [formData.examId, formData.gradeId, formData.streamId, allBatches])
+  }, [formData.examId, formData.gradeId, formData.streamId, allBatches]);
 
   // Filter batch add-ons based on selected batch
   useEffect(() => {
     if (formData.batchId && allBatchAddOns.length > 0) {
-      const filtered = allBatchAddOns.filter(addon => addon.batchId === formData.batchId)
-      setFilteredBatchAddOns(filtered)
+      const filtered = allBatchAddOns.filter(
+        (addon) => addon.batchId === formData.batchId
+      );
+      setFilteredBatchAddOns(filtered);
     } else {
-      setFilteredBatchAddOns([])
-      setFormData((prev) => ({ ...prev, batchAddOnId: null }))
+      setFilteredBatchAddOns([]);
+      setFormData((prev) => ({ ...prev, batchAddOnId: null }));
     }
-  }, [formData.batchId, allBatchAddOns])
+  }, [formData.batchId, allBatchAddOns]);
 
   const loadAllFilterOptions = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       // Fetch all basic data
-      const [examsRes, gradesRes, streamsRes, languagesRes] = await Promise.all([
-        fetchExams({ active: true }),
-        fetchGrades({ active: true }),
-        fetchStreams({ active: true }),
-        fetchLanguages(),
-      ])
+      const [examsRes, gradesRes, streamsRes, languagesRes] = await Promise.all(
+        [
+          fetchExams({ active: true }),
+          fetchGrades({ active: true }),
+          fetchStreams({ active: true }),
+          fetchLanguages(),
+        ]
+      );
 
       // Fetch all mapping data
-      const [examGradeMappingsRes, examGradeStreamMappingsRes, allBatchesRes, allBatchAddOnsRes] = await Promise.all([
+      const [
+        examGradeMappingsRes,
+        examGradeStreamMappingsRes,
+        allBatchesRes,
+        allBatchAddOnsRes,
+      ] = await Promise.all([
         fetchExamGradeMappings(),
         fetchExamGradeStreamMappings(),
         fetchAllBatches({ activeFlag: true }),
         fetchAllBatchAddOns(),
-      ])
+      ]);
 
       // Set basic data
-      setExams(examsRes.content)
-      setGrades(gradesRes.content)
-      setStreams(streamsRes.content)
-      setLanguages(languagesRes)
+      setExams(examsRes.content);
+      setGrades(gradesRes.content);
+      setStreams(streamsRes.content);
+      setLanguages(languagesRes);
 
       // Set mapping data
-      setExamGradeMappings(examGradeMappingsRes.content || examGradeMappingsRes)
-      setExamGradeStreamMappings(examGradeStreamMappingsRes.content || examGradeStreamMappingsRes)
-      setAllBatches(allBatchesRes.content || allBatchesRes)
-      setAllBatchAddOns(allBatchAddOnsRes.content || allBatchAddOnsRes)
-
+      setExamGradeMappings(
+        examGradeMappingsRes.content || examGradeMappingsRes
+      );
+      setExamGradeStreamMappings(
+        examGradeStreamMappingsRes.content || examGradeStreamMappingsRes
+      );
+      setAllBatches(allBatchesRes.content || allBatchesRes);
+      setAllBatchAddOns(allBatchAddOnsRes.content || allBatchAddOnsRes);
     } catch (error) {
-      console.error('Failed to load filter options:', error)
-      toast.error('Failed to load options')
+      console.error("Failed to load filter options:", error);
+      toast.error("Failed to load options");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Reset form when sheet opens
   useEffect(() => {
@@ -212,87 +256,94 @@ export function AddChapterDialog({
         streamId: null,
         batchId: null,
         batchAddOnId: null,
-        language: 'English',
-      })
+        language: "English",
+      });
     }
-  }, [open])
+  }, [open]);
 
   const handleClose = () => {
     if (!isSubmitting) {
-      onOpenChange(false)
+      onOpenChange(false);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       // Accept Excel, CSV, and OLE2 (legacy Office) files
       const validTypes = [
         // Modern Excel formats
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
         // CSV formats
-        'text/csv',
-        'application/csv',
-        'text/plain', // Sometimes CSV files have this MIME type
-        
+        "text/csv",
+        "application/csv",
+        "text/plain", // Sometimes CSV files have this MIME type
+
         // OLE2 / Legacy Microsoft Office formats
-        'application/msword', // .doc files
-        'application/vnd.ms-word', // Alternative MIME for .doc
-        'application/x-msexcel', // Legacy Excel
-        'application/x-ms-excel', // Alternative Excel MIME
-        'application/excel', // Another Excel MIME
-        'application/x-excel', // Yet another Excel MIME
-        'application/x-dos_ms_excel', // DOS Excel
-        'application/xls', // Simple .xls MIME
-        
+        "application/msword", // .doc files
+        "application/vnd.ms-word", // Alternative MIME for .doc
+        "application/x-msexcel", // Legacy Excel
+        "application/x-ms-excel", // Alternative Excel MIME
+        "application/excel", // Another Excel MIME
+        "application/x-excel", // Yet another Excel MIME
+        "application/x-dos_ms_excel", // DOS Excel
+        "application/xls", // Simple .xls MIME
+
         // Generic binary formats that might be OLE2
-        'application/octet-stream', // Generic binary
-        'application/x-ole-storage', // OLE2 storage
-      ]
-      
-      const validExtensions = /\.(xlsx|xls|csv|doc)$/i
-      const hasValidType = validTypes.includes(file.type)
-      const hasValidExtension = validExtensions.test(file.name)
-      
+        "application/octet-stream", // Generic binary
+        "application/x-ole-storage", // OLE2 storage
+      ];
+
+      const validExtensions = /\.(xlsx|xls|csv|doc)$/i;
+      const hasValidType = validTypes.includes(file.type);
+      const hasValidExtension = validExtensions.test(file.name);
+
       // File must have either valid MIME type OR valid extension
       if (!hasValidType && !hasValidExtension) {
-        toast.error('Please upload a valid Excel, CSV, or OLE2 document file (.xlsx, .xls, .csv, .doc)')
+        toast.error(
+          "Please upload a valid Excel, CSV, or OLE2 document file (.xlsx, .xls, .csv, .doc)"
+        );
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+          fileInputRef.current.value = "";
         }
-        return
+        return;
       }
 
       // Additional validation for file size (max 50MB)
-      const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
       if (file.size > maxSize) {
-        toast.error('File size must be less than 50MB')
+        toast.error("File size must be less than 50MB");
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+          fileInputRef.current.value = "";
         }
-        return
+        return;
       }
 
       // Detect file type for user feedback
-      const isCSV = file.name.toLowerCase().endsWith('.csv') || 
-                   file.type === 'text/csv' || 
-                   file.type === 'application/csv'
-                   
-      const isLegacyExcel = file.name.toLowerCase().endsWith('.xls') ||
-                           file.type.includes('ms-excel') ||
-                           file.type.includes('msexcel') ||
-                           file.type === 'application/excel'
-                           
-      const isModernExcel = file.name.toLowerCase().endsWith('.xlsx') ||
-                           file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                           
-      const isOLE2 = file.type === 'application/octet-stream' ||
-                     file.type === 'application/x-ole-storage' ||
-                     file.name.toLowerCase().endsWith('.doc')
+      const isCSV =
+        file.name.toLowerCase().endsWith(".csv") ||
+        file.type === "text/csv" ||
+        file.type === "application/csv";
 
-      console.log('Selected file:', {
+      const isLegacyExcel =
+        file.name.toLowerCase().endsWith(".xls") ||
+        file.type.includes("ms-excel") ||
+        file.type.includes("msexcel") ||
+        file.type === "application/excel";
+
+      const isModernExcel =
+        file.name.toLowerCase().endsWith(".xlsx") ||
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+      const isOLE2 =
+        file.type === "application/octet-stream" ||
+        file.type === "application/x-ole-storage" ||
+        file.name.toLowerCase().endsWith(".doc");
+
+      console.log("Selected file:", {
         name: file.name,
         type: file.type,
         size: file.size,
@@ -301,39 +352,43 @@ export function AddChapterDialog({
         isCSV,
         isLegacyExcel,
         isModernExcel,
-        isOLE2
-      })
+        isOLE2,
+      });
 
       // Show info about file type
       if (isCSV) {
-        toast.info('CSV file detected - make sure it follows the required format')
+        toast.info(
+          "CSV file detected - make sure it follows the required format"
+        );
       } else if (isLegacyExcel) {
-        toast.info('Legacy Excel (.xls) file detected - OLE2 format supported')
+        toast.info("Legacy Excel (.xls) file detected - OLE2 format supported");
       } else if (isModernExcel) {
-        toast.info('Modern Excel (.xlsx) file detected')
+        toast.info("Modern Excel (.xlsx) file detected");
       } else if (isOLE2) {
-        toast.info('OLE2 document detected - legacy Office format supported')
+        toast.info("OLE2 document detected - legacy Office format supported");
       }
 
-      setFormData((prev) => ({ ...prev, file }))
+      setFormData((prev) => ({ ...prev, file }));
     }
-  }
+  };
 
   const handleDropzoneClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleRemoveFile = () => {
-    setFormData((prev) => ({ ...prev, file: null }))
+    setFormData((prev) => ({ ...prev, file: null }));
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const validateForm = (): boolean => {
     if (!formData.file) {
-      toast.error('Please select an Excel, CSV, or OLE2 document file to upload')
-      return false
+      toast.error(
+        "Please select an Excel, CSV, or OLE2 document file to upload"
+      );
+      return false;
     }
 
     // Validate: if any of exam, grade, stream, batch, batchAddOn is provided, all must be provided or none
@@ -342,35 +397,35 @@ export function AddChapterDialog({
       formData.gradeId ||
       formData.streamId ||
       formData.batchId ||
-      formData.batchAddOnId
+      formData.batchAddOnId;
 
     if (hasAnyMapping) {
       if (!formData.examId) {
-        toast.error('Exam is required when providing mapping details')
-        return false
+        toast.error("Exam is required when providing mapping details");
+        return false;
       }
       if (!formData.gradeId) {
-        toast.error('Grade is required when providing mapping details')
-        return false
+        toast.error("Grade is required when providing mapping details");
+        return false;
       }
       if (!formData.streamId) {
-        toast.error('Stream is required when providing mapping details')
-        return false
+        toast.error("Stream is required when providing mapping details");
+        return false;
       }
       if (!formData.batchId) {
-        toast.error('Batch is required when providing mapping details')
-        return false
+        toast.error("Batch is required when providing mapping details");
+        return false;
       }
       // batchAddOnId is optional even when other mapping fields are provided
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       // First API call - Upload and get preview
       const response = await uploadChapter({
@@ -381,90 +436,95 @@ export function AddChapterDialog({
         batchId: formData.batchId || undefined,
         batchAddOnId: formData.batchAddOnId || undefined,
         language: formData.language || undefined,
-      })
+      });
 
       // Always show confirmation popup regardless of success/failure
-      console.log('Upload response received:', response)
-      setUploadPreview(response)
-      setShowConfirmation(true)
-      
+      console.log("Upload response received:", response);
+      setUploadPreview(response);
+      setShowConfirmation(true);
     } catch (error) {
-      console.error('Upload error:', error)
+      console.error("Upload error:", error);
       // Even on error, show the confirmation with error details
       const errorResponse = {
         success: false,
         error: true,
-        message: error instanceof Error ? error.message : 'Failed to upload chapters',
-        errors: [error instanceof Error ? error.message : 'Unknown error'],
-        datas: []
-      }
-      setUploadPreview(errorResponse)
-      setShowConfirmation(true)
+        message:
+          error instanceof Error ? error.message : "Failed to upload chapters",
+        errors: [error instanceof Error ? error.message : "Unknown error"],
+        datas: [],
+      };
+      setUploadPreview(errorResponse);
+      setShowConfirmation(true);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleConfirmSave = async () => {
-    if (!uploadPreview) return
+    if (!uploadPreview) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       // Second API call - Save the upload data
-      const saveResponse = await saveChapterUpload(uploadPreview)
-      
-      console.log('Save response received:', saveResponse)
-      
+      const saveResponse = await saveChapterUpload(uploadPreview);
+
+      console.log("Save response received:", saveResponse);
+
       if (saveResponse.success) {
         // Show main success message
-        toast.success(saveResponse.message || 'Chapters saved successfully')
-        
+        toast.success(saveResponse.message || "Chapters saved successfully");
+
         // Show uploaded chapters info
         if (saveResponse.uploadedChapters) {
           toast.success(`✅ ${saveResponse.uploadedChapters}`, {
             duration: 5000,
-            position: 'top-center'
-          })
+            position: "top-center",
+          });
         }
-        
+
         // Show mapping info if available
         if (saveResponse.mappedChapters) {
           toast.info(`📋 ${saveResponse.mappedChapters}`, {
-            duration: 4000
-          })
+            duration: 4000,
+          });
         }
-        
+
         // Show failed chapters warning if any
-        if (saveResponse.failedChapters && saveResponse.failedChapters !== "Chapters Upload Failed") {
+        if (
+          saveResponse.failedChapters &&
+          saveResponse.failedChapters !== "Chapters Upload Failed"
+        ) {
           toast.warning(`⚠️ ${saveResponse.failedChapters}`, {
-            duration: 6000
-          })
+            duration: 6000,
+          });
         }
-        
-        onSuccess()
-        handleClose()
-        setShowConfirmation(false)
-        setShowFullDetails(false)
-        setUploadPreview(null)
+
+        onSuccess();
+        handleClose();
+        setShowConfirmation(false);
+        setShowFullDetails(false);
+        setUploadPreview(null);
       } else {
-        toast.error(saveResponse.message || 'Failed to save chapters')
+        toast.error(saveResponse.message || "Failed to save chapters");
         if (saveResponse.errorDetails) {
-          toast.error(saveResponse.errorDetails)
+          toast.error(saveResponse.errorDetails);
         }
       }
     } catch (error) {
-      console.error('Save error:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to save chapters')
+      console.error("Save error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save chapters"
+      );
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleCancelConfirmation = () => {
-    setShowConfirmation(false)
-    setShowFullDetails(false)
-    setUploadPreview(null)
-  }
+    setShowConfirmation(false);
+    setShowFullDetails(false);
+    setUploadPreview(null);
+  };
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -525,8 +585,8 @@ export function AddChapterDialog({
             <div className="space-y-2">
               <h3 className="font-medium">Mapping Details (Optional)</h3>
               <p className="text-sm text-muted-foreground">
-                If you want to automatically map uploaded chapters, provide all mapping details
-                below. Otherwise, leave them empty.
+                If you want to automatically map uploaded chapters, provide all
+                mapping details below. Otherwise, leave them empty.
               </p>
             </div>
 
@@ -535,9 +595,12 @@ export function AddChapterDialog({
               <div className="space-y-2">
                 <Label htmlFor="exam">Exam</Label>
                 <Select
-                  value={formData.examId?.toString() || ''}
+                  value={formData.examId?.toString() || ""}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, examId: value ? Number(value) : null }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      examId: value ? Number(value) : null,
+                    }))
                   }
                   disabled={loading}
                 >
@@ -558,9 +621,12 @@ export function AddChapterDialog({
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
                 <Select
-                  value={formData.gradeId?.toString() || ''}
+                  value={formData.gradeId?.toString() || ""}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, gradeId: value ? Number(value) : null }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      gradeId: value ? Number(value) : null,
+                    }))
                   }
                   disabled={!formData.examId || loading}
                 >
@@ -581,9 +647,12 @@ export function AddChapterDialog({
               <div className="space-y-2">
                 <Label htmlFor="stream">Stream</Label>
                 <Select
-                  value={formData.streamId?.toString() || ''}
+                  value={formData.streamId?.toString() || ""}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, streamId: value ? Number(value) : null }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      streamId: value ? Number(value) : null,
+                    }))
                   }
                   disabled={!formData.examId || !formData.gradeId || loading}
                 >
@@ -604,11 +673,16 @@ export function AddChapterDialog({
               <div className="space-y-2">
                 <Label htmlFor="batch">Batch</Label>
                 <Select
-                  value={formData.batchId?.toString() || ''}
+                  value={formData.batchId?.toString() || ""}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, batchId: value ? Number(value) : null }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      batchId: value ? Number(value) : null,
+                    }))
                   }
-                  disabled={!formData.examId || !formData.gradeId || !formData.streamId}
+                  disabled={
+                    !formData.examId || !formData.gradeId || !formData.streamId
+                  }
                 >
                   <SelectTrigger id="batch">
                     <SelectValue placeholder="Select Batch" />
@@ -627,7 +701,7 @@ export function AddChapterDialog({
               <div className="space-y-2">
                 <Label htmlFor="batchAddon">Batch Add-on (Optional)</Label>
                 <Select
-                  value={formData.batchAddOnId?.toString() || ''}
+                  value={formData.batchAddOnId?.toString() || ""}
                   onValueChange={(value) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -695,57 +769,128 @@ export function AddChapterDialog({
       </SheetContent>
 
       {/* Confirmation Dialog */}
-      <Dialog open={showConfirmation} onOpenChange={() => !isSubmitting && handleCancelConfirmation()}>
+      <Dialog
+        open={showConfirmation}
+        onOpenChange={() => !isSubmitting && handleCancelConfirmation()}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>📋 Confirm Chapter Upload</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Upload processing completed. Review the summary and click "Save" to finalize.
+              Upload processing completed. Review the summary and click "Save"
+              to finalize.
             </p>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Minimal Summary */}
             <div className="rounded-lg border p-4">
               <h4 className="font-medium mb-3 flex items-center gap-2">
-                {uploadPreview?.error ? 
-                  <span className="text-red-600">❌ Upload Issues Detected</span> : 
+                {uploadPreview?.error ? (
+                  <span className="text-red-600">
+                    ❌ Upload Issues Detected
+                  </span>
+                ) : (
                   <span className="text-green-600">✅ Upload Processed</span>
-                }
+                )}
               </h4>
-              
+
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><strong>File:</strong> {formData.file?.name}</div>
-                <div><strong>Size:</strong> {formData.file ? (formData.file.size / 1024).toFixed(1) + ' KB' : 'N/A'}</div>
-                <div><strong>Subject:</strong> {uploadPreview?.subject || 'Auto-detected'}</div>
-                <div><strong>Language:</strong> {uploadPreview?.language || formData.language}</div>
-                <div><strong>Chapters Found:</strong> {uploadPreview?.datas?.length || 0}</div>
-                <div><strong>Status:</strong> 
-                  {uploadPreview?.error ? 
-                    <span className="text-red-600 font-medium">Needs Review</span> : 
-                    <span className="text-green-600 font-medium">Ready to Save</span>
-                  }
+                <div>
+                  <strong>File:</strong> {formData.file?.name}
+                </div>
+                <div>
+                  <strong>Size:</strong>{" "}
+                  {formData.file
+                    ? (formData.file.size / 1024).toFixed(1) + " KB"
+                    : "N/A"}
+                </div>
+                <div>
+                  <strong>Subject:</strong>{" "}
+                  {uploadPreview?.subject || "Auto-detected"}
+                </div>
+                <div>
+                  <strong>Language:</strong>{" "}
+                  {uploadPreview?.language || formData.language}
+                </div>
+                <div>
+                  <strong>Chapters Found:</strong>{" "}
+                  {uploadPreview?.datas?.length || 0}
+                </div>
+                <div>
+                  <strong>Status:</strong>
+                  {uploadPreview?.error ? (
+                    <span className="text-red-600 font-medium">
+                      Needs Review
+                    </span>
+                  ) : (
+                    <span className="text-green-600 font-medium">
+                      Ready to Save
+                    </span>
+                  )}
                 </div>
               </div>
 
               {uploadPreview?.errors && uploadPreview.errors.length > 0 && (
                 <div className="mt-3 p-2 bg-red-50 rounded text-sm text-red-700">
-                  <strong>Issues:</strong> {uploadPreview.errors.slice(0, 2).join(', ')}
-                  {uploadPreview.errors.length > 2 && ` (and ${uploadPreview.errors.length - 2} more)`}
+                  <strong>Issues:</strong>{" "}
+                  {uploadPreview.errors.slice(0, 2).join(", ")}
+                  {uploadPreview.errors.length > 2 &&
+                    ` (and ${uploadPreview.errors.length - 2} more)`}
                 </div>
               )}
             </div>
 
             {/* Mapping Summary (if provided) */}
-            {(formData.examId || formData.gradeId || formData.streamId || formData.batchId) && (
+            {(formData.examId ||
+              formData.gradeId ||
+              formData.streamId ||
+              formData.batchId) && (
               <div className="rounded-lg border p-4">
                 <h4 className="font-medium mb-2">📋 Mapping Configuration</h4>
                 <div className="text-sm space-y-1">
-                  {formData.examId && <div>• Exam: {exams.find(e => e.id == formData.examId)?.name}</div>}
-                  {formData.gradeId && <div>• Grade: {filteredGrades.find(g => g.id == formData.gradeId)?.name}</div>}
-                  {formData.streamId && <div>• Stream: {filteredStreams.find(s => s.id == formData.streamId)?.name}</div>}
-                  {formData.batchId && <div>• Batch: {filteredBatches.find(b => b.id == formData.batchId)?.name}</div>}
-                  {formData.batchAddOnId && <div>• Batch Add-on: {filteredBatchAddOns.find(a => a.id == formData.batchAddOnId)?.name}</div>}
+                  {formData.examId && (
+                    <div>
+                      • Exam: {exams.find((e) => e.id == formData.examId)?.name}
+                    </div>
+                  )}
+                  {formData.gradeId && (
+                    <div>
+                      • Grade:{" "}
+                      {
+                        filteredGrades.find((g) => g.id == formData.gradeId)
+                          ?.name
+                      }
+                    </div>
+                  )}
+                  {formData.streamId && (
+                    <div>
+                      • Stream:{" "}
+                      {
+                        filteredStreams.find((s) => s.id == formData.streamId)
+                          ?.name
+                      }
+                    </div>
+                  )}
+                  {formData.batchId && (
+                    <div>
+                      • Batch:{" "}
+                      {
+                        filteredBatches.find((b) => b.id == formData.batchId)
+                          ?.name
+                      }
+                    </div>
+                  )}
+                  {formData.batchAddOnId && (
+                    <div>
+                      • Batch Add-on:{" "}
+                      {
+                        filteredBatchAddOns.find(
+                          (a) => a.id == formData.batchAddOnId
+                        )?.name
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -756,12 +901,15 @@ export function AddChapterDialog({
                 onClick={() => setShowFullDetails(!showFullDetails)}
                 className="w-full p-3 text-left  flex items-center justify-between"
               >
-                <span className="font-medium text-sm"> View Full Response </span>
+                <span className="font-medium text-sm">
+                  {" "}
+                  View Full Response{" "}
+                </span>
                 <span className="text-xs text-gray-500">
-                  {showFullDetails ? '▼ Hide' : '▶ Show'}
+                  {showFullDetails ? "▼ Hide" : "▶ Show"}
                 </span>
               </button>
-              
+
               {showFullDetails && (
                 <div className="border-t p-4 max-h-96 overflow-y-auto">
                   <pre className="text-xs  p-3 rounded whitespace-pre-wrap break-words">
@@ -773,24 +921,24 @@ export function AddChapterDialog({
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancelConfirmation}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmSave}
               disabled={isSubmitting}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-               Save
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </Sheet>
-  )
+  );
 }
