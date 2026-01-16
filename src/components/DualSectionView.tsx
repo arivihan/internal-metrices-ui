@@ -120,7 +120,6 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
   const [modalTotalElements, setModalTotalElements] = useState(0);
   const [modalTotalPages, setModalTotalPages] = useState(0);
 
-
   // Fetch left section options on mount
   useEffect(() => {
     console.log("[DualSectionView] Mounted, fetching left options");
@@ -280,7 +279,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         );
         const response = await apiClient<any>(addAction.modalFetchUrl, {
           method: "GET",
-          params: { 
+          params: {
             level: "SYSTEM",
             pageNo: String(pageNum),
             pageSize: String(modalPageSize),
@@ -294,11 +293,13 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
           : Array.isArray(response)
           ? response
           : [];
-        
+
         // Extract pagination info
         const totalElements = (response as any)?.totalElements ?? data.length;
-        const totalPages = (response as any)?.totalPages ?? Math.ceil(totalElements / modalPageSize);
-        
+        const totalPages =
+          (response as any)?.totalPages ??
+          Math.ceil(totalElements / modalPageSize);
+
         console.log("[DualSectionView] Parsed modal data:", data);
         setAllModalOptions(data || []);
         setModalTotalElements(totalElements);
@@ -436,17 +437,27 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       );
 
       if (!itemToDelete) {
-        console.error("[DualSectionView] Item not found for deletion:", deleteItemId);
+        console.error(
+          "[DualSectionView] Item not found for deletion:",
+          deleteItemId
+        );
         toast.error("Item not found");
         setDeleteConfirmOpen(false);
         return;
       }
 
       // Get the mapping ID - look for common ID field names
-      const mappingId = itemToDelete.id || itemToDelete.examGradeMappingId || itemToDelete.mappingId || deleteItemId;
+      const mappingId =
+        itemToDelete.id ||
+        itemToDelete.examGradeMappingId ||
+        itemToDelete.mappingId ||
+        deleteItemId;
 
       // Replace placeholder in delete URL
-      const deleteUrl = rightSection.deleteFetchUrl.replace("{examGradeMappingId}", String(mappingId));
+      const deleteUrl = rightSection.deleteFetchUrl.replace(
+        "{examGradeMappingId}",
+        String(mappingId)
+      );
 
       console.log("[DualSectionView] Calling delete API:", {
         deleteUrl,
@@ -472,7 +483,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
       // Update original options to reflect deletion
       setOriginalRightOptions((prev) =>
-        prev.filter((item) => String(item[rightSection.optionValueKey]) !== deleteItemId)
+        prev.filter(
+          (item) => String(item[rightSection.optionValueKey]) !== deleteItemId
+        )
       );
 
       setDeleteConfirmOpen(false);
@@ -593,12 +606,12 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       if ((leftSection as any).extractFields && selectedLeftObject) {
         const extractFields = (leftSection as any).extractFields;
         const fieldTypes = (leftSection as any)?.fieldTypes || {};
-        
+
         // Extract examId, gradeId, etc. from the selected left object
         for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
           const value = (selectedLeftObject as any)[objectKey];
           const fieldType = fieldTypes[payloadKey] || "string";
-          
+
           // Convert value based on fieldType
           if (fieldType === "number") {
             payload[payloadKey] = Number(value);
@@ -621,23 +634,27 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       if (rightSection.selectionType === "multi-select") {
         const rightData = allSelectedItems.map((id) => {
           const item: SelectedData = {};
-          
+
           // Get the field type from config, default to "string"
-          const fieldType = (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] || "string";
-          
+          const fieldType =
+            (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] ||
+            "string";
+
           // Convert value based on fieldType
           if (fieldType === "number") {
             item[rightSection.optionValueKey] = parseInt(id, 10);
           } else if (fieldType === "boolean") {
-            item[rightSection.optionValueKey] = id === "true" || (id as any) === true;
+            item[rightSection.optionValueKey] =
+              id === "true" || (id as any) === true;
           } else {
             item[rightSection.optionValueKey] = String(id);
           }
-          
+
           if (rightSection.includeDisplayOrder) {
-            const displayOrderType = (rightSection as any)?.fieldTypes?.displayOrder || "number";
+            const displayOrderType =
+              (rightSection as any)?.fieldTypes?.displayOrder || "number";
             const displayOrderValue = rightDisplayOrders[id] || 0;
-            
+
             if (displayOrderType === "string") {
               (item as any).displayOrder = String(displayOrderValue);
             } else {
@@ -648,11 +665,14 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         });
         payload[rightSection.fieldName] = rightData;
       } else {
-        const fieldType = (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] || "string";
+        const fieldType =
+          (rightSection as any)?.fieldTypes?.[rightSection.optionValueKey] ||
+          "string";
         if (fieldType === "number") {
           payload[rightSection.fieldName] = parseInt(selectedRight[0], 10);
         } else if (fieldType === "boolean") {
-          payload[rightSection.fieldName] = selectedRight[0] === "true" || (selectedRight[0] as any) === true;
+          payload[rightSection.fieldName] =
+            selectedRight[0] === "true" || (selectedRight[0] as any) === true;
         } else {
           payload[rightSection.fieldName] = String(selectedRight[0]);
         }
@@ -1055,7 +1075,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleAddItemsClick(Math.max(0, modalPageNumber - 1))}
+                  onClick={() =>
+                    handleAddItemsClick(Math.max(0, modalPageNumber - 1))
+                  }
                   disabled={modalPageNumber === 0}
                   className="h-8 w-8 p-0"
                 >
@@ -1064,7 +1086,11 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleAddItemsClick(Math.min(modalTotalPages - 1, modalPageNumber + 1))}
+                  onClick={() =>
+                    handleAddItemsClick(
+                      Math.min(modalTotalPages - 1, modalPageNumber + 1)
+                    )
+                  }
                   disabled={modalPageNumber >= modalTotalPages - 1}
                   className="h-8 w-8 p-0"
                 >
@@ -1104,14 +1130,15 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Existing Item</DialogTitle>
             <DialogDescription>
-              This item already exists in the system. Are you sure you want to delete it? 
-              You can recover it by re-adding it later if needed.
+              This item already exists in the system. Are you sure you want to
+              delete it? You can recover it by re-adding it later if needed.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
             <p className="text-sm text-muted-foreground">
-              This action will remove the item from the mapping and cannot be undone immediately. 
-              However, you can always re-add it if you change your mind.
+              This action will remove the item from the mapping and cannot be
+              undone immediately. However, you can always re-add it if you
+              change your mind.
             </p>
           </div>
           <DialogFooter className="flex gap-2">

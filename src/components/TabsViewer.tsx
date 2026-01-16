@@ -34,7 +34,11 @@ interface TabsViewerProps {
   loadingTabs: Record<string, boolean>;
   tabErrors: Record<string, string>;
   title: string;
-  onTabChange: (tabId: string, getDataUrl: string, page?: number) => Promise<void>;
+  onTabChange: (
+    tabId: string,
+    getDataUrl: string,
+    page?: number
+  ) => Promise<void>;
   onRowAction: (action: any, rowData: any) => void;
   onButtonClick: (button: any) => void;
   onViewJson: (data: any) => void;
@@ -95,10 +99,16 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
           setLoadingOptions((prev) => ({ ...prev, [field.value]: true }));
           try {
             const { dynamicRequest } = await import("@/services/apiClient");
-            const response: any = await dynamicRequest(field.fetchOptionsUrl, "GET");
+            const response: any = await dynamicRequest(
+              field.fetchOptionsUrl,
+              "GET"
+            );
 
             let options = [];
-            if ((response as any)?.data && Array.isArray((response as any).data)) {
+            if (
+              (response as any)?.data &&
+              Array.isArray((response as any).data)
+            ) {
               options = (response as any).data;
             } else if (Array.isArray(response)) {
               options = response;
@@ -162,7 +172,9 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                       className="mr-2 h-4 w-4 shrink-0"
                     />
                   )}
-                  <span className="truncate">{tab.tabTitle || tab.title || "Mapping"}</span>
+                  <span className="truncate">
+                    {tab.tabTitle || tab.title || "Mapping"}
+                  </span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -207,7 +219,9 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                         Something went wrong
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Failed to load {(tab.tabTitle || tab.title || "mapping").toLowerCase()} data
+                        Failed to load{" "}
+                        {(tab.tabTitle || tab.title || "mapping").toLowerCase()}{" "}
+                        data
                       </p>
                       <p className="text-xs text-red-600 font-mono bg-red-50 rounded px-3 py-2 mb-4">
                         {tabErrors[tab.tabId]}
@@ -370,13 +384,11 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                           <TableBody>
                             {[...Array(10)].map((_: any, i: number) => (
                               <TableRow key={i}>
-                                {tab.tableHeaders?.map(
-                                  (_: any, j: number) => (
-                                    <TableCell key={j}>
-                                      <Skeleton className="h-4 w-full" />
-                                    </TableCell>
-                                  )
-                                )}
+                                {tab.tableHeaders?.map((_: any, j: number) => (
+                                  <TableCell key={j}>
+                                    <Skeleton className="h-4 w-full" />
+                                  </TableCell>
+                                ))}
                               </TableRow>
                             ))}
                           </TableBody>
@@ -427,8 +439,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                       {tab.tableHeaders
                                         ?.sort(
                                           (a: any, b: any) =>
-                                            (a.order || 999) -
-                                            (b.order || 999)
+                                            (a.order || 999) - (b.order || 999)
                                         )
                                         .map(
                                           (header: any, colIndex: number) => {
@@ -453,9 +464,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                                         <MoreVertical className="h-4 w-4" />
                                                       </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent
-                                                      align="end"
-                                                    >
+                                                    <DropdownMenuContent align="end">
                                                       {header.actions.map(
                                                         (
                                                           action: any,
@@ -520,8 +529,9 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                 {tabPagination[tab.tabId].totalPages > 1 && (
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm text-muted-foreground">
-                                      Page {tabPagination[tab.tabId].currentPage + 1} of{" "}
-                                      {tabPagination[tab.tabId].totalPages}
+                                      Page{" "}
+                                      {tabPagination[tab.tabId].currentPage + 1}{" "}
+                                      of {tabPagination[tab.tabId].totalPages}
                                     </span>
                                     <div className="flex items-center gap-1">
                                       <Button
@@ -533,12 +543,14 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                             tab.tabId,
                                             Math.max(
                                               0,
-                                              tabPagination[tab.tabId].currentPage - 1
+                                              tabPagination[tab.tabId]
+                                                .currentPage - 1
                                             )
                                           )
                                         }
                                         disabled={
-                                          tabPagination[tab.tabId].currentPage === 0
+                                          tabPagination[tab.tabId]
+                                            .currentPage === 0
                                         }
                                       >
                                         <ChevronLeft className="size-4" />
@@ -551,14 +563,18 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                           onPageChange?.(
                                             tab.tabId,
                                             Math.min(
-                                              tabPagination[tab.tabId].totalPages - 1,
-                                              tabPagination[tab.tabId].currentPage + 1
+                                              tabPagination[tab.tabId]
+                                                .totalPages - 1,
+                                              tabPagination[tab.tabId]
+                                                .currentPage + 1
                                             )
                                           )
                                         }
                                         disabled={
-                                          tabPagination[tab.tabId].currentPage >=
-                                          tabPagination[tab.tabId].totalPages - 1
+                                          tabPagination[tab.tabId]
+                                            .currentPage >=
+                                          tabPagination[tab.tabId].totalPages -
+                                            1
                                         }
                                       >
                                         <ChevronRight className="size-4" />

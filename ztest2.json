@@ -315,14 +315,14 @@
             "type": "SHOW_POPUP"
           },
           {
-  "method": "PATCH",
-  "popupSubmitUrl": "/secure/api/v1/academic-year/{id}/status",
-  "title": "{statusToggle}",
-  "type": "STATUS_TOGGLE",
-  "statusField": "isActive",
-  "activeLabel": "Active",
-  "inactiveLabel": "Inactive"
-},
+            "method": "PATCH",
+            "popupSubmitUrl": "/secure/api/v1/academic-year/{id}/status",
+            "title": "{statusToggle}",
+            "type": "STATUS_TOGGLE",
+            "statusField": "isActive",
+            "activeLabel": "Active",
+            "inactiveLabel": "Inactive"
+          },
           {
             "method": "GET",
             "popupTitle": "View Row Wise Audit",

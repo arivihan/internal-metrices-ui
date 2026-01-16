@@ -18,7 +18,6 @@ import {
 } from './ui/dropdown-menu'
 import { Skeleton } from './ui/skeleton'
 import type { TableHeader as TableHeaderType, Action } from '../types/sidebar'
-import { getIcon } from '@/lib/icon-map'
 import { MoreHorizontal } from 'lucide-react'
 
 interface DataTableProps {

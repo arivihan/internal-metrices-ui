@@ -160,18 +160,22 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
         typeof value === "boolean"
           ? value
           : String(value).toLowerCase() === "true";
-      
+
       // Check if this is a status column (isActive, active, status, Status header)
       const isStatusBooleanColumn =
-        (header.accessor && /(^|\.)?(isActive|active|status)$/i.test(String(header.accessor))) ||
+        (header.accessor &&
+          /(^|\.)?(isActive|active|status)$/i.test(String(header.accessor))) ||
         /(^|\s)?status(\s|$)?/i.test(String(header.Header));
-      
+
       return (
         <div className="font-normal text-sm">
-          {isStatusBooleanColumn 
-            ? (boolValue ? "Active" : "Inactive")
-            : (boolValue ? "True" : "False")
-          }
+          {isStatusBooleanColumn
+            ? boolValue
+              ? "Active"
+              : "Inactive"
+            : boolValue
+            ? "True"
+            : "False"}
         </div>
       );
 
@@ -1324,17 +1328,19 @@ export default function DynamicContent() {
         // Construct the URL with query parameters for audit logs table view
         const url = `${auditButton.auditFetchUrl}?entityName=${auditButton.entityName}&pageNo=0&pageSize=10`;
         console.log("[DynamicContent] Opening audit trail:", url);
-        
+
         // Fetch audit data
         const { dynamicRequest } = await import("@/services/apiClient");
         const response = await dynamicRequest(url, "GET");
-        
+
         console.log("[DynamicContent] Audit data received:", response);
-        
+
         // Extract content array from response
-        const auditData = Array.isArray((response as any)?.content) ? (response as any).content : response;
+        const auditData = Array.isArray((response as any)?.content)
+          ? (response as any).content
+          : response;
         console.log("[DynamicContent] Parsed audit data:", auditData);
-        
+
         setViewDetailsData(auditData);
         setIsAuditTrailPopup(true);
         setViewDetailsOpen(true);
@@ -1452,12 +1458,19 @@ export default function DynamicContent() {
 
   const confirmStatusToggle = async () => {
     if (!confirmDialogData) return;
-    
-    const { action, rowData, statusField, newStatus, activeLabel, inactiveLabel } = confirmDialogData;
-    
+
+    const {
+      action,
+      rowData,
+      statusField,
+      newStatus,
+      activeLabel,
+      inactiveLabel,
+    } = confirmDialogData;
+
     try {
       setIsSubmitting(true);
-      
+
       // Replace {id} placeholder with actual ID
       const toggleUrl = action.popupSubmitUrl.replace("{id}", rowData.id);
 
@@ -1465,27 +1478,30 @@ export default function DynamicContent() {
       const requestBody: any = {};
       requestBody[statusField] = newStatus;
 
-      console.log("📤 Sending status toggle request:", { url: toggleUrl, body: requestBody });
+      console.log("📤 Sending status toggle request:", {
+        url: toggleUrl,
+        body: requestBody,
+      });
 
       // Send API request to toggle status
-      const response = await apiClient(toggleUrl, { 
+      const response = await apiClient(toggleUrl, {
         method: action.method || "PATCH",
         body: JSON.stringify(requestBody),
       });
 
       console.log("✅ Status toggled successfully:", response);
-      
+
       // Update the row data in the table
       const updatedData = tableData.value.map((item) =>
-        item.id === rowData.id
-          ? { ...item, [statusField]: newStatus }
-          : item
+        item.id === rowData.id ? { ...item, [statusField]: newStatus } : item
       );
       tableData.value = updatedData;
 
       showAlert({
         title: "Success",
-        description: `Status changed to ${newStatus ? activeLabel : inactiveLabel}`,
+        description: `Status changed to ${
+          newStatus ? activeLabel : inactiveLabel
+        }`,
         variant: "default",
       });
 
@@ -1510,10 +1526,10 @@ export default function DynamicContent() {
       const statusField = action.statusField || "isActive";
       const currentStatus = rowData[statusField];
       const newStatus = !currentStatus;
-      
+
       const activeLabel = action.activeLabel || "Active";
       const inactiveLabel = action.inactiveLabel || "Inactive";
-      
+
       // Store data for confirmation
       setConfirmDialogData({
         action,
@@ -1523,7 +1539,9 @@ export default function DynamicContent() {
         newStatus,
         activeLabel,
         inactiveLabel,
-        message: `Are you sure you want to change status to ${newStatus ? activeLabel : inactiveLabel}?`
+        message: `Are you sure you want to change status to ${
+          newStatus ? activeLabel : inactiveLabel
+        }?`,
       });
       setConfirmDialogOpen(true);
       return;
@@ -1537,22 +1555,24 @@ export default function DynamicContent() {
       });
 
       // Check if this is an audit trail action
-      const isAuditTrail = 
+      const isAuditTrail =
         action.title === "Audit Trail" ||
         action.popupTitle?.includes("Audit") ||
         action.viewFetchDetails?.includes("audit-logs");
 
       // Get entityName - use signal value first, then fallback to derived name
-      let entityNameToUse = entityName.value || layoutData.value?.entityName || null;
-      
+      let entityNameToUse =
+        entityName.value || layoutData.value?.entityName || null;
+
       // If still no entityName, derive it from the layout title or current content
       if (!entityNameToUse) {
         const title = currentContentItem.value?.title || "";
         // Convert "Academic Year" to "AcademicYear"
-        entityNameToUse = title
-          .split(" ")
-          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join("") || null;
+        entityNameToUse =
+          title
+            .split(" ")
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join("") || null;
       }
 
       console.log("📍 Using entityName:", entityNameToUse);
@@ -1569,10 +1589,12 @@ export default function DynamicContent() {
       apiClient(fetchUrl, { method: "GET" })
         .then((response: any) => {
           console.log("✅ Details fetched:", response);
-          
+
           if (isAuditTrail) {
             // For audit trail, extract content array from response
-            const auditData = Array.isArray(response?.content) ? response.content : response;
+            const auditData = Array.isArray(response?.content)
+              ? response.content
+              : response;
             console.log("📊 Audit trail data:", auditData);
             setViewDetailsData(auditData);
             setIsAuditTrailPopup(true);
@@ -1595,7 +1617,10 @@ export default function DynamicContent() {
     }
 
     // Handle VIEW action (display row data directly)
-    if ((action.type === "link" || action.title?.toLowerCase() === "view") && !action.viewFetchDetails) {
+    if (
+      (action.type === "link" || action.title?.toLowerCase() === "view") &&
+      !action.viewFetchDetails
+    ) {
       console.log("🔍 Opening view details for:", rowData);
       setViewDetailsData(rowData);
       setViewDetailsOpen(true);
@@ -2925,22 +2950,18 @@ export default function DynamicContent() {
                                 (a.order || 999) - (b.order || 999)
                             )
                             .map((header: any, index: number) => (
-                              <TableHead key={index}>
-                                {header.Header}
-                              </TableHead>
+                              <TableHead key={index}>{header.Header}</TableHead>
                             ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {[...Array(10)].map((_: any, i: number) => (
                           <TableRow key={i}>
-                            {layout.tableHeaders.map(
-                              (_: any, j: number) => (
-                                <TableCell key={j}>
-                                  <Skeleton className="h-4 w-full" />
-                                </TableCell>
-                              )
-                            )}
+                            {layout.tableHeaders.map((_: any, j: number) => (
+                              <TableCell key={j}>
+                                <Skeleton className="h-4 w-full" />
+                              </TableCell>
+                            ))}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -3018,31 +3039,50 @@ export default function DynamicContent() {
                                                   actionIndex: number
                                                 ) => {
                                                   // Handle STATUS_TOGGLE placeholder replacement
-                                                  let displayTitle = action.title;
+                                                  let displayTitle =
+                                                    action.title;
                                                   let buttonClassName = "";
-                                                  
-                                                  if (action.type === "STATUS_TOGGLE") {
-                                                    const statusField = action.statusField || "isActive";
-                                                    const currentStatus = row[statusField];
-                                                    const oppositeStatus = !currentStatus;
-                                                    const activeLabel = action.activeLabel || "Active";
-                                                    const inactiveLabel = action.inactiveLabel || "Inactive";
-                                                    displayTitle = oppositeStatus ? activeLabel : inactiveLabel;
-                                                    
+
+                                                  if (
+                                                    action.type ===
+                                                    "STATUS_TOGGLE"
+                                                  ) {
+                                                    const statusField =
+                                                      action.statusField ||
+                                                      "isActive";
+                                                    const currentStatus =
+                                                      row[statusField];
+                                                    const oppositeStatus =
+                                                      !currentStatus;
+                                                    const activeLabel =
+                                                      action.activeLabel ||
+                                                      "Active";
+                                                    const inactiveLabel =
+                                                      action.inactiveLabel ||
+                                                      "Inactive";
+                                                    displayTitle =
+                                                      oppositeStatus
+                                                        ? activeLabel
+                                                        : inactiveLabel;
+
                                                     // Add color based on what the button will do (opposite of current status)
                                                     if (oppositeStatus) {
                                                       // Will activate - show green
-                                                      buttonClassName = "text-green-600 hover:text-green-700 hover:bg-green-50";
+                                                      buttonClassName =
+                                                        "text-green-600 hover:text-green-700 hover:bg-green-50";
                                                     } else {
                                                       // Will deactivate - show red
-                                                      buttonClassName = "text-red-500 hover:text-red-700 hover:bg-red-50";
+                                                      buttonClassName =
+                                                        "text-red-500 hover:text-red-700 hover:bg-red-50";
                                                     }
                                                   }
-                                                  
+
                                                   return (
                                                     <DropdownMenuItem
                                                       key={actionIndex}
-                                                      className={buttonClassName}
+                                                      className={
+                                                        buttonClassName
+                                                      }
                                                       onClick={() =>
                                                         handleRowAction(
                                                           action,
@@ -3104,7 +3144,11 @@ export default function DynamicContent() {
                                   variant="ghost"
                                   size="icon"
                                   className="size-8"
-                                  onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
+                                  onClick={() =>
+                                    handlePageChange(
+                                      Math.max(0, currentPage - 1)
+                                    )
+                                  }
                                   disabled={currentPage === 0}
                                 >
                                   <ChevronLeft className="size-4" />
@@ -3113,7 +3157,9 @@ export default function DynamicContent() {
                                   variant="ghost"
                                   size="icon"
                                   className="size-8"
-                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  onClick={() =>
+                                    handlePageChange(currentPage + 1)
+                                  }
                                   disabled={currentPage >= totalPages - 1}
                                 >
                                   <ChevronRight className="size-4" />
@@ -3156,7 +3202,7 @@ export default function DynamicContent() {
               Are you sure you want to change the status?
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {confirmDialogData && (
               <>
@@ -3164,27 +3210,47 @@ export default function DynamicContent() {
                 <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
                   {confirmDialogData.rowData.code && (
                     <div className="flex justify-between items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Code:</span>
-                      <span className="text-sm font-semibold">{confirmDialogData.rowData.code}</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Code:
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {confirmDialogData.rowData.code}
+                      </span>
                     </div>
                   )}
                   {confirmDialogData.rowData.name && (
                     <div className="flex justify-between items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Name:</span>
-                      <span className="text-sm font-semibold">{confirmDialogData.rowData.name}</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Name:
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {confirmDialogData.rowData.name}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between items-start pt-2 border-t">
-                    <span className="text-sm font-medium text-muted-foreground">New Status:</span>
-                    <span className={`text-sm font-bold ${confirmDialogData.newStatus ? 'text-green-600' : 'text-red-600'}`}>
-                      {confirmDialogData.newStatus ? confirmDialogData.activeLabel : confirmDialogData.inactiveLabel}
+                    <span className="text-sm font-medium text-muted-foreground">
+                      New Status:
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${
+                        confirmDialogData.newStatus
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {confirmDialogData.newStatus
+                        ? confirmDialogData.activeLabel
+                        : confirmDialogData.inactiveLabel}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Warning Message */}
                 <p className="text-sm text-muted-foreground">
-                  This action will {confirmDialogData.newStatus ? 'activate' : 'deactivate'} the item.
+                  This action will{" "}
+                  {confirmDialogData.newStatus ? "activate" : "deactivate"} the
+                  item.
                 </p>
               </>
             )}
@@ -3204,7 +3270,11 @@ export default function DynamicContent() {
             <Button
               onClick={confirmStatusToggle}
               disabled={isSubmitting}
-              className={confirmDialogData?.newStatus ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+              className={
+                confirmDialogData?.newStatus
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
             >
               {isSubmitting ? (
                 <>

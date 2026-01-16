@@ -151,19 +151,20 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
         </div>
 
         {/* Action Buttons */}
-        {selectedViewConfig.buttons && selectedViewConfig.buttons.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedViewConfig.buttons.map((button: any, idx: number) => (
-              <Button
-                key={idx}
-                onClick={() => onButtonClick(button, selectedView)}
-                className="font-medium shadow-sm transition-all duration-200"
-              >
-                {button.title}
-              </Button>
-            ))}
-          </div>
-        )}
+        {selectedViewConfig.buttons &&
+          selectedViewConfig.buttons.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {selectedViewConfig.buttons.map((button: any, idx: number) => (
+                <Button
+                  key={idx}
+                  onClick={() => onButtonClick(button, selectedView)}
+                  className="font-medium shadow-sm transition-all duration-200"
+                >
+                  {button.title}
+                </Button>
+              ))}
+            </div>
+          )}
       </div>
 
       {/* Search/Filter Section */}
@@ -186,7 +187,6 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
             {selectedViewConfig.search.fields?.map(
               (field: any, fieldIndex: number) => (
                 <div key={fieldIndex} className="space-y-1.5">
-                  
                   {field.type === "select" ? (
                     <Select
                       value={searchData[field.value] || ""}
@@ -252,7 +252,9 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
               <TableHeader>
                 <TableRow className="border-b">
                   {selectedViewConfig.tableHeaders
-                    ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
+                    ?.sort(
+                      (a: any, b: any) => (a.order || 999) - (b.order || 999)
+                    )
                     .map((header: any, idx: number) => (
                       <TableHead
                         key={idx}
@@ -295,7 +297,9 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                 <TableHeader className="sticky top-0 bg-card border-b">
                   <TableRow>
                     {selectedViewConfig.tableHeaders
-                      ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
+                      ?.sort(
+                        (a: any, b: any) => (a.order || 999) - (b.order || 999)
+                      )
                       .map((header: any, idx: number) => (
                         <TableHead
                           key={idx}
@@ -328,27 +332,40 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                         className="border-b transition-colors hover:bg-accent/5"
                       >
                         {selectedViewConfig.tableHeaders
-                          ?.sort((a: any, b: any) => (a.order || 999) - (b.order || 999))
+                          ?.sort(
+                            (a: any, b: any) =>
+                              (a.order || 999) - (b.order || 999)
+                          )
                           .map((header: any, colIndex: number) => (
                             <TableCell key={colIndex} className="text-sm py-3">
                               {header.type === "actions" ? (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                    >
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    {header.actions?.map((action: any, aIdx: number) => (
-                                      <DropdownMenuItem
-                                        key={aIdx}
-                                        onClick={() =>
-                                          onRowAction(action, row.id, selectedView)
-                                        }
-                                      >
-                                        {action.title}
-                                      </DropdownMenuItem>
-                                    ))}
+                                    {header.actions?.map(
+                                      (action: any, aIdx: number) => (
+                                        <DropdownMenuItem
+                                          key={aIdx}
+                                          onClick={() =>
+                                            onRowAction(
+                                              action,
+                                              row.id,
+                                              selectedView
+                                            )
+                                          }
+                                        >
+                                          {action.title}
+                                        </DropdownMenuItem>
+                                      )
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               ) : (
@@ -386,7 +403,8 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                 {paginationData.totalPages > 1 && (
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">
-                      Page {paginationData.currentPage + 1} of {paginationData.totalPages}
+                      Page {paginationData.currentPage + 1} of{" "}
+                      {paginationData.totalPages}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
@@ -394,10 +412,19 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                         size="icon"
                         className="size-8 h-8 w-8"
                         onClick={() => {
-                          const newPage = Math.max(0, paginationData.currentPage - 1);
-                          console.log(`[DropdownTableView] Pagination - Previous page: ${newPage}`);
+                          const newPage = Math.max(
+                            0,
+                            paginationData.currentPage - 1
+                          );
+                          console.log(
+                            `[DropdownTableView] Pagination - Previous page: ${newPage}`
+                          );
                           // Call onTabChange with the new page number to trigger API request
-                          onTabChange(selectedView, selectedViewConfig?.getDataUrl || '', newPage);
+                          onTabChange(
+                            selectedView,
+                            selectedViewConfig?.getDataUrl || "",
+                            newPage
+                          );
                         }}
                         disabled={paginationData.currentPage === 0}
                       >
@@ -412,12 +439,19 @@ export const DropdownTableView: React.FC<DropdownTableViewProps> = ({
                             paginationData.totalPages - 1,
                             paginationData.currentPage + 1
                           );
-                          console.log(`[DropdownTableView] Pagination - Next page: ${newPage}`);
+                          console.log(
+                            `[DropdownTableView] Pagination - Next page: ${newPage}`
+                          );
                           // Call onTabChange with the new page number to trigger API request
-                          onTabChange(selectedView, selectedViewConfig?.getDataUrl || '', newPage);
+                          onTabChange(
+                            selectedView,
+                            selectedViewConfig?.getDataUrl || "",
+                            newPage
+                          );
                         }}
                         disabled={
-                          paginationData.currentPage >= paginationData.totalPages - 1
+                          paginationData.currentPage >=
+                          paginationData.totalPages - 1
                         }
                       >
                         <ChevronRight className="size-4" />
