@@ -4,7 +4,7 @@ import type { User, UserDisplay } from '@/types/auth'
 // Cookie utilities
 const setCookie = (name: string, value: string, days: number = 7) => {
   const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString()
-  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=None; domain=.arivihan.com;`
 }
 
 const getCookie = (name: string): string | null => {

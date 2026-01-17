@@ -467,11 +467,10 @@ const Login = () => {
                       loginLoading.value || phoneNumber.value.length !== 10
                     }
                     className={`w-full h-12 rounded-md text-white transition-colors
-    ${
-      phoneNumber.value.length === 10
-        ? "bg-[#107D89] hover:bg-[#0e6b75]"
-        : "bg-gray-400 cursor-not-allowed"
-    }
+    ${phoneNumber.value.length === 10
+                        ? "bg-[#107D89] hover:bg-[#0e6b75]"
+                        : "bg-gray-400 cursor-not-allowed"
+                      }
   `}
                   >
                     {loginLoading.value ? (

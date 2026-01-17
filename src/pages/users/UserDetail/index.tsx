@@ -123,7 +123,7 @@ export default function UserDetail() {
   // Subscription tab state
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([])
-  const [dateRange, setDateRange] = useState({
+  const [dateRange] = useState({
     fromDate: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
   })

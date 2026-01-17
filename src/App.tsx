@@ -21,6 +21,8 @@ import { Toaster } from "@/components/ui/sonner";
 import NotesUploadPage from "./pages/notes-upload";
 import ViralVideosPage from "./pages/viral-videos";
 import FileManagement from "./pages/files/FileManagement";
+import ServiceStatusPage from "@/pages/service-status";
+
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
   useAuthInit();
@@ -51,6 +53,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           {/* Dashboard Selection Screen */}
           <Route path="/select-dashboard" element={<DashboardSelect />} />
+
+          <Route path="/service-status" element={<ServiceStatusPage />} />
           {/* Internal Metrics Dashboard */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -90,6 +94,8 @@ function App() {
             />
             <Route path="/dashboard/file-upload" element={<FileManagement />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
+
+
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />
           </Route>
