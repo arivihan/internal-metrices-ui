@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/select";
 
 import { UploadVideoDialog } from "./UploadVideoDialog";
-import { DuplicateVideoDialog } from "./DuplicateVideoDialog";
+import { DuplicateVideoDialog } from "./duplicateVideoDialog";
 import {
   fetchViralVideos,
   fetchAllBatchesForVideos,
@@ -107,7 +107,7 @@ export default function ViralVideosPage() {
       console.error("[ViralVideosPage] Failed to load videos:", error);
       toast.error(
         "Failed to load videos: " +
-          (error instanceof Error ? error.message : "Unknown error")
+        (error instanceof Error ? error.message : "Unknown error")
       );
       setVideos([]);
       setTotalElements(0);
