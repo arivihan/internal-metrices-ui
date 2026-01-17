@@ -223,20 +223,24 @@ export function AddChapterDialog({
       ]);
 
       // Set basic data
-      setExams(examsRes.content);
-      setGrades(gradesRes.content);
-      setStreams(streamsRes.content);
-      setLanguages(languagesRes);
+      setExams(Array.isArray(examsRes) ? examsRes : (examsRes as any).content || []);
+      setGrades(Array.isArray(gradesRes) ? gradesRes : (gradesRes as any).content || []);
+      setStreams(Array.isArray(streamsRes) ? streamsRes : (streamsRes as any).content || []);
+      setLanguages(Array.isArray(languagesRes) ? languagesRes : (languagesRes as any) || []);
 
       // Set mapping data
       setExamGradeMappings(
-        examGradeMappingsRes.content || examGradeMappingsRes
+        Array.isArray(examGradeMappingsRes) ? examGradeMappingsRes : (examGradeMappingsRes as any).content || []
       );
       setExamGradeStreamMappings(
-        examGradeStreamMappingsRes.content || examGradeStreamMappingsRes
+        Array.isArray(examGradeStreamMappingsRes) ? examGradeStreamMappingsRes : (examGradeStreamMappingsRes as any).content || []
       );
-      setAllBatches(allBatchesRes.content || allBatchesRes);
-      setAllBatchAddOns(allBatchAddOnsRes.content || allBatchAddOnsRes);
+      setAllBatches(
+        Array.isArray(allBatchesRes) ? allBatchesRes : (allBatchesRes as any).content || []
+      );
+      setAllBatchAddOns(
+        Array.isArray(allBatchAddOnsRes) ? allBatchAddOnsRes : (allBatchAddOnsRes as any).content || []
+      );
     } catch (error) {
       console.error("Failed to load filter options:", error);
       toast.error("Failed to load options");
@@ -335,7 +339,7 @@ export function AddChapterDialog({
       const isModernExcel =
         file.name.toLowerCase().endsWith(".xlsx") ||
         file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
       const isOLE2 =
         file.type === "application/octet-stream" ||

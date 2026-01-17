@@ -194,8 +194,7 @@ export function DuplicateNotesDialog({
               </Label>
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  checked={isAllBatchesSelected}
-                  indeterminate={isIndeterminateBatches}
+                  checked={isIndeterminateBatches ? "indeterminate" : isAllBatchesSelected}
                   onCheckedChange={handleSelectAllBatches}
                   disabled={loading}
                 />

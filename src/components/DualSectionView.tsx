@@ -161,8 +161,8 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         method: "GET",
         params: {
           level: "SYSTEM",
-          pageNo: pageNumber,
-          pageSize: leftPageSize,
+          pageNo: String(pageNumber),
+          pageSize: String(leftPageSize),
         },
       });
       console.log("[DualSectionView] Left options response:", response);
@@ -217,7 +217,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
           searchParams
         );
         for (const [paramKey, objectKey] of Object.entries(searchParams)) {
-          params[paramKey] = String(selectedLeftObject[objectKey] || "");
+          // Fix: Ensure objectKey is treated as a string key and value is converted to string
+          const key = objectKey as string;
+          params[paramKey] = String(selectedLeftObject[key] || "");
         }
       } else if (rightSection.searchParam && selectedLeft) {
         // Fallback to old searchParam (single param)
@@ -236,10 +238,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
       const data = Array.isArray(response?.content)
         ? response.content
         : Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response)
-        ? response
-        : [];
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : [];
       console.log("[DualSectionView] Parsed right data:", data);
       setRightOptions(data || []);
       setOriginalRightOptions(data || []);
@@ -289,10 +291,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         const data = Array.isArray(response?.content)
           ? response.content
           : Array.isArray(response?.data)
-          ? response.data
-          : Array.isArray(response)
-          ? response
-          : [];
+            ? response.data
+            : Array.isArray(response)
+              ? response
+              : [];
 
         // Extract pagination info
         const totalElements = (response as any)?.totalElements ?? data.length;
@@ -609,7 +611,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
         // Extract examId, gradeId, etc. from the selected left object
         for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
-          const value = (selectedLeftObject as any)[objectKey];
+          // Fix: Ensure objectKey is treated as a string key
+          const key = objectKey as string;
+          const value = (selectedLeftObject as any)[key];
           const fieldType = fieldTypes[payloadKey] || "string";
 
           // Convert value based on fieldType
@@ -730,9 +734,8 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
               ) : (
                 <div className="space-y-2">
                   <Input
-                    placeholder={`Search ${
-                      leftSection.placeholder || "items"
-                    }...`}
+                    placeholder={`Search ${leftSection.placeholder || "items"
+                      }...`}
                     value={searchLeft}
                     onChange={(e) => {
                       setSearchLeft(e.target.value);
@@ -751,9 +754,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                         .filter((item) => {
                           const label = String(
                             item[leftLabel] ||
-                              item.displayName ||
-                              item.name ||
-                              ""
+                            item.displayName ||
+                            item.name ||
+                            ""
                           );
                           return label
                             .toLowerCase()
@@ -776,11 +779,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                                 setSelectedLeft(value);
                                 setSelectedLeftObject(item);
                               }}
-                              className={`p-2 rounded cursor-pointer transition-all ${
-                                isSelected
-                                  ? "bg-cyan-100 border-cyan-500 border text-cyan-900 font-medium"
-                                  : "border border-transparent"
-                              }`}
+                              className={`p-2 rounded cursor-pointer transition-all ${isSelected
+                                ? "bg-cyan-100 border-cyan-500 border text-cyan-900 font-medium"
+                                : "border border-transparent"
+                                }`}
                             >
                               {label}
                             </div>
@@ -812,7 +814,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                           onClick={() => fetchLeftOptions(leftPageNumber + 1)}
                           disabled={
                             leftPageNumber >=
-                              Math.ceil(leftTotalElements / leftPageSize) - 1 ||
+                            Math.ceil(leftTotalElements / leftPageSize) - 1 ||
                             leftLoading
                           }
                         >
@@ -854,9 +856,9 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                         ) || addedItems[value];
                       const label = item
                         ? item[rightLabel] ||
-                          item.gradeName ||
-                          item.name ||
-                          "Untitled"
+                        item.gradeName ||
+                        item.name ||
+                        "Untitled"
                         : "Untitled";
                       const isNewlyAdded = !originalRightOptions.some(
                         (opt) => String(opt[rightValue]) === value
@@ -877,13 +879,12 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                           onDragOver={(e) => handleDragOver(e, value)}
                           onDragLeave={handleDragLeave}
                           onDrop={(e) => handleDrop(e, value)}
-                          className={`flex items-center gap-3 p-2 rounded border transition-all ${
-                            draggedItemId === value
-                              ? "opacity-50 bg-muted"
-                              : dragOverItemId === value
+                          className={`flex items-center gap-3 p-2 rounded border transition-all ${draggedItemId === value
+                            ? "opacity-50 bg-muted"
+                            : dragOverItemId === value
                               ? "bg-primary/15 border-primary"
                               : "bg-primary/5 border-primary/20"
-                          } cursor-grab active:cursor-grabbing`}
+                            } cursor-grab active:cursor-grabbing`}
                         >
                           <div className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors">
                             <GripVertical className="h-4 w-4" />
@@ -1031,11 +1032,10 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
                         }
                         setModalSelectedItems(newSet);
                       }}
-                      className={`w-full text-left px-4 py-3 rounded-md border-2 transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-background hover:bg-accent"
-                      }`}
+                      className={`w-full text-left px-4 py-3 rounded-md border-2 transition-colors ${isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-background hover:bg-accent"
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{itemLabel}</span>

@@ -80,7 +80,7 @@ export default function NotesUploadPage() {
       console.error("[NotesUploadPage] Failed to load notes:", error);
       toast.error(
         "Failed to load notes: " +
-          (error instanceof Error ? error.message : "Unknown error")
+        (error instanceof Error ? error.message : "Unknown error")
       );
       setNotes([]);
       setTotalElements(0);
@@ -230,8 +230,7 @@ export default function NotesUploadPage() {
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={isAllSelected}
-                  indeterminate={isIndeterminate}
+                  checked={isIndeterminate ? "indeterminate" : isAllSelected}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all notes"
                 />

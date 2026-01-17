@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TabsViewerProps {
   tabs: any[];
@@ -281,7 +282,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                             Loading...
                                           </div>
                                         ) : (dropdownOptions[field.value] || [])
-                                            .length > 0 ? (
+                                          .length > 0 ? (
                                           (
                                             dropdownOptions[field.value] || []
                                           ).map((option, idx) => (
@@ -347,14 +348,14 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                               (val) =>
                                 val !== "" && val !== null && val !== undefined
                             ) && (
-                              <Button
-                                variant="outline"
-                                onClick={onClear}
-                                className="text-slate-700 font-medium"
-                              >
-                                Clear
-                              </Button>
-                            )}
+                                <Button
+                                  variant="outline"
+                                  onClick={onClear}
+                                  className="text-slate-700 font-medium"
+                                >
+                                  Clear
+                                </Button>
+                              )}
                           </div>
                         </CardContent>
                       </Card>
@@ -574,7 +575,7 @@ export const TabsViewer: React.FC<TabsViewerProps> = ({
                                           tabPagination[tab.tabId]
                                             .currentPage >=
                                           tabPagination[tab.tabId].totalPages -
-                                            1
+                                          1
                                         }
                                       >
                                         <ChevronRight className="size-4" />

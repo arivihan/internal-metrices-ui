@@ -79,9 +79,8 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
     const idValue = String(value);
     return (
       <div
-        className={`max-w-37.5 break-all font-mono font-semibold text-primary ${
-          idValue.length > 5 ? "text-xs leading-tight" : "text-sm"
-        }`}
+        className={`max-w-37.5 break-all font-mono font-semibold text-primary ${idValue.length > 5 ? "text-xs leading-tight" : "text-sm"
+          }`}
       >
         {idValue}
       </div>
@@ -174,8 +173,8 @@ const CellRenderer = ({ header, value, onViewJson, rowData }) => {
               ? "Active"
               : "Inactive"
             : boolValue
-            ? "True"
-            : "False"}
+              ? "True"
+              : "False"}
         </div>
       );
 
@@ -462,8 +461,8 @@ const FormPopup = ({
                                         formData[field.value]
                                       )
                                         ? formData[field.value].filter(
-                                            (v: any) => v !== itemId
-                                          )
+                                          (v: any) => v !== itemId
+                                        )
                                         : [];
 
                                       onFormDataChange({
@@ -487,12 +486,12 @@ const FormPopup = ({
                                       };
                                       if (
                                         newDisplayOrderValues[
-                                          field.value
+                                        field.value
                                         ] as Record<string, number>
                                       ) {
                                         delete (
                                           newDisplayOrderValues[
-                                            field.value
+                                          field.value
                                           ] as Record<string, number>
                                         )[itemId];
                                       }
@@ -535,8 +534,8 @@ const FormPopup = ({
                                   checked={
                                     Array.isArray(formData[field.value])
                                       ? formData[field.value].includes(
-                                          option.value
-                                        )
+                                        option.value
+                                      )
                                       : false
                                   }
                                   onChange={(e) => {
@@ -585,12 +584,12 @@ const FormPopup = ({
                                       };
                                       if (
                                         newDisplayOrderValues[
-                                          field.value
+                                        field.value
                                         ] as Record<string, number>
                                       ) {
                                         delete (
                                           newDisplayOrderValues[
-                                            field.value
+                                          field.value
                                           ] as Record<string, number>
                                         )[option.value];
                                       }
@@ -1431,7 +1430,16 @@ export default function DynamicContent() {
       }
 
       setTabsData((prev) => ({ ...prev, [tabId]: results }));
-      setTabPagination((prev) => ({ ...prev, [tabId]: paginationInfo }));
+      setTabsData((prev) => ({ ...prev, [tabId]: results }));
+      setTabPagination((prev) => ({
+        ...prev,
+        [tabId]: {
+          currentPage: paginationInfo.currentPage,
+          totalPages: paginationInfo.totalPages,
+          pageSize: paginationInfo.pageSize,
+          totalItems: paginationInfo.totalElements,
+        },
+      }));
     } catch (error) {
       console.error(`❌ Error fetching tab ${tabId}:`, error);
       const errorMessage =
@@ -1499,9 +1507,8 @@ export default function DynamicContent() {
 
       showAlert({
         title: "Success",
-        description: `Status changed to ${
-          newStatus ? activeLabel : inactiveLabel
-        }`,
+        description: `Status changed to ${newStatus ? activeLabel : inactiveLabel
+          }`,
         variant: "default",
       });
 
@@ -1539,9 +1546,8 @@ export default function DynamicContent() {
         newStatus,
         activeLabel,
         inactiveLabel,
-        message: `Are you sure you want to change status to ${
-          newStatus ? activeLabel : inactiveLabel
-        }?`,
+        message: `Are you sure you want to change status to ${newStatus ? activeLabel : inactiveLabel
+          }?`,
       });
       setConfirmDialogOpen(true);
       return;
@@ -1746,8 +1752,7 @@ export default function DynamicContent() {
         // Default: use value as-is
         initialData[formFieldKey] = rowValue;
         console.log(
-          `   ✅ Field: ${formFieldKey} = "${
-            initialData[formFieldKey]
+          `   ✅ Field: ${formFieldKey} = "${initialData[formFieldKey]
           }" (${typeof rowValue})`
         );
       });
@@ -2095,7 +2100,7 @@ export default function DynamicContent() {
 
         if (isMappingUpdate) {
           // For mapping updates, ONLY send displayOrder
-          const displayOrderValue = formData?.displayOrder;
+          const displayOrderValue = (formData as any)?.displayOrder;
           if (displayOrderValue === undefined || displayOrderValue === null) {
             throw new Error(
               "displayOrder value is required for mapping update"
@@ -2485,9 +2490,8 @@ export default function DynamicContent() {
 
       showAlert({
         title: "Search Complete",
-        description: `Found ${results.length} result${
-          results.length !== 1 ? "s" : ""
-        }`,
+        description: `Found ${results.length} result${results.length !== 1 ? "s" : ""
+          }`,
       });
     } catch (error) {
       console.error("❌ Search error:", error);
@@ -2631,9 +2635,8 @@ export default function DynamicContent() {
 
       showAlert({
         title: "Search Complete",
-        description: `Found ${results.length} result${
-          results.length !== 1 ? "s" : ""
-        }`,
+        description: `Found ${results.length} result${results.length !== 1 ? "s" : ""
+          }`,
       });
     } catch (error) {
       console.error(`❌ Search error for ${tabId}:`, error);
@@ -2808,8 +2811,8 @@ export default function DynamicContent() {
 
         <div className="flex items-center justify-between border-b py-4 bg-background">
           {layoutData.value?.type === "DUAL_SECTION_VIEW" &&
-          layoutData.value?.leftSection &&
-          layoutData.value?.rightSection ? (
+            layoutData.value?.leftSection &&
+            layoutData.value?.rightSection ? (
             <>
               {console.log(
                 `[Render] 🎯 Rendering DualSectionView for ${layoutData.value.title}`
@@ -2886,8 +2889,7 @@ export default function DynamicContent() {
           ) : (
             <>
               {console.log(
-                `[Render] 📋 Rendering Standard View - type: ${
-                  layoutData.value?.type
+                `[Render] 📋 Rendering Standard View - type: ${layoutData.value?.type
                 }, has tabs: ${!!layoutData.value?.tabs}`
               )}
               <SearchBar
@@ -3233,11 +3235,10 @@ export default function DynamicContent() {
                       New Status:
                     </span>
                     <span
-                      className={`text-sm font-bold ${
-                        confirmDialogData.newStatus
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
+                      className={`text-sm font-bold ${confirmDialogData.newStatus
+                        ? "text-green-600"
+                        : "text-red-600"
+                        }`}
                     >
                       {confirmDialogData.newStatus
                         ? confirmDialogData.activeLabel

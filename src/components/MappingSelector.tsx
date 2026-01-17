@@ -31,16 +31,16 @@ interface ViewConfig {
 interface Props {
   dropdownSelector: DropdownSelector;
   views: Record<string, ViewConfig>;
-  onTabChange: (tabId: string, getDataUrl: string, page?: number) => void;
-  onRowAction: (action: string, id: string, tabId: string) => void;
-  onButtonClick: (buttonData: any, tabId: string) => void;
+  onTabChange: (tabId: string, getDataUrl: string, page?: number) => Promise<void>;
+  onRowAction: (action: any, rowData: any) => void;
+  onButtonClick: (button: any) => void;
   onViewJson: (data: any) => void;
   CellRenderer: React.ComponentType<any>;
   tabPagination: Record<string, any>;
   onPageChange: (tabId: string, page: number) => void;
   searchData: Record<string, any>;
   onSearchDataChange: (data: Record<string, any>) => void;
-  onSearch: (tabId: string, searchValue: string) => void;
+  onSearch: (tabId: string, searchValue: string) => Promise<void>;
   onClear: (tabId: string) => void;
   isSearching: boolean;
   tabsData: Record<string, any[]>;
@@ -133,8 +133,8 @@ export const MappingSelector: React.FC<Props> = ({
           CellRenderer={CellRenderer}
           searchData={searchData}
           onSearchDataChange={onSearchDataChange}
-          onSearch={onSearch}
-          onClear={onClear}
+          onSearch={() => onSearch(selectedView, searchData[selectedView] || "")}
+          onClear={() => onClear(selectedView)}
           isSearching={isSearching}
           tabPagination={tabPagination}
           onPageChange={onPageChange}
