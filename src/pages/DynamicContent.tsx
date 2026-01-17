@@ -223,8 +223,8 @@ const FormPopup = ({
           const response = await dynamicRequest(field.languagesUrl, "GET");
 
           let languages = [];
-          if (response?.data && Array.isArray(response.data)) {
-            languages = response.data;
+          if ((response as any)?.data && Array.isArray((response as any).data)) {
+            languages = (response as any).data;
           } else if (Array.isArray(response)) {
             languages = response;
           }
@@ -254,8 +254,8 @@ const FormPopup = ({
           const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
-            options = response.data;
+          if ((response as any)?.data && Array.isArray((response as any).data)) {
+            options = (response as any).data;
           } else if (Array.isArray(response)) {
             options = response;
           }
@@ -539,8 +539,8 @@ const AdvancedSearchDialog = ({
           const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
-            options = response.data;
+          if ((response as any)?.data && Array.isArray((response as any).data)) {
+            options = (response as any).data;
           } else if (Array.isArray(response)) {
             options = response;
           }
@@ -699,8 +699,8 @@ const SearchBar = ({
           const response = await dynamicRequest(field.fetchOptionsUrl, "GET");
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
-            options = response.data;
+          if ((response as any)?.data && Array.isArray((response as any).data)) {
+            options = (response as any).data;
           } else if (Array.isArray(response)) {
             options = response;
           }
@@ -1029,9 +1029,9 @@ export default function DynamicContent() {
       console.log(`📦 Tab ${tabId} Response:`, response);
 
       // Handle wrapped response
-      let responseData = response;
-      if (response?.data && typeof response.data === "object") {
-        responseData = response.data;
+      let responseData: any = response;
+      if ((response as any)?.data && typeof (response as any).data === "object") {
+        responseData = (response as any).data;
       }
 
       let results = [];
@@ -1463,10 +1463,10 @@ export default function DynamicContent() {
 
       // Check for success - handles both normal responses and 204 No Content
       const isSuccess =
-        response?.success ||
-        response?.status === 204 ||
-        response?.code === 200 ||
-        response?.data !== undefined;
+        (response as any)?.success ||
+        (response as any)?.status === 204 ||
+        (response as any)?.code === 200 ||
+        (response as any)?.data !== undefined;
 
       if (!isSuccess) {
         throw new Error("Unexpected response format from server");
@@ -1550,9 +1550,9 @@ export default function DynamicContent() {
       console.log("📦 Pagination response:", response);
 
       // Handle wrapped response
-      let responseData = response;
-      if (response?.data && typeof response.data === "object") {
-        responseData = response.data;
+      let responseData: any = response;
+      if ((response as any)?.data && typeof (response as any).data === "object") {
+        responseData = (response as any).data;
       }
 
       let results = [];
@@ -1642,20 +1642,20 @@ export default function DynamicContent() {
       let results = [];
       let paginationInfo: any = {};
 
-      if (response?.content && Array.isArray(response.content)) {
-        results = response.content;
+      if ((response as any)?.content && Array.isArray((response as any).content)) {
+        results = (response as any).content;
         paginationInfo = {
-          currentPage: response.number ?? 0,
-          pageSize: response.size ?? 10,
-          totalPages: response.totalPages ?? 1,
-          totalElements: response.totalElements ?? 0,
+          currentPage: (response as any).number ?? 0,
+          pageSize: (response as any).size ?? 10,
+          totalPages: (response as any).totalPages ?? 1,
+          totalElements: (response as any).totalElements ?? 0,
         };
-      } else if (response?.data && Array.isArray(response.data)) {
-        results = response.data;
+      } else if ((response as any)?.data && Array.isArray((response as any).data)) {
+        results = (response as any).data;
       } else if (Array.isArray(response)) {
         results = response;
-      } else if (response.results && Array.isArray(response.results)) {
-        results = response.results;
+      } else if ((response as any).results && Array.isArray((response as any).results)) {
+        results = (response as any).results;
       }
 
       setSearchResults(results);

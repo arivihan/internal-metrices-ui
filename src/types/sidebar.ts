@@ -39,8 +39,9 @@ export interface TableHeader {
 export interface SearchField {
   label: string
   value: string
-  type: 'text'
+  type: 'text' | 'select'
   placeholder?: string
+  selectOptions?: SelectOption[]
 }
 
 // Search
@@ -64,6 +65,12 @@ export interface Button {
   popupSubmitUrl?: string
   method?: string
   popupSubtitle?: string
+  headers?: Array<{
+    name: string
+    value?: string
+    field?: string
+    payloadField?: string
+  }>
 }
 
 // Tab Item
