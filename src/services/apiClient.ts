@@ -1,11 +1,15 @@
 import { accessToken } from '@/signals/auth'
 
-// Use proxy in development, direct URL in production
-const BASE_URL = '/api'
+// Use environment variable or fallback to proxy in development
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const ANALYTICS_BASE_URL = '/analytics-api'
 
 // Analytics API token (static key for analytics service)
 const ANALYTICS_TOKEN = 'a536957dbd17737a22be1fbe367a189ff1537665d8e144edc1ad8a48eabdfe41'
+
+// Log environment configuration on module load
+console.log('[apiClient] 📍 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+console.log('[apiClient] 📍 BASE_URL:', BASE_URL)
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string>
@@ -42,7 +46,14 @@ if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
     ;(headers as Record<string, string>)['avToken'] = accessToken.value
   }
 
-  console.log(`[apiClient] 🔗 ${init.method || 'GET'} ${url}`)
+  // Create absolute URL for logging
+  const absoluteUrl = new URL(url, window.location.origin).href
+  
+  console.log(`[apiClient] 🔗 ${init.method || 'GET'}`)
+  console.log(`[apiClient] 📍 Base URL: ${BASE_URL}`)
+  console.log(`[apiClient] 📍 Endpoint: ${endpoint}`)
+  console.log(`[apiClient] 📍 Relative URL: ${url}`)
+  console.log(`[apiClient] 📍 Absolute URL: ${absoluteUrl}`)
 
   const response = await fetch(url, {
     ...init,
