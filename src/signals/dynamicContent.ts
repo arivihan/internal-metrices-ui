@@ -16,6 +16,7 @@ export const layoutError = signal<string | null>(null)
 export const tableData = signal<any[]>([])
 export const tableDataLoading = signal<boolean>(false)
 export const tableDataError = signal<string | null>(null)
+export const entityName = signal<string | null>(null)
 
 // Pagination states
 export const pagination = signal<{
@@ -128,6 +129,13 @@ export const fetchTableData = async (url: string, pageNo: number = 0, pageSize: 
 
     const data = extractArrayData(responseData);
     const paginationInfo = extractPaginationInfo(responseData);
+
+    // Extract entityName from API response
+    const extractedEntityName = responseData?.entityName || response?.entityName;
+    if (extractedEntityName) {
+      entityName.value = extractedEntityName;
+      console.log(`📍 EntityName stored from response: ${extractedEntityName}`);
+    }
 
     tableData.value = data;
     pagination.value = paginationInfo;

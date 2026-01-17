@@ -26,8 +26,7 @@ let url: string;
 if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
   // Absolute URL - use as is
   url = endpoint;
-}
- else {
+} else {
   // Relative URL - prepend BASE_URL
   url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
 }

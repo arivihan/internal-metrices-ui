@@ -1,0 +1,437 @@
+{
+  "configName": "all-mappings",
+  "order": 4,
+  "description": "Dynamic mapping configurations for exam-grade, exam-grade-stream, and future mappings",
+  "uiJson": {
+    "tabs": [
+      {
+        "buttons": [
+          {
+            "method": "POST",
+            "type": "SHOW_POPUP",
+            "popupLayout": "dual-section",
+            "popupTitle": "Add Exam-Grade Mapping",
+            "popupSubtitle": "Select exam and add grades with display order",
+            "popupSubmitText": "Update Mapping",
+            "popupSubmitUrl": "/secure/api/v1/exam-grades",
+            "title": "Add Exam-Grade Mapping",
+            "leftSection": {
+              "title": "Exams",
+              "description": "Select an exam to view mapped grades",
+              "fetchUrl": "/secure/api/v1/exams",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id",
+              "fieldName": "examId",
+              "selectionType": "single",
+              "placeholder": "Search exams..."
+            },
+            "rightSection": {
+              "title": "Mapped Grades",
+              "description": "Grades already assigned to selected exam",
+              "fetchUrl": "/secure/api/v1/exam-grades",
+              "searchParam": "examId",
+              "optionLabelKey": "gradeName",
+              "optionValueKey": "gradeId",
+              "fieldName": "gradeDisplayOrderRequests",
+              "selectionType": "multi-select",
+              "includeDisplayOrder": true,
+              "displayOrderPlaceholder": "Order"
+            },
+            "popupActions": [
+              {
+                "id": "add-grades",
+                "label": "Add Grades",
+                "icon": "Plus",
+                "type": "modal",
+                "modalTitle": "Select Grades to Add",
+                "modalDescription": "Choose grades to assign to this exam",
+                "modalFetchUrl": "/secure/api/v1/grades",
+                "modalOptionLabelKey": "name",
+                "modalOptionValueKey": "id",
+                "modalSelectionType": "multi-select",
+                "buttonVariant": "default"
+              },
+              {
+                "id": "copy",
+                "label": "Copy from Another Exam",
+                "icon": "Copy",
+                "type": "copy",
+                "buttonVariant": "outline"
+              },
+              {
+                "id": "update",
+                "label": "Update",
+                "icon": "Check",
+                "type": "submit",
+                "buttonVariant": "default"
+              }
+            ]
+          }
+        ],
+        "description": "Manage mapping between exams and grades",
+        "getDataUrl": "/secure/api/v1/exam-grades",
+        "icon": "Link",
+        "search": {
+          "fields": [
+            {
+              "label": "Exam Id",
+              "placeholder": "Enter Exam Id",
+              "type": "text",
+              "value": "examId"
+            },
+            {
+              "label": "Grade Id",
+              "placeholder": "Enter Grade Id",
+              "type": "text",
+              "value": "gradeId"
+            },
+            {
+              "label": "Search By",
+              "placeholder": "Search by Exam / Grade",
+              "type": "text",
+              "value": "search"
+            },
+            {
+              "label": "Sort By",
+              "placeholder": "Sort By",
+              "selectOptions": [
+                {
+                  "label": "Exam Name",
+                  "value": "examName"
+                },
+                {
+                  "label": "Exam Code",
+                  "value": "examCode"
+                },
+                {
+                  "label": "Grade Name",
+                  "value": "gradeName"
+                },
+                {
+                  "label": "Grade Code",
+                  "value": "gradeCode"
+                },
+                {
+                  "label": "Display Order",
+                  "value": "displayOrder"
+                }
+              ],
+              "type": "select",
+              "value": "sortBy"
+            },
+            {
+              "label": "Sort By Order",
+              "placeholder": "Sort Order",
+              "selectOptions": [
+                {
+                  "label": "Accending",
+                  "value": "ASC"
+                },
+                {
+                  "label": "Decending",
+                  "value": "DESC"
+                }
+              ],
+              "type": "select",
+              "value": "sortDir"
+            }
+          ],
+          "method": "GET",
+          "searchActionUrl": "/secure/api/v1/exam-grades",
+          "searchBtnText": "Search"
+        },
+        "searchable": true,
+        "tabId": "exam-grade",
+        "tableHeaders": [
+          {
+            "order": 2,
+            "accessor": "examName",
+            "Header": "Exam Name",
+            "type": "text"
+          },
+          {
+            "order": 3,
+            "accessor": "examCode",
+            "Header": "Exam Code",
+            "type": "text"
+          },
+          {
+            "order": 4,
+            "accessor": "gradeName",
+            "Header": "Grade Name",
+            "type": "text"
+          },
+          {
+            "order": 4,
+            "accessor": "gradeCode",
+            "Header": "Grade Code",
+            "type": "text"
+          },
+          {
+            "order": 5,
+            "accessor": "displayOrder",
+            "Header": "Display Order",
+            "type": "text"
+          },
+          {
+            "order": 6,
+            "accessor": "actions",
+            "actions": [
+              {
+                "method": "PATCH",
+                "popupFields": [
+                  {
+                    "label": "Display Order",
+                    "placeholder": "Enter display order",
+                    "required": true,
+                    "type": "number",
+                    "value": "displayOrder"
+                  }
+                ],
+                "popupSubmitText": "Update",
+                "popupSubmitUrl": "/secure/api/v1/exam-grades/{examGradeMappingId}",
+                "popupSubtitle": "Update display order",
+                "popupTitle": "Edit Exam-Grade Mapping",
+                "title": "Edit",
+                "type": "SHOW_POPUP"
+              },
+              {
+                "actionUrl": "/secure/api/v1/exam-grades/{examGradeMappingId}",
+                "cancelButtonText": "Cancel",
+                "confirmButtonText": "Delete",
+                "confirmMessage": "Are you sure you want to delete this exam-grade mapping?",
+                "confirmTitle": "Delete Mapping",
+                "method": "DELETE",
+                "title": "Delete",
+                "type": "DELETE_CONFIRM"
+              }
+            ],
+            "Header": "Actions",
+            "type": "actions"
+          }
+        ],
+        "tabTitle": "Exam-Grade"
+      },
+      {
+        "buttons": [
+          {
+            "method": "POST",
+            "type": "SHOW_POPUP",
+            "popupLayout": "dual-section",
+            "popupTitle": "Add Exam-Grade-Stream Mapping",
+            "popupSubtitle": "Select exam-grade combination and add streams with display order",
+            "popupSubmitText": "Update Mapping",
+            "popupSubmitUrl": "/secure/api/v1/exam-grade-streams",
+            "title": "Add Exam-Grade-Stream Mapping",
+            "leftSection": {
+              "title": "Exam-Grades",
+              "description": "Select an exam-grade combination to view mapped streams",
+              "fetchUrl": "/secure/api/v1/exam-grades",
+              "optionLabelKey": "examName",
+              "optionValueKey": "id",
+              "fieldName": "examGradeId",
+              "selectionType": "single",
+              "placeholder": "Search exam-grades..."
+            },
+            "rightSection": {
+              "title": "Mapped Streams",
+              "description": "Streams already assigned to selected exam-grade",
+              "fetchUrl": "/secure/api/v1/exam-grade-streams",
+              "searchParam": "examId",
+              "optionLabelKey": "streamName",
+              "optionValueKey": "streamId",
+              "fieldName": "streams",
+              "selectionType": "multi-select",
+              "includeDisplayOrder": true,
+              "displayOrderPlaceholder": "Order"
+            },
+            "popupActions": [
+              {
+                "id": "add-streams",
+                "label": "Add Streams",
+                "icon": "Plus",
+                "type": "modal",
+                "modalTitle": "Select Streams to Add",
+                "modalDescription": "Choose streams to assign to this exam-grade combination",
+                "modalFetchUrl": "/secure/api/v1/streams",
+                "modalOptionLabelKey": "name",
+                "modalOptionValueKey": "id",
+                "modalSelectionType": "multi-select",
+                "buttonVariant": "default"
+              },
+              {
+                "id": "copy",
+                "label": "Copy from Another Exam-Grade",
+                "icon": "Copy",
+                "type": "copy",
+                "buttonVariant": "outline"
+              },
+              {
+                "id": "update",
+                "label": "Update",
+                "icon": "Check",
+                "type": "submit",
+                "buttonVariant": "default"
+              }
+            ]
+          }
+        ],
+        "description": "Manage mapping between exam-grades and streams",
+        "getDataUrl": "/secure/api/v1/exam-grade-streams",
+        "icon": "Link",
+        "search": {
+          "fields": [
+            {
+              "label": "Exam Id",
+              "placeholder": "Enter Exam Id",
+              "type": "text",
+              "value": "examId"
+            },
+            {
+              "label": "Grade Id",
+              "placeholder": "Enter Grade Id",
+              "type": "text",
+              "value": "gradeId"
+            },
+            {
+              "label": "Stream Id",
+              "placeholder": "Enter Stream Id",
+              "type": "text",
+              "value": "streamId"
+            },
+            {
+              "label": "Search By",
+              "placeholder": "Search by Exam / Grade / Stream",
+              "type": "text",
+              "value": "search"
+            },
+            {
+              "label": "Sort By",
+              "placeholder": "Sort By",
+              "selectOptions": [
+                {
+                  "label": "Exam Name",
+                  "value": "examName"
+                },
+                {
+                  "label": "Grade Name",
+                  "value": "gradeName"
+                },
+                {
+                  "label": "Stream Name",
+                  "value": "streamName"
+                },
+                {
+                  "label": "Stream Code",
+                  "value": "streamCode"
+                },
+                {
+                  "label": "Display Order",
+                  "value": "displayOrder"
+                }
+              ],
+              "type": "select",
+              "value": "sortBy"
+            },
+            {
+              "label": "Sort By Order",
+              "placeholder": "Sort Order",
+              "selectOptions": [
+                {
+                  "label": "Ascending",
+                  "value": "ASC"
+                },
+                {
+                  "label": "Descending",
+                  "value": "DESC"
+                }
+              ],
+              "type": "select",
+              "value": "sortDir"
+            }
+          ],
+          "method": "GET",
+          "searchActionUrl": "/secure/api/v1/exam-grade-streams",
+          "searchBtnText": "Search"
+        },
+        "searchable": true,
+        "tabId": "exam-grade-stream",
+        "tableHeaders": [
+          {
+            "order": 1,
+            "accessor": "id",
+            "Header": "Id",
+            "type": "text"
+          },
+          {
+            "order": 2,
+            "accessor": "examName",
+            "Header": "Exam Name",
+            "type": "text"
+          },
+          {
+            "order": 3,
+            "accessor": "gradeName",
+            "Header": "Grade Name",
+            "type": "text"
+          },
+          {
+            "order": 4,
+            "accessor": "streamName",
+            "Header": "Stream Name",
+            "type": "text"
+          },
+          {
+            "order": 5,
+            "accessor": "streamCode",
+            "Header": "Stream Code",
+            "type": "text"
+          },
+          {
+            "order": 6,
+            "accessor": "displayOrder",
+            "Header": "Display Order",
+            "type": "text"
+          },
+          {
+            "order": 7,
+            "accessor": "actions",
+            "actions": [
+              {
+                "method": "PATCH",
+                "popupFields": [
+                  {
+                    "label": "Display Order",
+                    "placeholder": "Enter display order",
+                    "required": true,
+                    "type": "number",
+                    "value": "displayOrder"
+                  }
+                ],
+                "popupSubmitText": "Update",
+                "popupSubmitUrl": "/secure/api/v1/exam-grade-streams/{id}",
+                "popupSubtitle": "Update display order",
+                "popupTitle": "Edit Exam-Grade-Stream Mapping",
+                "title": "Edit",
+                "type": "SHOW_POPUP"
+              },
+              {
+                "actionUrl": "/secure/api/v1/exam-grade-streams/{id}",
+                "cancelButtonText": "Cancel",
+                "confirmButtonText": "Delete",
+                "confirmMessage": "Are you sure you want to delete this exam-grade-stream mapping?",
+                "confirmTitle": "Delete Mapping",
+                "method": "DELETE",
+                "title": "Delete",
+                "type": "DELETE_CONFIRM"
+              }
+            ],
+            "Header": "Actions",
+            "type": "actions"
+          }
+        ],
+        "tabTitle": "Exam-Grade-Stream"
+      }
+    ]
+  }
+}

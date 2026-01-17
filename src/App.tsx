@@ -18,6 +18,8 @@ import RBAC from "@/pages/rbac";
 import { isAuthenticated } from "@/signals/auth";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
+import NotesUploadPage from "./pages/notes-upload";
+import ViralVideosPage from "./pages/viral-videos";
 import ServiceStatusPage from "@/pages/service-status";
 
 function App() {
@@ -57,15 +59,38 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             {/* Static routes for specific pages */}
             <Route path="/dashboard/users" element={<Users />} />
-            <Route path="/dashboard/users/detail/:userId" element={<UserDetail />} />
-            <Route path="/dashboard/notifications" element={<Notifications />} />
-            <Route path="/dashboard/asat-scorecards" element={<ASATScorecards />} />
-            <Route path="/dashboard/sql-playground" element={<SqlPlayground />} />
-            <Route path="/dashboard/sql-playground/create" element={<CreateQuery />} />
+            <Route
+              path="/dashboard/users/detail/:userId"
+              element={<UserDetail />}
+            />
+            <Route
+              path="/dashboard/notifications"
+              element={<Notifications />}
+            />
+            <Route
+              path="/dashboard/asat-scorecards"
+              element={<ASATScorecards />}
+            />
+            <Route
+              path="/dashboard/sql-playground"
+              element={<SqlPlayground />}
+            />
+            <Route
+              path="/dashboard/sql-playground/create"
+              element={<CreateQuery />}
+            />
             <Route path="/dashboard/app-configs" element={<AppConfigs />} />
-            <Route path="/dashboard/dashboard-ui-configs" element={<DasboardUIConfig />} />
+            <Route
+              path="/dashboard/dashboard-ui-configs"
+              element={<DasboardUIConfig />}
+            />
 
             <Route path="/dashboard/chapters" element={<Chapters />} />
+            <Route path="/dashboard/notes" element={<NotesUploadPage />} />
+            <Route
+              path="/dashboard/viral-videos"
+              element={<ViralVideosPage />}
+            />
             <Route path="/dashboard/rbac" element={<RBAC />} />
 
 

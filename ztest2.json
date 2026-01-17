@@ -1,0 +1,339 @@
+{
+  "configName": "academicYear",
+  "order": 1,
+  "uiJson": {
+    "auditTableHeaders": [
+      {
+        "order": 2,
+        "accessor": "code",
+        "Header": "Code",
+        "type": "text"
+      },
+      {
+        "order": 3,
+        "accessor": "name",
+        "Header": "Name",
+        "type": "text"
+      },
+      {
+        "order": 4,
+        "accessor": "isCurrent",
+        "Header": "Current Year",
+        "type": "boolean"
+      },
+      {
+        "order": 5,
+        "accessor": "isActive",
+        "Header": "Status",
+        "type": "boolean"
+      },
+      {
+        "order": 6,
+        "accessor": "displayOrder",
+        "Header": "Display Order",
+        "type": "text"
+      }
+    ],
+    "buttons": [
+      {
+        "method": "POST",
+        "popupFields": [
+          {
+            "label": "Code",
+            "placeholder": "Enter Academic Year Code",
+            "type": "text",
+            "value": "code"
+          },
+          {
+            "label": "Name",
+            "placeholder": "Enter Academic Year Name",
+            "type": "text",
+            "value": "name"
+          },
+          {
+            "label": "Current Year",
+            "placeholder": "Set as Current Academic Year",
+            "selectOptions": [
+              {
+                "label": "True",
+                "value": "true"
+              },
+              {
+                "label": "False",
+                "value": "false"
+              }
+            ],
+            "type": "select",
+            "value": "isCurrent"
+          },
+          {
+            "label": "Display Order",
+            "placeholder": "Enter Display Order",
+            "type": "number",
+            "value": "displayOrder"
+          },
+          {
+            "displayFormat": "status",
+            "label": "Status",
+            "placeholder": "Select Status",
+            "selectOptions": [
+              {
+                "label": "Active",
+                "value": "true"
+              },
+              {
+                "label": "Inactive",
+                "value": "false"
+              }
+            ],
+            "type": "select",
+            "value": "isActive"
+          }
+        ],
+        "popupSubmitText": "Create",
+        "popupSubmitUrl": "/secure/api/v1/academic-year",
+        "popupTitle": "Create Academic Year",
+        "title": "Add New Academic Year",
+        "type": "SHOW_POPUP"
+      }
+    ],
+    "getDataUrl": "/secure/api/v1/academic-year",
+    "search": {
+      "fields": [
+        {
+          "label": "Search",
+          "placeholder": "Enter Code or Name",
+          "type": "text",
+          "value": "search"
+        },
+        {
+          "displayFormat": "status",
+          "label": "Status",
+          "placeholder": "Select Status",
+          "selectOptions": [
+            {
+              "label": "Active",
+              "value": "true"
+            },
+            {
+              "label": "Inactive",
+              "value": "false"
+            }
+          ],
+          "type": "select",
+          "value": "active"
+        },
+        {
+          "label": "Sort By",
+          "placeholder": "Sort By",
+          "selectOptions": [
+            {
+              "label": "Id",
+              "value": "id"
+            },
+            {
+              "label": "Code",
+              "value": "code"
+            },
+            {
+              "label": "Name",
+              "value": "name"
+            },
+            {
+              "label": "Is Current",
+              "value": "isCurrent"
+            },
+            {
+              "label": "Is Active",
+              "value": "isActive"
+            },
+            {
+              "label": "Display Order",
+              "value": "displayOrder"
+            },
+            {
+              "label": "Created At",
+              "value": "createdAt"
+            },
+            {
+              "label": "Updated At",
+              "value": "updatedAt"
+            }
+          ],
+          "type": "select",
+          "value": "sortBy"
+        },
+        {
+          "label": "Sort Order",
+          "placeholder": "Sort Order",
+          "selectOptions": [
+            {
+              "label": "Ascending",
+              "value": "ASC"
+            },
+            {
+              "label": "Descending",
+              "value": "DESC"
+            }
+          ],
+          "type": "select",
+          "value": "sortDir"
+        }
+      ],
+      "method": "GET",
+      "searchActionUrl": "/secure/api/v1/academic-year",
+      "searchBtnText": "Search"
+    },
+    "searchable": true,
+    "tableHeaders": [
+      {
+        "order": 2,
+        "accessor": "code",
+        "Header": "Code",
+        "type": "text"
+      },
+      {
+        "order": 3,
+        "accessor": "name",
+        "Header": "Name",
+        "type": "text"
+      },
+      {
+        "order": 4,
+        "accessor": "isCurrent",
+        "displayFormat": "boolean",
+        "Header": "Current Year",
+        "type": "boolean"
+      },
+      {
+        "order": 5,
+        "accessor": "isActive",
+        "displayFormat": "status",
+        "Header": "Status",
+        "type": "boolean"
+      },
+      {
+        "order": 6,
+        "accessor": "displayOrder",
+        "Header": "Display Order",
+        "type": "text"
+      },
+      {
+        "order": 7,
+        "accessor": "actions",
+        "actions": [
+          {
+            "method": "GET",
+            "popupTitle": "View Academic Year",
+            "title": "View",
+            "type": "SHOW_POPUP",
+            "viewFetchDetails": "/secure/api/v1/academic-year/{id}"
+          },
+          {
+            "method": "PATCH",
+            "popupFields": [
+              {
+                "label": "Code",
+                "placeholder": "Enter Academic Year Code",
+                "type": "text",
+                "value": "code"
+              },
+              {
+                "label": "Name",
+                "placeholder": "Enter Academic Year Name",
+                "type": "text",
+                "value": "name"
+              },
+              {
+                "label": "Current Year",
+                "placeholder": "Set as Current Academic Year",
+                "selectOptions": [
+                  {
+                    "label": "True",
+                    "value": "true"
+                  },
+                  {
+                    "label": "False",
+                    "value": "false"
+                  }
+                ],
+                "type": "select",
+                "value": "isCurrent"
+              },
+              {
+                "label": "Display Order",
+                "placeholder": "Enter Display Order",
+                "type": "number",
+                "value": "displayOrder"
+              },
+              {
+                "displayFormat": "status",
+                "label": "Status",
+                "placeholder": "Select Status",
+                "selectOptions": [
+                  {
+                    "label": "Active",
+                    "value": "true"
+                  },
+                  {
+                    "label": "Inactive",
+                    "value": "false"
+                  }
+                ],
+                "type": "select",
+                "value": "isActive"
+              }
+            ],
+            "popupSubmitText": "Save Changes",
+            "popupSubmitUrl": "/secure/api/v1/academic-year/{id}",
+            "popupTitle": "Edit Academic Year",
+            "title": "Edit",
+            "type": "SHOW_POPUP"
+          },
+          {
+            "method": "DELETE",
+            "popupFields": [
+              {
+                "disabled": true,
+                "label": "Code",
+                "placeholder": "Academic Year Code",
+                "type": "text",
+                "value": "code"
+              },
+              {
+                "disabled": true,
+                "label": "Name",
+                "placeholder": "Academic Year Name",
+                "type": "text",
+                "value": "name"
+              }
+            ],
+            "popupSubmitText": "Delete",
+            "popupSubmitUrl": "/secure/api/v1/academic-year/{id}",
+            "popupTitle": "Are You Sure?",
+            "title": "Delete",
+            "type": "SHOW_POPUP"
+          },
+          {
+            "method": "PATCH",
+            "popupSubmitUrl": "/secure/api/v1/academic-year/{id}/status",
+            "title": "{statusToggle}",
+            "type": "STATUS_TOGGLE",
+            "statusField": "isActive",
+            "activeLabel": "Active",
+            "inactiveLabel": "Inactive"
+          },
+          {
+            "method": "GET",
+            "popupTitle": "View Row Wise Audit",
+            "title": "Audit Trail",
+            "type": "SHOW_POPUP",
+            "viewFetchDetails": "/secure/api/v1/audit-logs/row?entityName={entityName}&entityId={entityId}"
+          }
+        ],
+        "Header": "Actions",
+        "type": "actions"
+      }
+    ]
+  }
+}
