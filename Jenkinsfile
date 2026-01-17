@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        GIT_REPO          = 'https://github.com/arivihan/arivihan-live-chat-frontend.git'
+        GIT_REPO          = 'https://github.com/arivihan/internal-metrices-ui.git'
         GITHUB_TOKEN      = credentials('GitHubAccessToken')
         SONAR_TOKEN       = credentials('SonarQubeToken')
 
