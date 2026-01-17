@@ -6,6 +6,10 @@ pipeline {
         }
     }
 
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'production'], description: 'Deployment Environment')
+    }
+
     options {
         skipDefaultCheckout(true)
         timeout(time: 90, unit: 'MINUTES')
@@ -108,6 +112,24 @@ pipeline {
                         env.IMAGE_TAG = "${date}-${BUILD_NUMBER}"
                         env.FULL_IMAGE_NAME = "${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
                         env.CACHE_REPO = "${ECR_REGISTRY}/jenkins-cache"
+                        
+                        // Set environment-specific variables
+                        if (params.ENVIRONMENT == 'production') {
+                            env.VITE_API_BASE_URL = 'https://platform.arivihan.com/internal-metrics'
+                            env.VITE_SIDEBAR_API_URL = 'https://api.arivihan.com/sidebar-data'
+                            env.VITE_DASHBOARD_SERVICES_API_URL = 'https://api.arivihan.com/dashboard-services'
+                        } else if (params.ENVIRONMENT == 'staging') {
+                            env.VITE_API_BASE_URL = 'https://platform-staging.arivihan.com/internal-metrics'
+                            env.VITE_SIDEBAR_API_URL = 'https://api-staging.arivihan.com/sidebar-data'
+                            env.VITE_DASHBOARD_SERVICES_API_URL = 'https://api-staging.arivihan.com/dashboard-services'
+                        } else {
+                            env.VITE_API_BASE_URL = 'https://platform-dev.arivihan.com/internal-metrics'
+                            env.VITE_SIDEBAR_API_URL = 'https://platform-dev.arivihan.com/sidebar-data'
+                            env.VITE_DASHBOARD_SERVICES_API_URL = 'https://platform-dev.arivihan.com/dashboard-services'
+                        }
+                        
+                        echo "🌍 Building for environment: ${params.ENVIRONMENT}"
+                        echo "🔗 API Base URL: ${env.VITE_API_BASE_URL}"
                     }
 
                     container(name: 'builder') {
@@ -120,6 +142,9 @@ pipeline {
                                 --cache-to ${CACHE_REPO} \
                                 --jobs 100 \
                                 --layers \
+                                --build-arg VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+                                --build-arg VITE_SIDEBAR_API_URL=${VITE_SIDEBAR_API_URL} \
+                                --build-arg VITE_DASHBOARD_SERVICES_API_URL=${VITE_DASHBOARD_SERVICES_API_URL} \
                                 -t ${FULL_IMAGE_NAME} \
                                 -f ${DOCKERFILE_PATH} .
                         """
