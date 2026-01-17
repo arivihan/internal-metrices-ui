@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.6
-FROM 524814437057.dkr.ecr.ap-south-1.amazonaws.com/base-images:node-22 AS builder
+FROM 524814437057.dkr.ecr.ap-south-1.amazonaws.com/base-images:node-20 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install -f
