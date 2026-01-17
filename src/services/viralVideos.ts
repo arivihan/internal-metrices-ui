@@ -136,12 +136,58 @@ export const uploadViralVideos = async (
     console.log('[uploadViralVideos] Response headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Upload failed' }))
+      let error
+      const contentType = response.headers.get('content-type')
+      
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          error = await response.json()
+        } else {
+          const textResponse = await response.text()
+          console.log('[uploadViralVideos] Non-JSON error response:', textResponse)
+          error = { 
+            message: textResponse || `HTTP Error ${response.status}: ${response.statusText}`,
+            status: response.status,
+            statusText: response.statusText 
+          }
+        }
+      } catch (parseError) {
+        console.error('[uploadViralVideos] Error parsing response:', parseError)
+        error = { 
+          message: `HTTP Error ${response.status}: ${response.statusText}`,
+          status: response.status,
+          statusText: response.statusText 
+        }
+      }
+      
       console.error('[uploadViralVideos] Error response:', error)
       throw new Error(error.message || 'Upload failed')
     }
 
-    const result = await response.json()
+    const contentType = response.headers.get('content-type')
+    let result
+    
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json()
+      } else {
+        const textResponse = await response.text()
+        console.log('[uploadViralVideos] Non-JSON success response:', textResponse)
+        result = {
+          success: true,
+          message: textResponse || 'Upload completed successfully',
+          data: null
+        }
+      }
+    } catch (parseError) {
+      console.error('[uploadViralVideos] Error parsing success response:', parseError)
+      result = {
+        success: true,
+        message: 'Upload completed successfully',
+        data: null
+      }
+    }
+    
     console.log('[uploadViralVideos] Success response:', result)
     return result
   } catch (error) {

@@ -128,14 +128,11 @@ export function UploadVideoDialog({
 
   const validateFiles = (files: File[]): File[] => {
     const validFiles: File[] = [];
-    const maxSize = 500 * 1024 * 1024; // 500MB per file
+    const maxSize = 10 * 1024 * 1024; // 10MB per file
     const validTypes = [
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-      "video/x-msvideo",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ];
-    const validExtensions = /\.(mp4|webm|mov|avi|mkv)$/i;
+    const validExtensions = /\.xlsx$/i;
 
     files.forEach((file) => {
       const hasValidType = validTypes.includes(file.type);
@@ -143,13 +140,13 @@ export function UploadVideoDialog({
 
       if (!hasValidType && !hasValidExtension) {
         toast.error(
-          `${file.name}: Invalid format. Please upload video files only.`
+          `${file.name}: Invalid format. Please upload .xlsx files only.`
         );
         return;
       }
 
       if (file.size > maxSize) {
-        toast.error(`${file.name}: File size must be less than 500MB`);
+        toast.error(`${file.name}: File size must be less than 10MB`);
         return;
       }
 
@@ -371,7 +368,7 @@ export function UploadVideoDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>
-                Video Files <span className="text-destructive">*</span>
+                Excel Files <span className="text-destructive">*</span>
               </Label>
               {formData.files.length > 0 && (
                 <Button
@@ -400,7 +397,7 @@ export function UploadVideoDialog({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,.mp4,.webm,.mov,.avi,.mkv"
+                accept=".xlsx"
                 onChange={handleFileChange}
                 className="hidden"
                 multiple
@@ -412,11 +409,11 @@ export function UploadVideoDialog({
               />
               <p className="font-medium text-center">
                 {isDragging
-                  ? "Drop your videos here"
-                  : "Drag & drop videos or click to browse"}
+                  ? "Drop your Excel files here"
+                  : "Drag & drop Excel files or click to browse"}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Supported formats: MP4, WebM, MOV, AVI (max 500MB each)
+                Supported formats: .xlsx (max 10MB each)
               </p>
             </div>
 

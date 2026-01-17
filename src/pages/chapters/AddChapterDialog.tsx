@@ -28,7 +28,6 @@ import {
 
 import {
   uploadChapter,
-  saveChapterUpload,
   fetchExams,
   fetchGrades,
   fetchStreams,
@@ -41,6 +40,7 @@ import {
   fetchAllBatchAddOns,
 } from "@/services/chapters";
 import type { FilterOption } from "@/types/chapters";
+import { ConfirmChapterUploadDialog } from "./ConfirmChapterUploadDialog";
 
 interface AddChapterDialogProps {
   open: boolean;
@@ -67,7 +67,6 @@ export function AddChapterDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [showFullDetails, setShowFullDetails] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -460,69 +459,8 @@ export function AddChapterDialog({
     }
   };
 
-  const handleConfirmSave = async () => {
-    if (!uploadPreview) return;
-
-    setIsSubmitting(true);
-    try {
-      // Second API call - Save the upload data
-      const saveResponse = await saveChapterUpload(uploadPreview);
-
-      console.log("Save response received:", saveResponse);
-
-      if (saveResponse.success) {
-        // Show main success message
-        toast.success(saveResponse.message || "Chapters saved successfully");
-
-        // Show uploaded chapters info
-        if (saveResponse.uploadedChapters) {
-          toast.success(`✅ ${saveResponse.uploadedChapters}`, {
-            duration: 5000,
-            position: "top-center",
-          });
-        }
-
-        // Show mapping info if available
-        if (saveResponse.mappedChapters) {
-          toast.info(`📋 ${saveResponse.mappedChapters}`, {
-            duration: 4000,
-          });
-        }
-
-        // Show failed chapters warning if any
-        if (
-          saveResponse.failedChapters &&
-          saveResponse.failedChapters !== "Chapters Upload Failed"
-        ) {
-          toast.warning(`⚠️ ${saveResponse.failedChapters}`, {
-            duration: 6000,
-          });
-        }
-
-        onSuccess();
-        handleClose();
-        setShowConfirmation(false);
-        setShowFullDetails(false);
-        setUploadPreview(null);
-      } else {
-        toast.error(saveResponse.message || "Failed to save chapters");
-        if (saveResponse.errorDetails) {
-          toast.error(saveResponse.errorDetails);
-        }
-      }
-    } catch (error) {
-      console.error("Save error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save chapters"
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancelConfirmation = () => {
+  const handleConfirmationClose = () => {
     setShowConfirmation(false);
-    setShowFullDetails(false);
     setUploadPreview(null);
   };
 
@@ -769,176 +707,22 @@ export function AddChapterDialog({
       </SheetContent>
 
       {/* Confirmation Dialog */}
-      <Dialog
+      <ConfirmChapterUploadDialog
         open={showConfirmation}
-        onOpenChange={() => !isSubmitting && handleCancelConfirmation()}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>📋 Confirm Chapter Upload</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Upload processing completed. Review the summary and click "Save"
-              to finalize.
-            </p>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Minimal Summary */}
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                {uploadPreview?.error ? (
-                  <span className="text-red-600">
-                    ❌ Upload Issues Detected
-                  </span>
-                ) : (
-                  <span className="text-green-600">✅ Upload Processed</span>
-                )}
-              </h4>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <strong>File:</strong> {formData.file?.name}
-                </div>
-                <div>
-                  <strong>Size:</strong>{" "}
-                  {formData.file
-                    ? (formData.file.size / 1024).toFixed(1) + " KB"
-                    : "N/A"}
-                </div>
-                <div>
-                  <strong>Subject:</strong>{" "}
-                  {uploadPreview?.subject || "Auto-detected"}
-                </div>
-                <div>
-                  <strong>Language:</strong>{" "}
-                  {uploadPreview?.language || formData.language}
-                </div>
-                <div>
-                  <strong>Chapters Found:</strong>{" "}
-                  {uploadPreview?.datas?.length || 0}
-                </div>
-                <div>
-                  <strong>Status:</strong>
-                  {uploadPreview?.error ? (
-                    <span className="text-red-600 font-medium">
-                      Needs Review
-                    </span>
-                  ) : (
-                    <span className="text-green-600 font-medium">
-                      Ready to Save
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {uploadPreview?.errors && uploadPreview.errors.length > 0 && (
-                <div className="mt-3 p-2 bg-red-50 rounded text-sm text-red-700">
-                  <strong>Issues:</strong>{" "}
-                  {uploadPreview.errors.slice(0, 2).join(", ")}
-                  {uploadPreview.errors.length > 2 &&
-                    ` (and ${uploadPreview.errors.length - 2} more)`}
-                </div>
-              )}
-            </div>
-
-            {/* Mapping Summary (if provided) */}
-            {(formData.examId ||
-              formData.gradeId ||
-              formData.streamId ||
-              formData.batchId) && (
-              <div className="rounded-lg border p-4">
-                <h4 className="font-medium mb-2">📋 Mapping Configuration</h4>
-                <div className="text-sm space-y-1">
-                  {formData.examId && (
-                    <div>
-                      • Exam: {exams.find((e) => e.id == formData.examId)?.name}
-                    </div>
-                  )}
-                  {formData.gradeId && (
-                    <div>
-                      • Grade:{" "}
-                      {
-                        filteredGrades.find((g) => g.id == formData.gradeId)
-                          ?.name
-                      }
-                    </div>
-                  )}
-                  {formData.streamId && (
-                    <div>
-                      • Stream:{" "}
-                      {
-                        filteredStreams.find((s) => s.id == formData.streamId)
-                          ?.name
-                      }
-                    </div>
-                  )}
-                  {formData.batchId && (
-                    <div>
-                      • Batch:{" "}
-                      {
-                        filteredBatches.find((b) => b.id == formData.batchId)
-                          ?.name
-                      }
-                    </div>
-                  )}
-                  {formData.batchAddOnId && (
-                    <div>
-                      • Batch Add-on:{" "}
-                      {
-                        filteredBatchAddOns.find(
-                          (a) => a.id == formData.batchAddOnId
-                        )?.name
-                      }
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* View Full Details Toggle */}
-            <div className="border rounded-lg">
-              <button
-                onClick={() => setShowFullDetails(!showFullDetails)}
-                className="w-full p-3 text-left  flex items-center justify-between"
-              >
-                <span className="font-medium text-sm">
-                  {" "}
-                  View Full Response{" "}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {showFullDetails ? "▼ Hide" : "▶ Show"}
-                </span>
-              </button>
-
-              {showFullDetails && (
-                <div className="border-t p-4 max-h-96 overflow-y-auto">
-                  <pre className="text-xs  p-3 rounded whitespace-pre-wrap break-words">
-                    {JSON.stringify(uploadPreview, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelConfirmation}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmSave}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setShowConfirmation}
+        uploadPreview={uploadPreview}
+        formData={formData}
+        exams={exams}
+        filteredGrades={filteredGrades}
+        filteredStreams={filteredStreams}
+        filteredBatches={filteredBatches}
+        filteredBatchAddOns={filteredBatchAddOns}
+        onSuccess={() => {
+          onSuccess();
+          handleClose();
+        }}
+        onClose={handleConfirmationClose}
+      />
     </Sheet>
   );
 }
