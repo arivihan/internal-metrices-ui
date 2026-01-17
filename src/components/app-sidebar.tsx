@@ -85,13 +85,6 @@ const staticNavItems: DrawerItem[] = [
     accessibleToRoles: ["ADMIN"],
   },
   {
-    title: "Notes Upload",
-    type: "getData",
-    getDataUrl: "/notes-upload",
-    icon: "FileText",
-    accessibleToRoles: ["ADMIN"],
-  },
-  {
     title: "RBAC",
     type: "getData",
     getDataUrl: "/rbac",
@@ -100,9 +93,27 @@ const staticNavItems: DrawerItem[] = [
   },
 ];
 
+const uploadsNavItems: DrawerItem[] = [
+  {
+    title: "File Upload",
+    type: "getData",
+    getDataUrl: "",
+    icon: "UploadCloud",
+    accessibleToRoles: ["ADMIN"],
+  },
+  {
+    title: "Notes Upload",
+    type: "getData",
+    getDataUrl: "/notes-upload",
+    icon: "FileText",
+    accessibleToRoles: ["ADMIN"],
+  },
+];
+
 // Static items organized by section (for sidebar organization)
 const staticItemsBySection: Record<string, DrawerItem[]> = {
   MANAGEMENT: staticNavItems,
+  UPLOADS: uploadsNavItems,
 };
 
 function NavUserSkeleton() {
@@ -197,10 +208,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
    */
   const getCombinedSectionItems = React.useCallback(
     (section: string): DrawerItem[] => {
-      // const staticItems = getStaticItems(section);
+      const staticItems = getStaticItems(section);
       const dynamicItems = getDynamicSectionItems(section);
-      // ...staticItems,
-      return [...dynamicItems];
+      return [...staticItems, ...dynamicItems];
     },
     [getStaticItems, getDynamicSectionItems]
   );
