@@ -81,7 +81,7 @@ export default function Users() {
   const [genderFilter, setGenderFilter] = useState<string>('')
 
   // Debounce ref
-  const debounceRef = useRef<NodeJS.Timeout>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Debounce text search
   useEffect(() => {
