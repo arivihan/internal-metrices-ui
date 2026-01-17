@@ -20,6 +20,7 @@ import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
 import NotesUploadPage from "./pages/notes-upload";
 import ViralVideosPage from "./pages/viral-videos";
+import FileManagement from "./pages/files/FileManagement";
 import ServiceStatusPage from "@/pages/service-status";
 
 function App() {
@@ -91,6 +92,7 @@ function App() {
               path="/dashboard/viral-videos"
               element={<ViralVideosPage />}
             />
+            <Route path="/dashboard/file-upload" element={<FileManagement />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
 
 
