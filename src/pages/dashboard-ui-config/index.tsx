@@ -63,7 +63,7 @@ export default function AppConfigs() {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [editedJson, setEditedJson] = useState<string>("");
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1); // 1-based
+  const [currentPage, setCurrentPage] = useState(0); // 1-based
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
@@ -334,7 +334,7 @@ export default function AppConfigs() {
         </div>
       ) : (
         <div className="w-full h-[80vh] flex flex-col items-center justify-center bg-background rounded-lg border shadow-lg p-4">
-          <div className="w-full h-full max-w-5xl mx-auto flex flex-col">
+          <div className="w-full h-full max-w-8xl mx-auto flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">
                 {isDuplicating ? "Duplicate Config" : selectedItem?.configName}
@@ -379,7 +379,7 @@ export default function AppConfigs() {
               theme="dark"
               onChange={(value) => handleJsonChange(value)}
               className="rounded-lg border flex-1 overflow-hidden"
-              basicSetup={{ lineNumbers: true, foldGutter: true }}
+              basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLineGutter: true }}
             />
             {jsonError && (
               <p className="text-red-500 text-sm mt-2">{jsonError}</p>

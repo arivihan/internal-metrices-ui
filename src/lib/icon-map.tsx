@@ -79,9 +79,14 @@ interface DynamicIconProps extends LucideProps {
 export function DynamicIcon({ name, ...props }: DynamicIconProps) {
   if (!name) return null;
 
-  const Icon = (Icons as Record<string, LucideIcon>)[name];
+  const Icon = (Icons as any)[name] as LucideIcon | undefined;
 
   if (!Icon) return null; // or fallback icon
 
   return <Icon {...props} />;
 }
+
+export const getIcon = (iconName?: string): LucideIcon | undefined => {
+  if (!iconName) return undefined;
+  return (Icons as any)[iconName] as LucideIcon | undefined;
+};

@@ -74,6 +74,12 @@ export interface Button {
   popupSubmitUrl?: string
   method?: string
   popupSubtitle?: string
+  headers?: Array<{
+    name: string
+    value?: string
+    field?: string
+    payloadField?: string
+  }>
 }
 
 // Tab Item
