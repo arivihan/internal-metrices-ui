@@ -124,7 +124,7 @@ pipeline {
                             env.VITE_DASHBOARD_SERVICES_API_URL = 'https://api-staging.arivihan.com/dashboard-services'
                         } else {
                             env.VITE_API_BASE_URL = 'https://platform-dev.arivihan.com/internal-metrics'
-                            env.VITE_SIDEBAR_API_URL = 'https://platform-dev.arivihan.com/sidebar-data'
+                            env.VITE_SIDEBAR_API_URL = '/secure/ui/fetch-component-configs/drawer-items'
                             env.VITE_DASHBOARD_SERVICES_API_URL = 'https://platform-dev.arivihan.com/dashboard-services'
                         }
                         
