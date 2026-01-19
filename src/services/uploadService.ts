@@ -19,7 +19,7 @@ export const uploadFiles = async (
     if (uploadType) formData.append('uploadType', uploadType)
     if (folderPath && folderPath.trim()) formData.append('folderPath', folderPath.trim())
 
-    const url = `${BASE_URL}/files`.startsWith('/') ? `/api${BASE_URL}/files` : `${BASE_URL}/files`
+    const url = `${BASE_URL}/files`
 
     console.log('[uploadService] 📤 Uploading to URL:', url)
     console.log('[uploadService] 🔗 Full URL:', new URL(url, window.location.origin).href)
