@@ -59,7 +59,9 @@ export const getFilesList = async (
     if (search) params.search = search
     if (uploadType && uploadType !== 'all') params.uploadType = uploadType
 
-    const response = await apiClient<any>(`${BASE_URL}/files`, {
+    // Use absolute URL to bypass apiClient's default /api prefixing
+    const url = new URL(`${BASE_URL}/files`, window.location.origin).toString()
+    const response = await apiClient<any>(url, {
         params
     })
 
@@ -71,11 +73,15 @@ export const getFilesList = async (
 }
 
 export const getSupportedExtensions = async (): Promise<string[]> => {
-    const response = await apiClient<any>(`${BASE_URL}/supported-extensions`)
+    // Use absolute URL to bypass apiClient's default /api prefixing
+    const url = new URL(`${BASE_URL}/supported-extensions`, window.location.origin).toString()
+    const response = await apiClient<any>(url)
     return response.data || response || []
 }
 
 export const getUploadTypes = async (): Promise<string[]> => {
-    const response = await apiClient<any>(`${BASE_URL}/upload-types`)
+    // Use absolute URL to bypass apiClient's default /api prefixing
+    const url = new URL(`${BASE_URL}/upload-types`, window.location.origin).toString()
+    const response = await apiClient<any>(url)
     return response.data || response || []
 }

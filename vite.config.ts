@@ -14,6 +14,10 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      '/secure': {
+        target: 'https://platform-dev.arivihan.com',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'https://platform-dev.arivihan.com',
         changeOrigin: true,
