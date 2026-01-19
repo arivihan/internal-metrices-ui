@@ -1,7 +1,8 @@
 import { apiClient } from './apiClient'
 import type { UploadResponse, ListResponse } from '../types/upload'
+import { API_CONFIG } from '@/config'
 
-const BASE_URL = '/secure/upload/api/v1'
+const BASE_URL = API_CONFIG.UPLOAD_BASE
 
 import { accessToken } from '@/signals/auth'
 
@@ -22,7 +23,8 @@ export const uploadFiles = async (
     const url = `${BASE_URL}/files`
 
     console.log('[uploadService] 📤 Uploading to URL:', url)
-    console.log('[uploadService] 🔗 Full URL:', new URL(url, window.location.origin).href)
+    console.log('[uploadService] 📤 Uploading to URL:', url)
+    console.log('[uploadService] 🔗 Full URL:', url)
 
     const headers: Record<string, string> = {}
     if (accessToken.value) {
@@ -60,7 +62,7 @@ export const getFilesList = async (
     if (uploadType && uploadType !== 'all') params.uploadType = uploadType
 
     // Use absolute URL to bypass apiClient's default /api prefixing
-    const url = new URL(`${BASE_URL}/files`, window.location.origin).toString()
+    const url = `${BASE_URL}/files`
     const response = await apiClient<any>(url, {
         params
     })
@@ -74,14 +76,14 @@ export const getFilesList = async (
 
 export const getSupportedExtensions = async (): Promise<string[]> => {
     // Use absolute URL to bypass apiClient's default /api prefixing
-    const url = new URL(`${BASE_URL}/supported-extensions`, window.location.origin).toString()
+    const url = `${BASE_URL}/supported-extensions`
     const response = await apiClient<any>(url)
     return response.data || response || []
 }
 
 export const getUploadTypes = async (): Promise<string[]> => {
     // Use absolute URL to bypass apiClient's default /api prefixing
-    const url = new URL(`${BASE_URL}/upload-types`, window.location.origin).toString()
+    const url = `${BASE_URL}/upload-types`
     const response = await apiClient<any>(url)
     return response.data || response || []
 }

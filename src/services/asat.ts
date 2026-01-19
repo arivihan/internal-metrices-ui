@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { API_CONFIG } from '@/config'
 import type {
   ASATStatus,
   ASATPaginatedResponse,
@@ -60,7 +61,7 @@ export const downloadASATInfo = async (
   }
 
   const queryString = new URLSearchParams(params).toString()
-  const url = `/api/secure/asat/download-all-approved?${queryString}`
+  const url = `${API_CONFIG.INTERNAL_METRICS_BASE}/secure/asat/download-all-approved?${queryString}`
 
   const response = await fetch(url, {
     credentials: 'include',

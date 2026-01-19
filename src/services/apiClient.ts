@@ -1,8 +1,9 @@
 import { accessToken } from '@/signals/auth'
+import { API_CONFIG } from '@/config'
 
 // Use environment variable or fallback to proxy in development
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const ANALYTICS_BASE_URL = '/analytics-api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || API_CONFIG.INTERNAL_METRICS_BASE
+const ANALYTICS_BASE_URL = API_CONFIG.ANALYTICS_BASE
 
 // Analytics API token (static key for analytics service)
 const ANALYTICS_TOKEN = 'a536957dbd17737a22be1fbe367a189ff1537665d8e144edc1ad8a48eabdfe41'
@@ -22,14 +23,14 @@ export const apiClient = async <T>(
   const { params, ...init } = config
 
   // Construct URL with proper slash handling
-let url: string;
-if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-  // Absolute URL - use as is
-  url = endpoint;
-} else {
-  // Relative URL - prepend BASE_URL
-  url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
-}
+  let url: string;
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    // Absolute URL - use as is
+    url = endpoint;
+  } else {
+    // Relative URL - prepend BASE_URL
+    url = endpoint.startsWith('/') ? `${BASE_URL}${endpoint}` : `${BASE_URL}/${endpoint}`;
+  }
   if (params) {
     const searchParams = new URLSearchParams(params)
     url += `?${searchParams.toString()}`
@@ -42,12 +43,12 @@ if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
 
   // Add token as header for authenticated requests
   if (accessToken.value) {
-    ;(headers as Record<string, string>)['avToken'] = accessToken.value
+    ; (headers as Record<string, string>)['avToken'] = accessToken.value
   }
 
   // Create absolute URL for logging
   const absoluteUrl = new URL(url, window.location.origin).href
-  
+
   console.log(`[apiClient] 🔗 ${init.method || 'GET'}`)
   console.log(`[apiClient] 📍 Base URL: ${BASE_URL}`)
   console.log(`[apiClient] 📍 Endpoint: ${endpoint}`)
@@ -176,7 +177,7 @@ export const analyticsClient = async <T>(
 ): Promise<T> => {
   const { params, ...init } = config
 
-  let url = `${ANALYTICS_BASE_URL}${endpoint}`
+  let url = endpoint.startsWith('http') ? endpoint : `${ANALYTICS_BASE_URL}${endpoint}`
   if (params) {
     const searchParams = new URLSearchParams(params)
     url += `?${searchParams.toString()}`

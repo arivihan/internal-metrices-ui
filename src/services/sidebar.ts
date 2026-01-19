@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient'
+import { API_CONFIG } from '@/config'
 import type { SidebarConfig, DrawerItem, SubMenuItem } from '../types/sidebar'
 
 /**
@@ -42,7 +43,7 @@ const transformSubMenuItem = (item: any): SubMenuItem => {
  * Fetch sidebar configuration data from the API
  */
 export const fetchSidebarData = async (): Promise<SidebarConfig> => {
-  const sidebarApiUrl = import.meta.env.VITE_SIDEBAR_API_URL || '/secure/ui/fetch-component-configs/drawer-items'
+  const sidebarApiUrl = import.meta.env.VITE_SIDEBAR_API_URL || `${API_CONFIG.DOMAIN}/secure/ui/fetch-component-configs/drawer-items`
   const response = await apiClient<{
     code: string
     message: null
@@ -53,7 +54,7 @@ export const fetchSidebarData = async (): Promise<SidebarConfig> => {
     size: null
     page: null
   }>(sidebarApiUrl)
-  
+
   return {
     drawerItems: response.data.drawerItems.map(transformDrawerItem),
   }
@@ -66,7 +67,7 @@ export const fetchSubMenuLayout = async (subMenuItem: SubMenuItem): Promise<any>
   if (!subMenuItem.getLayoutDataUrl) {
     throw new Error('No getLayoutDataUrl configured for submenu item')
   }
-  
+
   try {
     console.log(`[fetchSubMenuLayout] Fetching layout from: ${subMenuItem.getLayoutDataUrl}`)
     const response = await apiClient(subMenuItem.getLayoutDataUrl)
@@ -100,7 +101,7 @@ export const fetchSubMenuData = async (url: string): Promise<any> => {
 export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
   try {
     console.log(`[fetchDataByUrl] Fetching from: ${url}`);
-    
+
     // Handle different URL formats
     if (url.startsWith('http')) {
       // Absolute URL - fetch directly
@@ -119,7 +120,7 @@ export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
       // Relative URL - filter empty query params only
       const urlObj = new URL(url, 'http://localhost');
       const basePath = url.split('?')[0];
-      
+
       // Filter out empty query parameters
       const params = new URLSearchParams(urlObj.search);
       for (const [key, value] of params.entries()) {
@@ -127,10 +128,10 @@ export const fetchDataByUrl = async <T = any>(url: string): Promise<T> => {
           params.delete(key);
         }
       }
-      
+
       // Reconstruct the URL without empty params, preserving original path
       const cleanUrl = `${basePath}${params.toString() ? '?' + params.toString() : ''}`;
-      
+
       console.log(`[fetchDataByUrl] Clean URL: ${url} → ${cleanUrl}`);
       const data = await apiClient<T>(cleanUrl);
       console.log(`[fetchDataByUrl] Success:`, data);

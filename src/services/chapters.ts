@@ -30,7 +30,9 @@ interface PaginatedResponse<T> {
   last: boolean
 }
 
-const BASE_URL = '/api'
+import { API_CONFIG } from '@/config'
+
+const BASE_URL = API_CONFIG.INTERNAL_METRICS_BASE
 
 // ============================================================================
 // CHAPTER APIs
@@ -121,19 +123,19 @@ export const uploadChapter = async (
   })
 
   const formData = new FormData()
-  
+
   // Handle different file types appropriately
   const fileName = payload.file.name
   const fileType = payload.file.type
   const isCSV = fileName.toLowerCase().endsWith('.csv')
-  const isOLE2 = fileName.toLowerCase().endsWith('.xls') || 
-                fileName.toLowerCase().endsWith('.doc') ||
-                fileType.includes('ms-excel') ||
-                fileType === 'application/octet-stream'
-  
+  const isOLE2 = fileName.toLowerCase().endsWith('.xls') ||
+    fileName.toLowerCase().endsWith('.doc') ||
+    fileType.includes('ms-excel') ||
+    fileType === 'application/octet-stream'
+
   // Explicitly set filename and ensure proper content type handling
   formData.append('file', payload.file, fileName)
-  
+
   console.log('[uploadChapter] File type detection:', {
     fileName,
     fileType,
@@ -152,7 +154,7 @@ export const uploadChapter = async (
 
   const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : ''
   const url = `${BASE_URL}/secure/api/v1/chapter/upload${queryString}`
-  
+
   console.log('[uploadChapter] Request URL:', url)
 
   const headers: HeadersInit = {
@@ -195,7 +197,7 @@ export const saveChapterUpload = async (
   console.log('[saveChapterUpload] Saving upload data:', uploadData)
 
   const url = `${BASE_URL}/secure/api/v1/chapter/save`
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   }
@@ -615,7 +617,7 @@ export const fetchStreams = async (params?: {
  * Fetch all exam-grade mappings
  * GET /secure/api/v1/exam-grades/all
  */
-export const fetchExamGradeMappings = async (): Promise<Array<{examId: number, gradeId: number}>> => {
+export const fetchExamGradeMappings = async (): Promise<Array<{ examId: number, gradeId: number }>> => {
   try {
     const response = await apiClient<PaginatedResponse<any>>(
       '/secure/api/v1/exam-grades',
@@ -636,7 +638,7 @@ export const fetchExamGradeMappings = async (): Promise<Array<{examId: number, g
  * Fetch all exam-grade-stream mappings
  * GET /secure/api/v1/exam-grade-streams/all
  */
-export const fetchExamGradeStreamMappings = async (): Promise<Array<{examId: number, gradeId: number, streamId: number}>> => {
+export const fetchExamGradeStreamMappings = async (): Promise<Array<{ examId: number, gradeId: number, streamId: number }>> => {
   try {
     const response = await apiClient<PaginatedResponse<any>>(
       '/secure/api/v1/exam-grade-streams',

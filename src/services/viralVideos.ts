@@ -12,7 +12,9 @@ import type {
 } from '@/types/viralVideos'
 
 // Base URL for API calls
-const BASE_URL = '/api'
+import { API_CONFIG } from '@/config'
+
+const BASE_URL = API_CONFIG.INTERNAL_METRICS_BASE
 
 // ============================================================================
 // VIRAL VIDEOS APIs
@@ -111,13 +113,13 @@ export const uploadViralVideos = async (
 
   const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : ''
   const url = `${BASE_URL}/secure/viral-videos/api/v1/upload${queryString}`
-  
+
   console.log('[uploadViralVideos] Request URL:', url)
 
   const headers: HeadersInit = {
     // Don't set Content-Type for FormData, let browser set it with boundary
   }
-  
+
   if (accessToken.value) {
     headers['avToken'] = accessToken.value
   }
@@ -138,35 +140,35 @@ export const uploadViralVideos = async (
     if (!response.ok) {
       let error
       const contentType = response.headers.get('content-type')
-      
+
       try {
         if (contentType && contentType.includes('application/json')) {
           error = await response.json()
         } else {
           const textResponse = await response.text()
           console.log('[uploadViralVideos] Non-JSON error response:', textResponse)
-          error = { 
+          error = {
             message: textResponse || `HTTP Error ${response.status}: ${response.statusText}`,
             status: response.status,
-            statusText: response.statusText 
+            statusText: response.statusText
           }
         }
       } catch (parseError) {
         console.error('[uploadViralVideos] Error parsing response:', parseError)
-        error = { 
+        error = {
           message: `HTTP Error ${response.status}: ${response.statusText}`,
           status: response.status,
-          statusText: response.statusText 
+          statusText: response.statusText
         }
       }
-      
+
       console.error('[uploadViralVideos] Error response:', error)
       throw new Error(error.message || 'Upload failed')
     }
 
     const contentType = response.headers.get('content-type')
     let result
-    
+
     try {
       if (contentType && contentType.includes('application/json')) {
         result = await response.json()
@@ -187,7 +189,7 @@ export const uploadViralVideos = async (
         data: null
       }
     }
-    
+
     console.log('[uploadViralVideos] Success response:', result)
     return result
   } catch (error) {
@@ -250,8 +252,8 @@ export const fetchAllBatchesForVideos = async (params?: {
         batchData = Array.isArray(response.data.content)
           ? response.data.content
           : Array.isArray(response.data)
-          ? response.data
-          : []
+            ? response.data
+            : []
       } else if (Array.isArray(response.content)) {
         batchData = response.content
       } else if (Array.isArray(response)) {
