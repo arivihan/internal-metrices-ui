@@ -9,42 +9,61 @@ import { accessToken } from '@/signals/auth'
 export const uploadFiles = async (
     files: File[],
     uploadType: string = 'general',
-    folderPath?: string
+    folderPath?: string,
+    onProgress?: (percent: number) => void
 ): Promise<UploadResponse> => {
-    const formData = new FormData()
-    files.forEach((file) => {
-        formData.append('files', file)
+    return new Promise((resolve, reject) => {
+        const formData = new FormData()
+        files.forEach((file) => {
+            formData.append('files', file)
+        })
+
+        if (uploadType) formData.append('uploadType', uploadType)
+        if (folderPath && folderPath.trim()) formData.append('folderPath', folderPath.trim())
+
+        const url = `${API_CONFIG.UPLOAD_BASE}/files`
+
+        console.log('[uploadService] 🔧 API_CONFIG:', API_CONFIG)
+        console.log('[uploadService] 📤 Uploading to URL:', url)
+
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', url)
+
+        if (accessToken.value) {
+            xhr.setRequestHeader('avToken', accessToken.value)
+        }
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable && onProgress) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100)
+                onProgress(percentComplete)
+            }
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const data = JSON.parse(xhr.responseText)
+                    resolve(data.data || data)
+                } catch (e) {
+                    reject(new Error('Failed to parse response'))
+                }
+            } else {
+                try {
+                    const error = JSON.parse(xhr.responseText)
+                    reject(new Error(error.message || 'Upload failed'))
+                } catch (e) {
+                    reject(new Error('Upload failed'))
+                }
+            }
+        }
+
+        xhr.onerror = () => {
+            reject(new Error('Network error during upload'))
+        }
+
+        xhr.send(formData)
     })
-
-    // Clean params before appending
-    if (uploadType) formData.append('uploadType', uploadType)
-    if (folderPath && folderPath.trim()) formData.append('folderPath', folderPath.trim())
-
-    const url = `${API_CONFIG.UPLOAD_BASE}/files`
-
-    console.log('[uploadService] 🔧 API_CONFIG:', API_CONFIG)
-    console.log('[uploadService] 📤 Uploading to URL:', url)
-    console.log('[uploadService] 🔗 Full URL:', url)
-
-    const headers: Record<string, string> = {}
-    if (accessToken.value) {
-        headers['avToken'] = accessToken.value
-    }
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers, // No Content-Type header to allow FormData boundary
-        body: formData,
-    })
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Upload failed' }))
-        throw new Error(error.message || 'Upload failed')
-    }
-
-    const data = await response.json()
-    // Handle wrapped response if necessary, similar to list endpoint
-    return data.data || data;
 }
 
 export const getFilesList = async (

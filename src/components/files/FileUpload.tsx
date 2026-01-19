@@ -29,11 +29,24 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     const [uploadProgress, setUploadProgress] = useState(0)
     const [uploadResults, setUploadResults] = useState<FileUploadResult[]>([])
     const [hasAttemptedUpload, setHasAttemptedUpload] = useState(false)
+    const [startTime, setStartTime] = useState<number | null>(null)
+    const [elapsedTime, setElapsedTime] = useState('0s')
 
     // Config state
     const [allowedExtensions, setAllowedExtensions] = useState<string[]>([])
     const [supportedTypes, setSupportedTypes] = useState<string[]>(['general'])
     const inputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        let interval: any
+        if (uploading && startTime) {
+            interval = setInterval(() => {
+                const seconds = Math.floor((Date.now() - startTime) / 1000)
+                setElapsedTime(seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`)
+            }, 1000)
+        }
+        return () => clearInterval(interval)
+    }, [uploading, startTime])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -113,17 +126,15 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
         if (files.length === 0) return
 
         setUploading(true)
-        setUploadProgress(10) // Start progress
+        setUploadProgress(0)
+        setStartTime(Date.now())
+        setElapsedTime('0s')
 
         try {
-            // Simulate progress for better UX since fetch doesn't give upload progress natively easily
-            const progressInterval = setInterval(() => {
-                setUploadProgress(prev => Math.min(prev + 5, 90))
-            }, 200)
+            const response = await uploadFiles(files, uploadType, folderPath, (percent) => {
+                setUploadProgress(percent)
+            })
 
-            const response = await uploadFiles(files, uploadType, folderPath)
-
-            clearInterval(progressInterval)
             setUploadProgress(100)
             setHasAttemptedUpload(true)
 
@@ -150,7 +161,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
             toast.error('Upload failed. Please try again.', { duration: 5000 })
         } finally {
             setUploading(false)
-            // setTimeout(() => setUploadProgress(0), 1000) // Keep progress full
+            setStartTime(null)
         }
     }
 
@@ -159,6 +170,11 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
         setUploadResults([])
         setHasAttemptedUpload(false)
         setUploadProgress(0)
+        setStartTime(null)
+        setElapsedTime('0s')
+        if (inputRef.current) {
+            inputRef.current.value = ''
+        }
     }
 
     const handleCopyUrl = (url: string) => {
@@ -274,7 +290,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="font-medium text-sm">Selected Files ({files.length})</h3>
-                            {uploading && <span className="text-xs text-muted-foreground">Uploading...</span>}
+                            {uploading && <span className="text-xs text-muted-foreground">Uploading... {uploadProgress}% ({elapsedTime})</span>}
                         </div>
 
                         {uploading && <Progress value={uploadProgress} className="h-2" />}
