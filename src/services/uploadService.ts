@@ -21,6 +21,9 @@ export const uploadFiles = async (
 
     const url = `${BASE_URL}/files`.startsWith('/') ? `/api${BASE_URL}/files` : `${BASE_URL}/files`
 
+    console.log('[uploadService] 📤 Uploading to URL:', url)
+    console.log('[uploadService] 🔗 Full URL:', new URL(url, window.location.origin).href)
+
     const headers: Record<string, string> = {}
     if (accessToken.value) {
         headers['avToken'] = accessToken.value
