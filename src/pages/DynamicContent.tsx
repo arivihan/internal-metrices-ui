@@ -1227,6 +1227,16 @@ export default function DynamicContent() {
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [viewDetailsData, setViewDetailsData] = useState<any>(null);
   const [isAuditTrailPopup, setIsAuditTrailPopup] = useState(false);
+  const [auditTrailPagination, setAuditTrailPagination] = useState({
+    currentPage: 0,
+    totalPages: 1,
+    totalElements: 0,
+    pageSize: 10,
+    isLoading: false,
+    fetchUrl: "",
+    entityName: "",
+    entityId: "", // For row-wise audit trail
+  });
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogData, setConfirmDialogData] = useState<any>(null);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -1322,36 +1332,82 @@ export default function DynamicContent() {
     setJsonPopupOpen(true);
   };
 
+  const fetchAuditTrailPage = async (
+    fetchUrl: string,
+    entityName: string,
+    pageNo: number,
+    entityId?: string
+  ) => {
+    try {
+      setAuditTrailPagination((prev) => ({ ...prev, isLoading: true }));
+
+      // Build URL based on whether it's row-wise (with entityId) or table-wise
+      let url: string;
+      if (entityId) {
+        // Row-wise audit: /audit-logs?entityName=X&entityId=Y&pageNo=Z&pageSize=10
+        url = `${fetchUrl}?entityName=${entityName}&entityId=${entityId}&pageNo=${pageNo}&pageSize=10`;
+      } else {
+        // Table-wise audit: /audit-logs?entityName=X&pageNo=Y&pageSize=10
+        url = `${fetchUrl}?entityName=${entityName}&pageNo=${pageNo}&pageSize=10`;
+      }
+      console.log("[DynamicContent] Fetching audit trail page:", url);
+
+      const { dynamicRequest } = await import("@/services/apiClient");
+      const response = await dynamicRequest(url, "GET");
+
+      console.log("[DynamicContent] Audit data received:", response);
+
+      const auditData = Array.isArray((response as any)?.content)
+        ? (response as any).content
+        : response;
+
+      setViewDetailsData(auditData);
+      setAuditTrailPagination((prev) => ({
+        ...prev,
+        currentPage: (response as any)?.pageNumber ?? pageNo,
+        totalPages: (response as any)?.totalPages ?? 1,
+        totalElements: (response as any)?.totalElements ?? auditData.length,
+        pageSize: (response as any)?.pageSize ?? 10,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error("[DynamicContent] Failed to fetch audit trail:", error);
+      setAuditTrailPagination((prev) => ({ ...prev, isLoading: false }));
+      showAlert({
+        title: "Error",
+        description: "Failed to fetch audit trail",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAuditPageChange = (newPage: number) => {
+    const { fetchUrl, entityName, entityId } = auditTrailPagination;
+    if (fetchUrl && entityName) {
+      fetchAuditTrailPage(fetchUrl, entityName, newPage, entityId || undefined);
+    }
+  };
+
   const handleAuditButtonClick = async (auditButton: any) => {
     if (auditButton.type === "AUDIT_TRAIL") {
-      try {
-        // Construct the URL with query parameters for audit logs table view
-        const url = `${auditButton.auditFetchUrl}?entityName=${auditButton.entityName}&pageNo=0&pageSize=10`;
-        console.log("[DynamicContent] Opening audit trail:", url);
+      // Store the fetch URL and entity name for pagination (table-wise, no entityId)
+      setAuditTrailPagination((prev) => ({
+        ...prev,
+        fetchUrl: auditButton.auditFetchUrl,
+        entityName: auditButton.entityName,
+        entityId: "", // Clear entityId for table-wise audit
+        currentPage: 0,
+      }));
 
-        // Fetch audit data
-        const { dynamicRequest } = await import("@/services/apiClient");
-        const response = await dynamicRequest(url, "GET");
+      setIsAuditTrailPopup(true);
+      setViewDetailsOpen(true);
 
-        console.log("[DynamicContent] Audit data received:", response);
-
-        // Extract content array from response
-        const auditData = Array.isArray((response as any)?.content)
-          ? (response as any).content
-          : response;
-        console.log("[DynamicContent] Parsed audit data:", auditData);
-
-        setViewDetailsData(auditData);
-        setIsAuditTrailPopup(true);
-        setViewDetailsOpen(true);
-      } catch (error) {
-        console.error("[DynamicContent] Failed to fetch audit trail:", error);
-        showAlert({
-          title: "Error",
-          description: "Failed to fetch audit trail",
-          variant: "destructive",
-        });
-      }
+      // Fetch first page (no entityId for table-wise)
+      await fetchAuditTrailPage(
+        auditButton.auditFetchUrl,
+        auditButton.entityName,
+        0
+      );
     }
   };
   const handleTabChange = async (
@@ -1585,33 +1641,45 @@ export default function DynamicContent() {
 
       console.log("🔗 Final fetch URL:", fetchUrl);
 
-      // Fetch the details
-      apiClient(fetchUrl, { method: "GET" })
-        .then((response: any) => {
-          console.log("✅ Details fetched:", response);
+      if (isAuditTrail) {
+        // Extract base URL, entity name, and entityId for row-wise pagination
+        const baseUrl = fetchUrl.split("?")[0];
+        const urlParams = new URLSearchParams(fetchUrl.split("?")[1] || "");
+        const entityParam = urlParams.get("entityName") || entityNameToUse || "";
+        const entityIdParam = urlParams.get("entityId") || String(rowData.id) || "";
 
-          if (isAuditTrail) {
-            // For audit trail, extract content array from response
-            const auditData = Array.isArray(response?.content)
-              ? response.content
-              : response;
-            console.log("📊 Audit trail data:", auditData);
-            setViewDetailsData(auditData);
-            setIsAuditTrailPopup(true);
-          } else {
+        // Store for pagination (row-wise with entityId)
+        setAuditTrailPagination((prev) => ({
+          ...prev,
+          fetchUrl: baseUrl,
+          entityName: entityParam,
+          entityId: entityIdParam,
+          currentPage: 0,
+        }));
+
+        setIsAuditTrailPopup(true);
+        setViewDetailsOpen(true);
+
+        // Fetch first page with entityId for row-wise audit
+        fetchAuditTrailPage(baseUrl, entityParam, 0, entityIdParam);
+      } else {
+        // Fetch the details normally
+        apiClient(fetchUrl, { method: "GET" })
+          .then((response: any) => {
+            console.log("✅ Details fetched:", response);
             setViewDetailsData(response);
             setIsAuditTrailPopup(false);
-          }
-          setViewDetailsOpen(true);
-        })
-        .catch((error) => {
-          console.error("❌ Failed to fetch details:", error);
-          showAlert({
-            title: "Error",
-            description: "Failed to fetch details",
-            variant: "destructive",
+            setViewDetailsOpen(true);
+          })
+          .catch((error) => {
+            console.error("❌ Failed to fetch details:", error);
+            showAlert({
+              title: "Error",
+              description: "Failed to fetch details",
+              variant: "destructive",
+            });
           });
-        });
+      }
 
       return;
     }
@@ -2784,6 +2852,12 @@ export default function DynamicContent() {
             }}
             data={viewDetailsData}
             title="Audit Trail"
+            currentPage={auditTrailPagination.currentPage}
+            totalPages={auditTrailPagination.totalPages}
+            totalElements={auditTrailPagination.totalElements}
+            pageSize={auditTrailPagination.pageSize}
+            isLoading={auditTrailPagination.isLoading}
+            onPageChange={handleAuditPageChange}
           />
         ) : (
           <ViewDetailsPopup

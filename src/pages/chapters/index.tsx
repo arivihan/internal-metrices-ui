@@ -5,6 +5,13 @@ import {
   Upload,
   MoreHorizontal,
   Filter,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  AlertTriangle,
+  Link2,
+  X,
+  Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -27,6 +34,22 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import { AddChapterDialog } from './AddChapterDialog'
 import {
@@ -81,6 +104,39 @@ export default function Chapters() {
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [chapterToDelete, setChapterToDelete] = useState<ChapterDto | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isTogglingStatus, setIsTogglingStatus] = useState<number | null>(null)
+
+  // Selected chapters for mapping
+  const [selectedChapters, setSelectedChapters] = useState<Set<number>>(new Set())
+
+  // Mapping view state
+  const [showMappingView, setShowMappingView] = useState(false)
+  const [mappingDisplayOrders, setMappingDisplayOrders] = useState<Record<number, number>>({})
+  const [isSavingMapping, setIsSavingMapping] = useState(false)
+
+  // Mapping filters (separate from table filters)
+  const [mappingExamFilter, setMappingExamFilter] = useState<string>('')
+  const [mappingGradeFilter, setMappingGradeFilter] = useState<string>('')
+  const [mappingStreamFilter, setMappingStreamFilter] = useState<string>('')
+  const [mappingBatchFilter, setMappingBatchFilter] = useState<string>('')
+  const [mappingBatchAddOnFilter, setMappingBatchAddOnFilter] = useState<string>('')
+
+  // Mapping filter options
+  const [mappingGrades, setMappingGrades] = useState<FilterOption[]>([])
+  const [mappingStreams, setMappingStreams] = useState<FilterOption[]>([])
+  const [mappingBatches, setMappingBatches] = useState<FilterOption[]>([])
+  const [mappingBatchAddOns, setMappingBatchAddOns] = useState<FilterOption[]>([])
+
+  // Loading states for mapping dropdowns
+  const [loadingMappingGrades, setLoadingMappingGrades] = useState(false)
+  const [loadingMappingStreams, setLoadingMappingStreams] = useState(false)
+  const [loadingMappingBatches, setLoadingMappingBatches] = useState(false)
+  const [loadingMappingBatchAddOns, setLoadingMappingBatchAddOns] = useState(false)
 
   // Helper to get code from id
   const getCode = (items: FilterOption[], id: string): string | undefined => {
@@ -310,6 +366,287 @@ export default function Chapters() {
     loadChapters()
   }
 
+  // Handle delete chapter (hard delete)
+  const handleDeleteClick = (chapter: ChapterDto) => {
+    setChapterToDelete(chapter)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!chapterToDelete) return
+
+    setIsDeleting(true)
+    try {
+      const { dynamicRequest } = await import('@/services/apiClient')
+      await dynamicRequest(
+        `/secure/api/v1/chapter/${chapterToDelete.chapterId}/delete`,
+        'DELETE'
+      )
+      toast.success('Chapter deleted successfully')
+      setDeleteDialogOpen(false)
+      setChapterToDelete(null)
+      loadChapters()
+    } catch (error: any) {
+      console.error('Failed to delete chapter:', error)
+      toast.error(error?.message || 'Failed to delete chapter')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Handle toggle active/inactive status
+  const handleToggleStatus = async (chapter: ChapterDto) => {
+    setIsTogglingStatus(chapter.chapterId)
+    try {
+      const { dynamicRequest } = await import('@/services/apiClient')
+      // Toggle: if currently active, set to inactive (false), and vice versa
+      const newStatus = !chapter.active
+      await dynamicRequest(
+        `/secure/api/v1/chapter/${chapter.chapterId}/status`,
+        'PATCH',
+        { isActive: newStatus }
+      )
+      toast.success(
+        `Chapter ${chapter.active ? 'deactivated' : 'activated'} successfully`
+      )
+      loadChapters()
+    } catch (error: any) {
+      console.error('Failed to change chapter status:', error)
+      toast.error(error?.message || 'Failed to change chapter status')
+    } finally {
+      setIsTogglingStatus(null)
+    }
+  }
+
+  // ============================================================================
+  // Chapter selection handlers
+  // ============================================================================
+  const handleSelectChapter = (chapterId: number, checked: boolean) => {
+    setSelectedChapters(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(chapterId)
+      } else {
+        newSet.delete(chapterId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedChapters(new Set(data.map(c => c.chapterId)))
+    } else {
+      setSelectedChapters(new Set())
+    }
+  }
+
+  const isAllSelected = data.length > 0 && selectedChapters.size === data.length
+  const isSomeSelected = selectedChapters.size > 0 && selectedChapters.size < data.length
+
+  // ============================================================================
+  // Mapping view handlers
+  // ============================================================================
+  const handleOpenMappingView = () => {
+    // Initialize display orders from selected chapters
+    const orders: Record<number, number> = {}
+    data.filter(c => selectedChapters.has(c.chapterId)).forEach((chapter, idx) => {
+      orders[chapter.chapterId] = chapter.pos ?? (idx + 1)
+    })
+    setMappingDisplayOrders(orders)
+    setShowMappingView(true)
+  }
+
+  const handleCloseMappingView = () => {
+    setShowMappingView(false)
+    setMappingExamFilter('')
+    setMappingGradeFilter('')
+    setMappingStreamFilter('')
+    setMappingBatchFilter('')
+    setMappingBatchAddOnFilter('')
+    setMappingGrades([])
+    setMappingStreams([])
+    setMappingBatches([])
+    setMappingBatchAddOns([])
+  }
+
+  const handleDisplayOrderChange = (chapterId: number, value: string) => {
+    const numValue = parseInt(value, 10)
+    if (!isNaN(numValue) && numValue >= 0) {
+      setMappingDisplayOrders(prev => ({
+        ...prev,
+        [chapterId]: numValue
+      }))
+    }
+  }
+
+  // Mapping cascading filters
+  const loadMappingGrades = async (examId: string) => {
+    if (!examId) {
+      setMappingGrades([])
+      return
+    }
+    setLoadingMappingGrades(true)
+    try {
+      const response = await fetchGradesByExam({ examId: Number(examId) })
+      setMappingGrades(response.content)
+    } catch (error) {
+      console.error('Failed to load mapping grades:', error)
+      setMappingGrades([])
+    } finally {
+      setLoadingMappingGrades(false)
+    }
+  }
+
+  const loadMappingStreams = async (examId: string, gradeId: string) => {
+    if (!examId || !gradeId) {
+      setMappingStreams([])
+      return
+    }
+    setLoadingMappingStreams(true)
+    try {
+      const response = await fetchStreamsByExamGrade({
+        examId: Number(examId),
+        gradeId: Number(gradeId),
+      })
+      setMappingStreams(response.content)
+    } catch (error) {
+      console.error('Failed to load mapping streams:', error)
+      setMappingStreams([])
+    } finally {
+      setLoadingMappingStreams(false)
+    }
+  }
+
+  const loadMappingBatches = async (examId: string, gradeId: string, streamId: string) => {
+    if (!examId || !gradeId || !streamId) {
+      setMappingBatches([])
+      return
+    }
+    setLoadingMappingBatches(true)
+    try {
+      const response = await fetchBatches({
+        examId: Number(examId),
+        gradeId: Number(gradeId),
+        streamId: Number(streamId),
+        activeFlag: true,
+      })
+      setMappingBatches(response.content)
+    } catch (error) {
+      console.error('Failed to load mapping batches:', error)
+      setMappingBatches([])
+    } finally {
+      setLoadingMappingBatches(false)
+    }
+  }
+
+  const loadMappingBatchAddOns = async (batchId: string) => {
+    if (!batchId) {
+      setMappingBatchAddOns([])
+      return
+    }
+    setLoadingMappingBatchAddOns(true)
+    try {
+      const response = await fetchBatchAddOns({ batchId: Number(batchId) })
+      setMappingBatchAddOns(response.content)
+    } catch (error) {
+      console.error('Failed to load mapping batch add-ons:', error)
+      setMappingBatchAddOns([])
+    } finally {
+      setLoadingMappingBatchAddOns(false)
+    }
+  }
+
+  // Handle mapping filter changes
+  const handleMappingExamChange = (value: string) => {
+    setMappingExamFilter(value === 'all' ? '' : value)
+    setMappingGradeFilter('')
+    setMappingStreamFilter('')
+    setMappingBatchFilter('')
+    setMappingBatchAddOnFilter('')
+    setMappingGrades([])
+    setMappingStreams([])
+    setMappingBatches([])
+    setMappingBatchAddOns([])
+    if (value && value !== 'all') {
+      loadMappingGrades(value)
+    }
+  }
+
+  const handleMappingGradeChange = (value: string) => {
+    setMappingGradeFilter(value === 'all' ? '' : value)
+    setMappingStreamFilter('')
+    setMappingBatchFilter('')
+    setMappingBatchAddOnFilter('')
+    setMappingStreams([])
+    setMappingBatches([])
+    setMappingBatchAddOns([])
+    if (value && value !== 'all' && mappingExamFilter) {
+      loadMappingStreams(mappingExamFilter, value)
+    }
+  }
+
+  const handleMappingStreamChange = (value: string) => {
+    setMappingStreamFilter(value === 'all' ? '' : value)
+    setMappingBatchFilter('')
+    setMappingBatchAddOnFilter('')
+    setMappingBatches([])
+    setMappingBatchAddOns([])
+    if (value && value !== 'all' && mappingExamFilter && mappingGradeFilter) {
+      loadMappingBatches(mappingExamFilter, mappingGradeFilter, value)
+    }
+  }
+
+  const handleMappingBatchChange = (value: string) => {
+    setMappingBatchFilter(value === 'all' ? '' : value)
+    setMappingBatchAddOnFilter('')
+    setMappingBatchAddOns([])
+    if (value && value !== 'all') {
+      loadMappingBatchAddOns(value)
+    }
+  }
+
+  // Save mapping
+  const handleSaveMapping = async () => {
+    if (!mappingBatchFilter) {
+      toast.error('Please select a batch')
+      return
+    }
+
+    const chaptersToMap = Array.from(selectedChapters).map(chapterId => ({
+      chapterId: String(chapterId),
+      displayOrder: mappingDisplayOrders[chapterId] ?? 0,
+    }))
+
+    if (chaptersToMap.length === 0) {
+      toast.error('No chapters selected')
+      return
+    }
+
+    setIsSavingMapping(true)
+    try {
+      const { dynamicRequest } = await import('@/services/apiClient')
+
+      // Build URL with query params
+      let url = `/secure/api/v1/chapter-mappings?batchId=${mappingBatchFilter}`
+      if (mappingBatchAddOnFilter) {
+        url += `&batchAddonId=${mappingBatchAddOnFilter}`
+      }
+
+      await dynamicRequest(url, 'POST', chaptersToMap)
+
+      toast.success('Chapters mapped successfully')
+      handleCloseMappingView()
+      setSelectedChapters(new Set())
+      loadChapters()
+    } catch (error: any) {
+      console.error('Failed to save mapping:', error)
+      toast.error(error?.message || 'Failed to save mapping')
+    } finally {
+      setIsSavingMapping(false)
+    }
+  }
+
   const hasActiveFilters =
     examFilter ||
     gradeFilter ||
@@ -330,6 +667,206 @@ export default function Chapters() {
     setPage(0)
   }
 
+  // If mapping view is open, show full-width mapping UI
+  if (showMappingView) {
+    const selectedChaptersList = data.filter(c => selectedChapters.has(c.chapterId))
+
+    return (
+      <div className="space-y-6">
+        {/* Mapping Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCloseMappingView}
+              className="size-8"
+            >
+              <X className="size-4" />
+            </Button>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Create Chapter Mapping
+              <span className="ml-2 text-muted-foreground text-lg">
+                ({selectedChaptersList.length} chapters selected)
+              </span>
+            </h1>
+          </div>
+          <Button
+            onClick={handleSaveMapping}
+            disabled={isSavingMapping || !mappingBatchFilter}
+            className="gap-2"
+          >
+            <Save className="size-4" />
+            {isSavingMapping ? 'Saving...' : 'Save Mapping'}
+          </Button>
+        </div>
+
+        {/* Mapping Content - Split View */}
+        <div className="grid grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+          {/* Left Panel - Selected Chapters with Display Order */}
+          <div className="rounded-lg border bg-card flex flex-col">
+            <div className="px-4 py-3 border-b bg-muted/50">
+              <h2 className="font-semibold">Selected Chapters</h2>
+              <p className="text-sm text-muted-foreground">Edit display order for each chapter</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {selectedChaptersList.map((chapter) => (
+                <div
+                  key={chapter.chapterId}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-muted/50"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {chapter.title || chapter.chapterName}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {chapter.chapterCode}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Order:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={mappingDisplayOrders[chapter.chapterId] ?? 0}
+                      onChange={(e) => handleDisplayOrderChange(chapter.chapterId, e.target.value)}
+                      className="w-20 h-8 text-center"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Panel - Mapping Filters */}
+          <div className="rounded-lg border bg-card flex flex-col">
+            <div className="px-4 py-3 border-b bg-muted/50">
+              <h2 className="font-semibold">Select Mapping Target</h2>
+              <p className="text-sm text-muted-foreground">Choose where to map the chapters</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Exam */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Exam *</label>
+                <Select
+                  value={mappingExamFilter || "all"}
+                  onValueChange={handleMappingExamChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select Exam</SelectItem>
+                    {exams.map((exam) => (
+                      <SelectItem key={exam.id} value={String(exam.id)}>
+                        {exam.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Grade */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Grade *</label>
+                <Select
+                  value={mappingGradeFilter || "all"}
+                  onValueChange={handleMappingGradeChange}
+                  disabled={!mappingExamFilter || loadingMappingGrades}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingMappingGrades ? "Loading..." : "Select Grade"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select Grade</SelectItem>
+                    {mappingGrades.map((grade) => (
+                      <SelectItem key={grade.id} value={String(grade.id)}>
+                        {grade.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Stream */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Stream *</label>
+                <Select
+                  value={mappingStreamFilter || "all"}
+                  onValueChange={handleMappingStreamChange}
+                  disabled={!mappingGradeFilter || loadingMappingStreams}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingMappingStreams ? "Loading..." : "Select Stream"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select Stream</SelectItem>
+                    {mappingStreams.map((stream) => (
+                      <SelectItem key={stream.id} value={String(stream.id)}>
+                        {stream.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Batch *</label>
+                <Select
+                  value={mappingBatchFilter || "all"}
+                  onValueChange={handleMappingBatchChange}
+                  disabled={!mappingStreamFilter || loadingMappingBatches}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingMappingBatches ? "Loading..." : "Select Batch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select Batch</SelectItem>
+                    {mappingBatches.map((batch) => (
+                      <SelectItem key={batch.id} value={String(batch.id)}>
+                        {batch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch Add-On (Optional) */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Batch Add-On (Optional)</label>
+                <Select
+                  value={mappingBatchAddOnFilter || "all"}
+                  onValueChange={(v) => setMappingBatchAddOnFilter(v === "all" ? "" : v)}
+                  disabled={!mappingBatchFilter || loadingMappingBatchAddOns}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingMappingBatchAddOns ? "Loading..." : "Select Add-On"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">No Add-On</SelectItem>
+                    {mappingBatchAddOns.map((addon) => (
+                      <SelectItem key={addon.id} value={String(addon.id)}>
+                        {addon.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Validation message */}
+              {!mappingBatchFilter && (
+                <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-lg">
+                  Please select Exam, Grade, Stream, and Batch to save the mapping.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -337,10 +874,22 @@ export default function Chapters() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Chapters
           {totalElements > 0 && (
-            <span className="ml-2 text-muted-foreground">({totalElements})</span>
+            <span className="ml-2 text-muted-foreground">
+              ({totalElements})
+            </span>
           )}
         </h1>
         <div className="flex items-center gap-3">
+          {selectedChapters.size > 0 && (
+            <Button
+              variant="default"
+              onClick={handleOpenMappingView}
+              className="gap-2"
+            >
+              <Link2 className="size-4" />
+              Create Mapping ({selectedChapters.size})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={handleAddChapter}
@@ -357,14 +906,18 @@ export default function Chapters() {
         <Input
           placeholder="Chapter Code..."
           value={chapterCodeFilter}
-          onChange={(e) => handleFilterChange(setChapterCodeFilter, e.target.value)}
+          onChange={(e) =>
+            handleFilterChange(setChapterCodeFilter, e.target.value)
+          }
           className="w-40"
         />
 
         {/* Exam Filter */}
         <Select
-          value={examFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setExamFilter, v === 'all' ? '' : v)}
+          value={examFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setExamFilter, v === "all" ? "" : v)
+          }
         >
           <SelectTrigger className="w-35">
             <SelectValue placeholder="Exam" />
@@ -381,12 +934,14 @@ export default function Chapters() {
 
         {/* Grade Filter (depends on Exam) */}
         <Select
-          value={gradeFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setGradeFilter, v === 'all' ? '' : v)}
+          value={gradeFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setGradeFilter, v === "all" ? "" : v)
+          }
           disabled={!examFilter || loadingGrades}
         >
           <SelectTrigger className="w-35">
-            <SelectValue placeholder={loadingGrades ? 'Loading...' : 'Grade'} />
+            <SelectValue placeholder={loadingGrades ? "Loading..." : "Grade"} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Grades</SelectItem>
@@ -400,12 +955,16 @@ export default function Chapters() {
 
         {/* Stream Filter (depends on Exam + Grade) */}
         <Select
-          value={streamFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setStreamFilter, v === 'all' ? '' : v)}
+          value={streamFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setStreamFilter, v === "all" ? "" : v)
+          }
           disabled={!examFilter || !gradeFilter || loadingStreams}
         >
           <SelectTrigger className="w-35">
-            <SelectValue placeholder={loadingStreams ? 'Loading...' : 'Stream'} />
+            <SelectValue
+              placeholder={loadingStreams ? "Loading..." : "Stream"}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Streams</SelectItem>
@@ -419,12 +978,18 @@ export default function Chapters() {
 
         {/* Batch Filter (depends on Exam + Grade + Stream) */}
         <Select
-          value={batchFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setBatchFilter, v === 'all' ? '' : v)}
-          disabled={!examFilter || !gradeFilter || !streamFilter || loadingBatches}
+          value={batchFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setBatchFilter, v === "all" ? "" : v)
+          }
+          disabled={
+            !examFilter || !gradeFilter || !streamFilter || loadingBatches
+          }
         >
           <SelectTrigger className="w-35">
-            <SelectValue placeholder={loadingBatches ? 'Loading...' : 'Batch'} />
+            <SelectValue
+              placeholder={loadingBatches ? "Loading..." : "Batch"}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Batches</SelectItem>
@@ -438,12 +1003,16 @@ export default function Chapters() {
 
         {/* Batch Add-On Filter (depends on Batch) */}
         <Select
-          value={batchAddOnFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setBatchAddOnFilter, v === 'all' ? '' : v)}
+          value={batchAddOnFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setBatchAddOnFilter, v === "all" ? "" : v)
+          }
           disabled={!batchFilter || loadingBatchAddOns}
         >
           <SelectTrigger className="w-35">
-            <SelectValue placeholder={loadingBatchAddOns ? 'Loading...' : 'Batch Add-On'} />
+            <SelectValue
+              placeholder={loadingBatchAddOns ? "Loading..." : "Batch Add-On"}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Add-Ons</SelectItem>
@@ -457,8 +1026,10 @@ export default function Chapters() {
 
         {/* Subject Filter (independent) */}
         <Select
-          value={subjectFilter || 'all'}
-          onValueChange={(v) => handleFilterChange(setSubjectFilter, v === 'all' ? '' : v)}
+          value={subjectFilter || "all"}
+          onValueChange={(v) =>
+            handleFilterChange(setSubjectFilter, v === "all" ? "" : v)
+          }
         >
           <SelectTrigger className="w-35">
             <SelectValue placeholder="Subject" />
@@ -495,7 +1066,9 @@ export default function Chapters() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-12">
+                  <Checkbox disabled className="opacity-50" />
+                </TableHead>
                 <TableHead>Chapter Code</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Title</TableHead>
@@ -510,16 +1083,36 @@ export default function Chapters() {
             <TableBody>
               {[...Array(10)].map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="size-4" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="size-8 rounded" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="size-4" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-12" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="size-8 rounded" />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -529,7 +1122,18 @@ export default function Chapters() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) {
+                          (el as HTMLButtonElement).dataset.state = isSomeSelected ? 'indeterminate' : (isAllSelected ? 'checked' : 'unchecked')
+                        }
+                      }}
+                      onCheckedChange={handleSelectAll}
+                      className="data-[state=checked]:bg-brand data-[state=checked]:border-brand data-[state=indeterminate]:bg-brand data-[state=indeterminate]:border-brand"
+                    />
+                  </TableHead>
                   <TableHead>Chapter Code</TableHead>
                   <TableHead>Subject</TableHead>
                   <TableHead>Title</TableHead>
@@ -555,17 +1159,23 @@ export default function Chapters() {
                   data.map((chapter) => (
                     <TableRow key={chapter.chapterId}>
                       <TableCell>
-                        <Checkbox className="data-[state=checked]:bg-brand data-[state=checked]:border-brand" />
+                        <Checkbox
+                          checked={selectedChapters.has(chapter.chapterId)}
+                          onCheckedChange={(checked) => handleSelectChapter(chapter.chapterId, checked as boolean)}
+                          className="data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                        />
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {chapter.chapterCode || '-'}
+                        {chapter.chapterCode || "-"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {chapter.subject?.displayName || '-'}
+                        {chapter.subject?.displayName || "-"}
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{chapter.title || chapter.chapterName}</p>
+                          <p className="font-medium">
+                            {chapter.title || chapter.chapterName}
+                          </p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -580,16 +1190,17 @@ export default function Chapters() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-center">
-                        {chapter.pos ?? '-'}
+                        {chapter.pos ?? "-"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {chapter.accessType || '-'}
+                        {chapter.accessType || "-"}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-center">
                         {chapter.microLectureCount ?? chapter.lectureCount ?? 0}
                       </TableCell>
                       <TableCell>
-                        {chapter.batchChapters && chapter.batchChapters.length > 0 ? (
+                        {chapter.batchChapters &&
+                        chapter.batchChapters.length > 0 ? (
                           <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-300">
                             Yes
                           </span>
@@ -600,9 +1211,39 @@ export default function Chapters() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontal className="size-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(chapter)}
+                              disabled={isTogglingStatus === chapter.chapterId}
+                              className="gap-2"
+                            >
+                              {chapter.active ? (
+                                <>
+                                  <ToggleLeft className="size-4" />
+                                  Make Inactive
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleRight className="size-4" />
+                                  Make Active
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteClick(chapter)}
+                              className="gap-2 text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="size-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -614,7 +1255,7 @@ export default function Chapters() {
             {totalPages > 0 && (
               <div className="flex items-center justify-between border-t px-4 py-3">
                 <p className="text-sm text-muted-foreground">
-                  Total {totalElements} items
+                  showing {data.length} of {totalElements} chapters
                 </p>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
@@ -653,6 +1294,40 @@ export default function Chapters() {
         onOpenChange={setDialogOpen}
         onSuccess={handleDialogSuccess}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="size-5" />
+              Delete Chapter Permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Are you sure you want to delete{' '}
+                <span className="font-semibold text-foreground">
+                  {chapterToDelete?.chapterName || chapterToDelete?.title || chapterToDelete?.chapterCode}
+                </span>
+                ?
+              </p>
+              <p className="text-red-600 font-medium">
+                This action cannot be undone. The chapter will be permanently removed and you will not be able to recover it.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  )
+  );
 }

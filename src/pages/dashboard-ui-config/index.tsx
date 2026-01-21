@@ -63,7 +63,7 @@ export default function AppConfigs() {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [editedJson, setEditedJson] = useState<string>("");
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(0); // 1-based
+  const [currentPage, setCurrentPage] = useState(1); // 1-based
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);

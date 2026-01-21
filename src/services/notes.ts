@@ -104,7 +104,7 @@ export const fetchNotes = async (
 
   try {
     const response = await apiClient<NotesPaginatedResponse>(
-      '/secure/notes/api/v1/paginated',
+      '/secure/api/v1/notes/paginated',
       { params }
     )
 

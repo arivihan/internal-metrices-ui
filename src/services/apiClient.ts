@@ -71,15 +71,55 @@ if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }))
     console.error(`[apiClient] ❌ Error:`, error)
-    throw new Error(error.message || 'Request failed')
+
+    // Build detailed error message including validation errors
+    let errorMessage = error.message || 'Request failed'
+    if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+      const errorDetails = error.errors
+        .map((e: any) => e.field ? `${e.field}: ${e.message || e.defaultMessage}` : (e.message || e.defaultMessage || e))
+        .join(', ')
+      errorMessage = `${errorMessage} - ${errorDetails}`
+      console.error(`[apiClient] ❌ Validation errors:`, error.errors)
+    }
+
+    throw new Error(errorMessage)
   }
 
   // Check content-type before parsing
   const contentType = response.headers.get('content-type')
+
+  // Handle text/plain responses (some APIs return plain text for success/error messages)
+  if (contentType?.includes('text/plain')) {
+    const textResponse = await response.text()
+    console.log(`[apiClient] 📝 Text Response:`, textResponse)
+
+    // Check if the text response indicates an error (contains common error phrases)
+    const lowerText = textResponse.toLowerCase()
+    const isErrorMessage =
+      lowerText.includes('cannot') ||
+      lowerText.includes('error') ||
+      lowerText.includes('failed') ||
+      lowerText.includes('invalid') ||
+      lowerText.includes('not allowed') ||
+      lowerText.includes('not found') ||
+      lowerText.includes('unauthorized') ||
+      lowerText.includes('forbidden') ||
+      lowerText.includes('please contact')
+
+    if (isErrorMessage) {
+      console.error(`[apiClient] ❌ Error in text response:`, textResponse)
+      throw new Error(textResponse)
+    }
+
+    // Return as a success object with the message
+    return { success: true, message: textResponse } as T
+  }
+
   if (!contentType || !contentType.includes('application/json')) {
     console.error(`[apiClient] ❌ Invalid content-type: ${contentType}`)
-    console.error(`[apiClient] ❌ Response body:`, await response.text())
-    throw new Error(`Expected JSON but got ${contentType || 'unknown'} content type`)
+    const bodyText = await response.text()
+    console.error(`[apiClient] ❌ Response body:`, bodyText)
+    throw new Error(bodyText || `Expected JSON but got ${contentType || 'unknown'} content type`)
   }
 
   const data = await response.json()

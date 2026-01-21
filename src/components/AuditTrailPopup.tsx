@@ -9,10 +9,34 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, Code2, Eye } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronDown, ChevronRight, ChevronLeft, Code2, Eye, Loader2 } from "lucide-react";
 
-// @ts-ignore
-export const AuditTrailPopup = ({ open, onClose, data, title }) => {
+interface AuditTrailPopupProps {
+  open: boolean;
+  onClose: () => void;
+  data: any[];
+  title?: string;
+  currentPage?: number;
+  totalPages?: number;
+  totalElements?: number;
+  pageSize?: number;
+  isLoading?: boolean;
+  onPageChange?: (page: number) => void;
+}
+
+export const AuditTrailPopup = ({
+  open,
+  onClose,
+  data,
+  title,
+  currentPage = 0,
+  totalPages = 1,
+  totalElements = 0,
+  pageSize = 10,
+  isLoading = false,
+  onPageChange,
+}: AuditTrailPopupProps) => {
   const [viewMode, setViewMode] = useState<"formatted" | "json">("formatted");
   const [expandedBatches, setExpandedBatches] = useState<
     Record<string, boolean>
@@ -21,7 +45,9 @@ export const AuditTrailPopup = ({ open, onClose, data, title }) => {
     Record<string, boolean>
   >({});
 
-  if (!data || !Array.isArray(data)) return null;
+  if (!open) return null;
+
+  const auditData = data || [];
 
   // Group audit trail entries by date and sort by latest first
   const groupAuditTrailByDate = (entries: any[]): Record<string, any[]> => {
@@ -54,7 +80,7 @@ export const AuditTrailPopup = ({ open, onClose, data, title }) => {
     return groups;
   };
 
-  const groupedData = groupAuditTrailByDate(data);
+  const groupedData = groupAuditTrailByDate(auditData);
 
   // Expand all batches by default
   const defaultExpandedBatchState = Object.keys(groupedData).reduce(
@@ -330,25 +356,86 @@ export const AuditTrailPopup = ({ open, onClose, data, title }) => {
                 </div>
               ))}
 
-              {data.length === 0 && (
+              {auditData.length === 0 && !isLoading && (
                 <div className="text-center text-muted-foreground py-8 border rounded-lg">
                   No audit trail data available
+                </div>
+              )}
+
+              {isLoading && (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-5 w-40" />
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                      <div className="space-y-2 ml-7">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           ) : (
             <div className="bg-muted rounded-lg p-4 border">
               <pre className="text-sm font-mono whitespace-pre-wrap text-foreground overflow-x-auto">
-                {JSON.stringify(data, null, 2)}
+                {JSON.stringify(auditData, null, 2)}
               </pre>
             </div>
           )}
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-muted/20">
-          <Button variant="outline" onClick={onClose} className="min-w-[100px]">
-            Close
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            {/* Pagination Info */}
+            <div className="text-sm text-muted-foreground">
+              {totalElements > 0 ? (
+                <>
+                  Showing {currentPage * pageSize + 1} -{" "}
+                  {Math.min((currentPage + 1) * pageSize, totalElements)} of{" "}
+                  {totalElements} entries
+                </>
+              ) : (
+                "No entries"
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2">
+              {totalPages > 1 && onPageChange && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 0 || isLoading}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="flex h-8 min-w-[3rem] items-center justify-center rounded-md border text-sm px-2">
+                    {currentPage + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages - 1 || isLoading}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" onClick={onClose} className="min-w-[100px] ml-4">
+                Close
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
