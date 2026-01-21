@@ -204,13 +204,22 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
   /**
    * Combine static and dynamic items for a section
-   * Static items come first, then dynamic items
+   * Static items come first, then dynamic items (excluding duplicates)
    */
   const getCombinedSectionItems = React.useCallback(
     (section: string): DrawerItem[] => {
       const staticItems = getStaticItems(section);
       const dynamicItems = getDynamicSectionItems(section);
-      return [...staticItems, ...dynamicItems];
+
+      // Create a set of static item titles to filter out duplicates
+      const staticTitles = new Set(staticItems.map((item) => item.title));
+
+      // Filter dynamic items to exclude any that match static item titles
+      const uniqueDynamicItems = dynamicItems.filter(
+        (item) => !staticTitles.has(item.title)
+      );
+
+      return [...staticItems, ...uniqueDynamicItems];
     },
     [getStaticItems, getDynamicSectionItems]
   );
