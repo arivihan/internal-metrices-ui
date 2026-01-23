@@ -22,6 +22,7 @@ import NotesUploadPage from "./pages/notes-upload";
 import ViralVideosPage from "./pages/viral-videos";
 import FileManagement from "./pages/files/FileManagement";
 import ServiceStatusPage from "@/pages/service-status";
+import HomePageDynamic from "@/pages/homepage-dynamic";
 
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
@@ -94,7 +95,8 @@ function App() {
             />
             <Route path="/dashboard/file-upload" element={<FileManagement />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
-
+            <Route path="/dashboard/homepage-carousels" element={<HomePageDynamic />} />
+            <Route path="/dashboard/app-carousels" element={<HomePageDynamic />} />
 
             {/* Dynamic routes for sidebar items under /dashboard */}
             <Route path="/dashboard/*" element={<DynamicContent />} />

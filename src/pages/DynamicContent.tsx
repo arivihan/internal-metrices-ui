@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { MoreVertical, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { MoreVertical, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { DynamicIcon } from "@/lib/icon-map";
 import { apiClient } from "@/services/apiClient";
 import { TabsViewer } from "@/components/TabsViewer";
@@ -675,6 +675,139 @@ const FormPopup = ({
                       </div>
                     )}
                   </div>
+                ) : field.type === "section-divider" ? (
+                  <div className="border-t pt-4 mt-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">
+                      {field.label}
+                    </h4>
+                  </div>
+                ) : field.type === "key-value-pairs" ? (
+                  <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                    {/* Existing key-value pairs */}
+                    {Object.entries(formData[field.value] || {}).map(
+                      ([key, value], idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Input
+                            placeholder={field.keyPlaceholder || "Key"}
+                            value={key}
+                            onChange={(e) => {
+                              const currentPairs = formData[field.value] || {};
+                              const entries = Object.entries(currentPairs);
+                              const newEntries = entries.map(([k, v], i) =>
+                                i === idx ? [e.target.value, v] : [k, v]
+                              );
+                              onFormDataChange({
+                                ...formData,
+                                [field.value]: Object.fromEntries(newEntries),
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder={field.valuePlaceholder || "Value"}
+                            value={value as string}
+                            onChange={(e) => {
+                              const currentPairs = formData[field.value] || {};
+                              onFormDataChange({
+                                ...formData,
+                                [field.value]: {
+                                  ...currentPairs,
+                                  [key]: e.target.value,
+                                },
+                              });
+                            }}
+                            className="flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentPairs = { ...formData[field.value] };
+                              delete currentPairs[key];
+                              onFormDataChange({
+                                ...formData,
+                                [field.value]: currentPairs,
+                              });
+                            }}
+                            className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )
+                    )}
+                    {/* Add new pair button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentPairs = formData[field.value] || {};
+                        const newKey = `key${Object.keys(currentPairs).length + 1}`;
+                        onFormDataChange({
+                          ...formData,
+                          [field.value]: {
+                            ...currentPairs,
+                            [newKey]: "",
+                          },
+                        });
+                      }}
+                      className="w-full mt-2"
+                    >
+                      <span className="mr-2">+</span>
+                      {field.addButtonText || "Add Parameter"}
+                    </Button>
+                    {field.helpText && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {field.helpText}
+                      </p>
+                    )}
+                  </div>
+                ) : field.type === "json-editor" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      id={field.value}
+                      placeholder={field.placeholder || "Enter JSON object"}
+                      value={
+                        typeof formData[field.value] === "object"
+                          ? JSON.stringify(formData[field.value], null, 2)
+                          : formData[field.value] || ""
+                      }
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          onFormDataChange({
+                            ...formData,
+                            [field.value]: parsed,
+                          });
+                        } catch {
+                          // Keep raw text if not valid JSON
+                          onFormDataChange({
+                            ...formData,
+                            [field.value]: e.target.value,
+                          });
+                        }
+                      }}
+                      className="w-full min-h-[120px] p-3 border rounded-md font-mono text-sm bg-background resize-y"
+                    />
+                    {field.helpText && (
+                      <p className="text-xs text-muted-foreground">
+                        {field.helpText}
+                      </p>
+                    )}
+                  </div>
+                ) : field.type === "textarea" ? (
+                  <textarea
+                    id={field.value}
+                    placeholder={field.placeholder}
+                    value={formData[field.value] || ""}
+                    onChange={(e) =>
+                      onFormDataChange({
+                        ...formData,
+                        [field.value]: e.target.value,
+                      })
+                    }
+                    className="w-full min-h-[100px] p-3 border rounded-md text-sm bg-background resize-y"
+                  />
                 ) : (
                   <Input
                     id={field.value}
@@ -688,6 +821,9 @@ const FormPopup = ({
                       })
                     }
                   />
+                )}
+                {field.helpText && field.type !== "key-value-pairs" && field.type !== "json-editor" && (
+                  <p className="text-xs text-muted-foreground">{field.helpText}</p>
                 )}
               </div>
             ))}
