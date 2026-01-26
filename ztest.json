@@ -1,437 +1,509 @@
 {
-  "configName": "all-mappings",
-  "order": 4,
-  "description": "Dynamic mapping configurations for exam-grade, exam-grade-stream, and future mappings",
-  "uiJson": {
-    "tabs": [
-      {
-        "buttons": [
-          {
-            "method": "POST",
-            "type": "SHOW_POPUP",
-            "popupLayout": "dual-section",
-            "popupTitle": "Add Exam-Grade Mapping",
-            "popupSubtitle": "Select exam and add grades with display order",
-            "popupSubmitText": "Update Mapping",
-            "popupSubmitUrl": "/secure/api/v1/exam-grades",
-            "title": "Add Exam-Grade Mapping",
-            "leftSection": {
-              "title": "Exams",
-              "description": "Select an exam to view mapped grades",
-              "fetchUrl": "/secure/api/v1/exams",
-              "optionLabelKey": "displayName",
-              "optionValueKey": "id",
-              "fieldName": "examId",
-              "selectionType": "single",
-              "placeholder": "Search exams..."
-            },
-            "rightSection": {
-              "title": "Mapped Grades",
-              "description": "Grades already assigned to selected exam",
-              "fetchUrl": "/secure/api/v1/exam-grades",
-              "searchParam": "examId",
-              "optionLabelKey": "gradeName",
-              "optionValueKey": "gradeId",
-              "fieldName": "gradeDisplayOrderRequests",
-              "selectionType": "multi-select",
-              "includeDisplayOrder": true,
-              "displayOrderPlaceholder": "Order"
-            },
-            "popupActions": [
-              {
-                "id": "add-grades",
-                "label": "Add Grades",
-                "icon": "Plus",
-                "type": "modal",
-                "modalTitle": "Select Grades to Add",
-                "modalDescription": "Choose grades to assign to this exam",
-                "modalFetchUrl": "/secure/api/v1/grades",
-                "modalOptionLabelKey": "name",
-                "modalOptionValueKey": "id",
-                "modalSelectionType": "multi-select",
-                "buttonVariant": "default"
-              },
-              {
-                "id": "copy",
-                "label": "Copy from Another Exam",
-                "icon": "Copy",
-                "type": "copy",
-                "buttonVariant": "outline"
-              },
-              {
-                "id": "update",
-                "label": "Update",
-                "icon": "Check",
-                "type": "submit",
-                "buttonVariant": "default"
-              }
-            ]
-          }
-        ],
-        "description": "Manage mapping between exams and grades",
-        "getDataUrl": "/secure/api/v1/exam-grades",
-        "icon": "Link",
-        "search": {
-          "fields": [
+  "tableHeaders": [
+    {
+      "Header": "Carousel Code",
+      "accessor": "carouselCode",
+      "type": "text",
+      "order": 2
+    },
+    {
+      "Header": "Screen Type",
+      "accessor": "screenType",
+      "type": "text",
+      "order": 3
+    },
+    {
+      "Header": "Visibility Type",
+      "accessor": "visibilityType",
+      "type": "text",
+      "order": 4
+    },
+    {
+      "Header": "URL",
+      "accessor": "url",
+      "type": "text",
+      "order": 5
+    },
+    {
+      "Header": "Status",
+      "accessor": "isActive",
+      "displayFormat": "status",
+      "type": "boolean",
+      "order": 6
+    },
+    {
+      "Header": "Created At",
+      "accessor": "createdAt",
+      "type": "datetime",
+      "order": 7
+    },
+    {
+      "Header": "Actions",
+      "accessor": "actions",
+      "type": "actions",
+      "actions": [
+        {
+          "method": "GET",
+          "popupTitle": "View Carousel",
+          "viewFetchDetails": "/secure/api/v1/av-carousels/{id}",
+          "title": "View",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "popupFields": [
             {
-              "label": "Exam Id",
-              "placeholder": "Enter Exam Id",
+              "label": "Carousel Code",
+              "placeholder": "Enter Carousel Code",
               "type": "text",
-              "value": "examId"
+              "value": "carouselCode"
             },
             {
-              "label": "Grade Id",
-              "placeholder": "Enter Grade Id",
+              "label": "URL",
+              "placeholder": "Enter Image/Video URL",
               "type": "text",
-              "value": "gradeId"
+              "value": "url"
             },
             {
-              "label": "Search By",
-              "placeholder": "Search by Exam / Grade",
+              "label": "Screen Type",
+              "placeholder": "Enter Screen Type (e.g., homeScreen)",
               "type": "text",
-              "value": "search"
+              "value": "screenType"
             },
             {
-              "label": "Sort By",
-              "placeholder": "Sort By",
               "selectOptions": [
                 {
-                  "label": "Exam Name",
-                  "value": "examName"
+                  "label": "Subscribed",
+                  "value": "SUBSCRIBED"
                 },
                 {
-                  "label": "Exam Code",
-                  "value": "examCode"
+                  "label": "Public",
+                  "value": "PUBLIC"
                 },
                 {
-                  "label": "Grade Name",
-                  "value": "gradeName"
+                  "label": "Private",
+                  "value": "PRIVATE"
+                }
+              ],
+              "label": "Visibility Type",
+              "placeholder": "Select Visibility Type",
+              "type": "select",
+              "value": "visibilityType"
+            },
+            {
+              "selectOptions": [
+                {
+                  "label": "Active",
+                  "value": "true"
                 },
                 {
-                  "label": "Grade Code",
-                  "value": "gradeCode"
+                  "label": "Inactive",
+                  "value": "false"
+                }
+              ],
+              "displayFormat": "status",
+              "label": "Status",
+              "placeholder": "Select Status",
+              "type": "select",
+              "value": "isActive"
+            },
+            {
+              "label": "Batches",
+              "type": "repeater",
+              "value": "batches",
+              "fields": [
+                {
+                  "label": "Batch ID",
+                  "placeholder": "Enter Batch ID",
+                  "type": "number",
+                  "value": "batchId"
                 },
                 {
                   "label": "Display Order",
+                  "placeholder": "Enter Display Order",
+                  "type": "number",
                   "value": "displayOrder"
-                }
-              ],
-              "type": "select",
-              "value": "sortBy"
-            },
-            {
-              "label": "Sort By Order",
-              "placeholder": "Sort Order",
-              "selectOptions": [
-                {
-                  "label": "Accending",
-                  "value": "ASC"
                 },
                 {
-                  "label": "Decending",
-                  "value": "DESC"
+                  "label": "Class Name",
+                  "placeholder": "Enter Class Name",
+                  "type": "text",
+                  "value": "className"
+                },
+                {
+                  "selectOptions": [
+                    {
+                      "label": "External Image",
+                      "value": "EXTERNAL_IMAGE"
+                    },
+                    {
+                      "label": "Internal Link",
+                      "value": "INTERNAL_LINK"
+                    },
+                    {
+                      "label": "External Link",
+                      "value": "EXTERNAL_LINK"
+                    }
+                  ],
+                  "label": "Navigation Type",
+                  "placeholder": "Select Navigation Type",
+                  "type": "select",
+                  "value": "navigationType"
+                },
+                {
+                  "label": "Activity Parameters",
+                  "placeholder": "Add key-value pairs",
+                  "type": "keyvalue",
+                  "value": "activityParams"
+                },
+                {
+                  "label": "Parameters",
+                  "placeholder": "Enter Parameters (JSON)",
+                  "type": "json",
+                  "value": "parameter"
                 }
-              ],
-              "type": "select",
-              "value": "sortDir"
+              ]
             }
           ],
-          "method": "GET",
-          "searchActionUrl": "/secure/api/v1/exam-grades",
-          "searchBtnText": "Search"
+          "popupSubmitText": "Save Changes",
+          "method": "PUT",
+          "popupTitle": "Edit Carousel",
+          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}",
+          "title": "Edit",
+          "type": "SHOW_POPUP"
         },
-        "searchable": true,
-        "tabId": "exam-grade",
-        "tableHeaders": [
-          {
-            "order": 2,
-            "accessor": "examName",
-            "Header": "Exam Name",
-            "type": "text"
-          },
-          {
-            "order": 3,
-            "accessor": "examCode",
-            "Header": "Exam Code",
-            "type": "text"
-          },
-          {
-            "order": 4,
-            "accessor": "gradeName",
-            "Header": "Grade Name",
-            "type": "text"
-          },
-          {
-            "order": 4,
-            "accessor": "gradeCode",
-            "Header": "Grade Code",
-            "type": "text"
-          },
-          {
-            "order": 5,
-            "accessor": "displayOrder",
-            "Header": "Display Order",
-            "type": "text"
-          },
-          {
-            "order": 6,
-            "accessor": "actions",
-            "actions": [
-              {
-                "method": "PATCH",
-                "popupFields": [
-                  {
-                    "label": "Display Order",
-                    "placeholder": "Enter display order",
-                    "required": true,
-                    "type": "number",
-                    "value": "displayOrder"
-                  }
-                ],
-                "popupSubmitText": "Update",
-                "popupSubmitUrl": "/secure/api/v1/exam-grades/{examGradeMappingId}",
-                "popupSubtitle": "Update display order",
-                "popupTitle": "Edit Exam-Grade Mapping",
-                "title": "Edit",
-                "type": "SHOW_POPUP"
-              },
-              {
-                "actionUrl": "/secure/api/v1/exam-grades/{examGradeMappingId}",
-                "cancelButtonText": "Cancel",
-                "confirmButtonText": "Delete",
-                "confirmMessage": "Are you sure you want to delete this exam-grade mapping?",
-                "confirmTitle": "Delete Mapping",
-                "method": "DELETE",
-                "title": "Delete",
-                "type": "DELETE_CONFIRM"
-              }
-            ],
-            "Header": "Actions",
-            "type": "actions"
-          }
-        ],
-        "tabTitle": "Exam-Grade"
+        {
+          "popupFields": [
+            {
+              "disabled": true,
+              "label": "Carousel Code",
+              "placeholder": "Carousel Code",
+              "type": "text",
+              "value": "carouselCode"
+            },
+            {
+              "disabled": true,
+              "label": "Screen Type",
+              "placeholder": "Screen Type",
+              "type": "text",
+              "value": "screenType"
+            }
+          ],
+          "popupSubmitText": "Delete",
+          "method": "DELETE",
+          "popupTitle": "Are You Sure?",
+          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}",
+          "title": "Delete",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "method": "PATCH",
+          "statusField": "isActive",
+          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}/status",
+          "title": "{statusToggle}",
+          "type": "STATUS_TOGGLE",
+          "inactiveLabel": "Inactive",
+          "activeLabel": "Active"
+        },
+        {
+          "popupFields": [
+            {
+              "label": "Source Batch ID",
+              "placeholder": "Enter Source Batch ID",
+              "type": "number",
+              "value": "sourceBatchId"
+            },
+            {
+              "label": "Target Batch IDs",
+              "placeholder": "Enter Target Batch IDs (comma-separated)",
+              "type": "multiselect",
+              "value": "targetBatchIds"
+            }
+          ],
+          "popupSubmitText": "Copy",
+          "method": "POST",
+          "popupTitle": "Copy Carousel to Batches",
+          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}/copy",
+          "title": "Copy to Batch",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "method": "GET",
+          "popupTitle": "View Row Wise Audit",
+          "viewFetchDetails": "/secure/api/v1/audit-logs/row?entityName={entityName}&entityId={entityId}",
+          "title": "Audit Trail",
+          "type": "SHOW_POPUP"
+        }
+      ],
+      "order": 8
+    }
+  ],
+  "search": {
+    "searchBtnText": "Search",
+    "method": "GET",
+    "fields": [
+      {
+        "label": "Search",
+        "placeholder": "Enter Carousel Code or Screen Type",
+        "type": "text",
+        "value": "search"
       },
       {
-        "buttons": [
+        "label": "Batch ID",
+        "placeholder": "Enter Batch ID",
+        "type": "number",
+        "value": "batchId"
+      },
+      {
+        "label": "Screen Type",
+        "placeholder": "Enter Screen Type",
+        "type": "text",
+        "value": "screenType"
+      },
+      {
+        "selectOptions": [
           {
-            "method": "POST",
-            "type": "SHOW_POPUP",
-            "popupLayout": "dual-section",
-            "popupTitle": "Add Exam-Grade-Stream Mapping",
-            "popupSubtitle": "Select exam-grade combination and add streams with display order",
-            "popupSubmitText": "Update Mapping",
-            "popupSubmitUrl": "/secure/api/v1/exam-grade-streams",
-            "title": "Add Exam-Grade-Stream Mapping",
-            "leftSection": {
-              "title": "Exam-Grades",
-              "description": "Select an exam-grade combination to view mapped streams",
-              "fetchUrl": "/secure/api/v1/exam-grades",
-              "optionLabelKey": "examName",
-              "optionValueKey": "id",
-              "fieldName": "examGradeId",
-              "selectionType": "single",
-              "placeholder": "Search exam-grades..."
-            },
-            "rightSection": {
-              "title": "Mapped Streams",
-              "description": "Streams already assigned to selected exam-grade",
-              "fetchUrl": "/secure/api/v1/exam-grade-streams",
-              "searchParam": "examId",
-              "optionLabelKey": "streamName",
-              "optionValueKey": "streamId",
-              "fieldName": "streams",
-              "selectionType": "multi-select",
-              "includeDisplayOrder": true,
-              "displayOrderPlaceholder": "Order"
-            },
-            "popupActions": [
-              {
-                "id": "add-streams",
-                "label": "Add Streams",
-                "icon": "Plus",
-                "type": "modal",
-                "modalTitle": "Select Streams to Add",
-                "modalDescription": "Choose streams to assign to this exam-grade combination",
-                "modalFetchUrl": "/secure/api/v1/streams",
-                "modalOptionLabelKey": "name",
-                "modalOptionValueKey": "id",
-                "modalSelectionType": "multi-select",
-                "buttonVariant": "default"
-              },
-              {
-                "id": "copy",
-                "label": "Copy from Another Exam-Grade",
-                "icon": "Copy",
-                "type": "copy",
-                "buttonVariant": "outline"
-              },
-              {
-                "id": "update",
-                "label": "Update",
-                "icon": "Check",
-                "type": "submit",
-                "buttonVariant": "default"
-              }
-            ]
+            "label": "Active",
+            "value": "true"
+          },
+          {
+            "label": "Inactive",
+            "value": "false"
           }
         ],
-        "description": "Manage mapping between exam-grades and streams",
-        "getDataUrl": "/secure/api/v1/exam-grade-streams",
-        "icon": "Link",
-        "search": {
-          "fields": [
+        "displayFormat": "status",
+        "label": "Status",
+        "placeholder": "Select Status",
+        "type": "select",
+        "value": "active"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "Id",
+            "value": "id"
+          },
+          {
+            "label": "Carousel Code",
+            "value": "carouselCode"
+          },
+          {
+            "label": "Screen Type",
+            "value": "screenType"
+          },
+          {
+            "label": "Visibility Type",
+            "value": "visibilityType"
+          },
+          {
+            "label": "Is Active",
+            "value": "isActive"
+          },
+          {
+            "label": "Display Order",
+            "value": "displayOrder"
+          },
+          {
+            "label": "Created At",
+            "value": "createdAt"
+          },
+          {
+            "label": "Updated At",
+            "value": "updatedAt"
+          }
+        ],
+        "label": "Sort By",
+        "placeholder": "Sort By",
+        "type": "select",
+        "value": "sortBy"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "Ascending",
+            "value": "ASC"
+          },
+          {
+            "label": "Descending",
+            "value": "DESC"
+          }
+        ],
+        "label": "Sort Order",
+        "placeholder": "Sort Order",
+        "type": "select",
+        "value": "sortDir"
+      }
+    ],
+    "searchActionUrl": "/secure/api/v1/av-carousels"
+  },
+  "buttons": [
+    {
+      "popupFields": [
+        {
+          "label": "Carousel Code",
+          "placeholder": "Enter Carousel Code",
+          "type": "text",
+          "value": "carouselCode",
+          "required": true
+        },
+        {
+          "label": "URL",
+          "placeholder": "Enter Image/Video URL",
+          "type": "text",
+          "value": "url",
+          "required": true
+        },
+        {
+          "label": "Screen Type",
+          "placeholder": "Enter Screen Type (e.g., homeScreen)",
+          "type": "text",
+          "value": "screenType",
+          "required": true
+        },
+        {
+          "selectOptions": [
             {
-              "label": "Exam Id",
-              "placeholder": "Enter Exam Id",
-              "type": "text",
-              "value": "examId"
+              "label": "Subscribed",
+              "value": "SUBSCRIBED"
             },
             {
-              "label": "Grade Id",
-              "placeholder": "Enter Grade Id",
-              "type": "text",
-              "value": "gradeId"
+              "label": "Public",
+              "value": "PUBLIC"
             },
             {
-              "label": "Stream Id",
-              "placeholder": "Enter Stream Id",
-              "type": "text",
-              "value": "streamId"
-            },
-            {
-              "label": "Search By",
-              "placeholder": "Search by Exam / Grade / Stream",
-              "type": "text",
-              "value": "search"
-            },
-            {
-              "label": "Sort By",
-              "placeholder": "Sort By",
-              "selectOptions": [
-                {
-                  "label": "Exam Name",
-                  "value": "examName"
-                },
-                {
-                  "label": "Grade Name",
-                  "value": "gradeName"
-                },
-                {
-                  "label": "Stream Name",
-                  "value": "streamName"
-                },
-                {
-                  "label": "Stream Code",
-                  "value": "streamCode"
-                },
-                {
-                  "label": "Display Order",
-                  "value": "displayOrder"
-                }
-              ],
-              "type": "select",
-              "value": "sortBy"
-            },
-            {
-              "label": "Sort By Order",
-              "placeholder": "Sort Order",
-              "selectOptions": [
-                {
-                  "label": "Ascending",
-                  "value": "ASC"
-                },
-                {
-                  "label": "Descending",
-                  "value": "DESC"
-                }
-              ],
-              "type": "select",
-              "value": "sortDir"
+              "label": "Private",
+              "value": "PRIVATE"
             }
           ],
-          "method": "GET",
-          "searchActionUrl": "/secure/api/v1/exam-grade-streams",
-          "searchBtnText": "Search"
+          "label": "Visibility Type",
+          "placeholder": "Select Visibility Type",
+          "type": "select",
+          "value": "visibilityType",
+          "required": true
         },
-        "searchable": true,
-        "tabId": "exam-grade-stream",
-        "tableHeaders": [
-          {
-            "order": 1,
-            "accessor": "id",
-            "Header": "Id",
-            "type": "text"
-          },
-          {
-            "order": 2,
-            "accessor": "examName",
-            "Header": "Exam Name",
-            "type": "text"
-          },
-          {
-            "order": 3,
-            "accessor": "gradeName",
-            "Header": "Grade Name",
-            "type": "text"
-          },
-          {
-            "order": 4,
-            "accessor": "streamName",
-            "Header": "Stream Name",
-            "type": "text"
-          },
-          {
-            "order": 5,
-            "accessor": "streamCode",
-            "Header": "Stream Code",
-            "type": "text"
-          },
-          {
-            "order": 6,
-            "accessor": "displayOrder",
-            "Header": "Display Order",
-            "type": "text"
-          },
-          {
-            "order": 7,
-            "accessor": "actions",
-            "actions": [
-              {
-                "method": "PATCH",
-                "popupFields": [
-                  {
-                    "label": "Display Order",
-                    "placeholder": "Enter display order",
-                    "required": true,
-                    "type": "number",
-                    "value": "displayOrder"
-                  }
-                ],
-                "popupSubmitText": "Update",
-                "popupSubmitUrl": "/secure/api/v1/exam-grade-streams/{id}",
-                "popupSubtitle": "Update display order",
-                "popupTitle": "Edit Exam-Grade-Stream Mapping",
-                "title": "Edit",
-                "type": "SHOW_POPUP"
-              },
-              {
-                "actionUrl": "/secure/api/v1/exam-grade-streams/{id}",
-                "cancelButtonText": "Cancel",
-                "confirmButtonText": "Delete",
-                "confirmMessage": "Are you sure you want to delete this exam-grade-stream mapping?",
-                "confirmTitle": "Delete Mapping",
-                "method": "DELETE",
-                "title": "Delete",
-                "type": "DELETE_CONFIRM"
-              }
-            ],
-            "Header": "Actions",
-            "type": "actions"
-          }
-        ],
-        "tabTitle": "Exam-Grade-Stream"
-      }
-    ]
-  }
+        {
+          "selectOptions": [
+            {
+              "label": "Active",
+              "value": "true"
+            },
+            {
+              "label": "Inactive",
+              "value": "false"
+            }
+          ],
+          "displayFormat": "status",
+          "label": "Status",
+          "placeholder": "Select Status",
+          "type": "select",
+          "value": "isActive",
+          "required": true
+        },
+        {
+          "label": "Batches",
+          "type": "repeater",
+          "value": "batches",
+          "fields": [
+            {
+              "label": "Batch ID",
+              "placeholder": "Enter Batch ID",
+              "type": "number",
+              "value": "batchId",
+              "required": true
+            },
+            {
+              "label": "Display Order",
+              "placeholder": "Enter Display Order",
+              "type": "number",
+              "value": "displayOrder"
+            },
+            {
+              "label": "Class Name",
+              "placeholder": "Enter Class Name",
+              "type": "text",
+              "value": "className"
+            },
+            {
+              "selectOptions": [
+                {
+                  "label": "External Image",
+                  "value": "EXTERNAL_IMAGE"
+                },
+                {
+                  "label": "Internal Link",
+                  "value": "INTERNAL_LINK"
+                },
+                {
+                  "label": "External Link",
+                  "value": "EXTERNAL_LINK"
+                }
+              ],
+              "label": "Navigation Type",
+              "placeholder": "Select Navigation Type",
+              "type": "select",
+              "value": "navigationType"
+            },
+            {
+              "label": "Activity Parameters",
+              "placeholder": "Add key-value pairs",
+              "type": "keyvalue",
+              "value": "activityParams"
+            },
+            {
+              "label": "Parameters",
+              "placeholder": "Enter Parameters (JSON)",
+              "type": "json",
+              "value": "parameter"
+            }
+          ]
+        }
+      ],
+      "popupSubmitText": "Create",
+      "method": "POST",
+      "popupTitle": "Create Carousel",
+      "popupSubmitUrl": "/secure/api/v1/av-carousels",
+      "title": "Add New Carousel",
+      "type": "SHOW_POPUP"
+    }
+  ],
+  "auditButton": {
+    "icon": "History",
+    "label": "View Audit Log",
+    "type": "AUDIT_TRAIL",
+    "auditFetchUrl": "/secure/api/v1/audit-logs/table",
+    "entityName": "AvCarouselEntity"
+  },
+  "auditTableHeaders": [
+    {
+      "Header": "Carousel Code",
+      "accessor": "carouselCode",
+      "type": "text",
+      "order": 2
+    },
+    {
+      "Header": "Screen Type",
+      "accessor": "screenType",
+      "type": "text",
+      "order": 3
+    },
+    {
+      "Header": "Visibility Type",
+      "accessor": "visibilityType",
+      "type": "text",
+      "order": 4
+    },
+    {
+      "Header": "URL",
+      "accessor": "url",
+      "type": "text",
+      "order": 5
+    },
+    {
+      "Header": "Status",
+      "accessor": "isActive",
+      "type": "boolean",
+      "order": 6
+    }
+  ],
+  "getDataUrl": "/secure/api/v1/av-carousels",
+  "searchable": true
 }

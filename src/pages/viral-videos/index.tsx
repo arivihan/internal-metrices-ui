@@ -12,6 +12,9 @@ import {
   Eye,
   Smartphone,
   Monitor,
+  Upload,
+  FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,16 +46,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Loader2, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+
 import { UploadVideoDialog } from "./UploadVideoDialog";
+import { BulkUploadVideoDialog } from "./BulkUploadVideoDialog";
 import { DuplicateVideoDialog } from "./DuplicateVideoDialog";
 import {
   fetchViralVideos,
   fetchAllBatchesForVideos,
+  updateVideo,
+  deleteVideo,
+  toggleVideoStatus,
 } from "@/services/viralVideos";
 import type {
   VideoResponseDto,
   VideoFilters,
   BatchOption,
+  VideoRequest,
 } from "@/types/viralVideos";
 import {
   VIDEO_TYPES,
@@ -64,6 +93,7 @@ export default function ViralVideosPage() {
   const [videos, setVideos] = useState<VideoResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [selectedVideos, setSelectedVideos] = useState<VideoResponseDto[]>([]);
   const [batches, setBatches] = useState<BatchOption[]>([]);
@@ -80,6 +110,15 @@ export default function ViralVideosPage() {
     null
   );
 
+  // Edit, Delete, Status Toggle states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<VideoResponseDto | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editFormData, setEditFormData] = useState<Partial<VideoRequest>>({});
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     loadVideos();
   }, [filters]);
@@ -90,6 +129,7 @@ export default function ViralVideosPage() {
 
   const loadVideos = async () => {
     setLoading(true);
+    setFailedImages(new Set()); // Reset failed images on reload
     try {
       console.log("[ViralVideosPage] Loading videos with filters:", filters);
       const response = await fetchViralVideos(filters);
@@ -172,6 +212,88 @@ export default function ViralVideosPage() {
     toast.success("Videos duplicated successfully!");
     setSelectedVideos([]);
     loadVideos();
+  };
+
+  // Handle Edit Video
+  const handleEditClick = (video: VideoResponseDto) => {
+    setSelectedVideo(video);
+    setEditFormData({
+      code: video.videoCode,
+      url: video.videoUrl,
+      thumbnailUrl: video.thumbnailUrl,
+      orientation: video.videoOrientation,
+      context: video.displayContext,
+      type: video.videoType,
+      position: video.position,
+      isActive: video.isActive,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!selectedVideo) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateVideo(selectedVideo.id, editFormData);
+      toast.success("Video updated successfully!");
+      setEditDialogOpen(false);
+      setSelectedVideo(null);
+      loadVideos();
+    } catch (error) {
+      console.error("Failed to update video:", error);
+      toast.error("Failed to update video");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Delete Video
+  const handleDeleteClick = (video: VideoResponseDto) => {
+    setSelectedVideo(video);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedVideo) return;
+
+    setIsSubmitting(true);
+    try {
+      await deleteVideo(selectedVideo.id);
+      toast.success("Video deleted successfully!");
+      setDeleteDialogOpen(false);
+      setSelectedVideo(null);
+      loadVideos();
+    } catch (error) {
+      console.error("Failed to delete video:", error);
+      toast.error("Failed to delete video");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Status Toggle
+  const handleStatusClick = (video: VideoResponseDto) => {
+    setSelectedVideo(video);
+    setStatusDialogOpen(true);
+  };
+
+  const handleStatusConfirm = async () => {
+    if (!selectedVideo) return;
+
+    setIsSubmitting(true);
+    try {
+      await toggleVideoStatus(selectedVideo.id, !selectedVideo.isActive);
+      toast.success(`Video ${selectedVideo.isActive ? "deactivated" : "activated"} successfully!`);
+      setStatusDialogOpen(false);
+      setSelectedVideo(null);
+      loadVideos();
+    } catch (error) {
+      console.error("Failed to toggle video status:", error);
+      toast.error("Failed to update video status");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getVideoTypeDisplay = (type: string) => {
@@ -261,13 +383,33 @@ export default function ViralVideosPage() {
               Duplicate ({selectedVideos.length})
             </Button>
           )}
-          <Button
-            onClick={() => setShowUploadDialog(true)}
-            className="bg-rose-400 hover:bg-rose-600"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Upload Videos
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-rose-500 hover:bg-rose-600">
+                <Plus className="mr-2 h-4 w-4" />
+                Upload Videos
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem
+                onClick={() => setShowUploadDialog(true)}
+                className="cursor-pointer"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Single
+                <span className="ml-auto text-xs text-muted-foreground">Form</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowBulkUploadDialog(true)}
+                className="cursor-pointer"
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Bulk Upload
+                <span className="ml-auto text-xs text-muted-foreground">Excel</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -522,16 +664,25 @@ export default function ViralVideosPage() {
                   </TableCell>
                   <TableCell>
                     <div className="relative group">
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.videoCode}
-                        className="h-16 w-12 object-cover rounded-md border shadow-sm"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://via.placeholder.com/48x64?text=No+Image";
-                        }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md cursor-pointer">
+                      {!video.thumbnailUrl || failedImages.has(video.id) ? (
+                        <div className="h-16 w-12 flex items-center justify-center bg-muted rounded-md border">
+                          <Video className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <img
+                          src={video.thumbnailUrl}
+                          alt={video.videoCode}
+                          loading="lazy"
+                          className="h-16 w-12 object-cover rounded-md border shadow-sm"
+                          onError={() => {
+                            setFailedImages((prev) => new Set(prev).add(video.id));
+                          }}
+                        />
+                      )}
+                      <div
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md cursor-pointer"
+                        onClick={() => video.videoUrl && window.open(video.videoUrl, "_blank")}
+                      >
                         <Play className="h-6 w-6 text-white" />
                       </div>
                     </div>
@@ -615,6 +766,29 @@ export default function ViralVideosPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
+                          onClick={() => handleEditClick(video)}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleStatusClick(video)}
+                          className="cursor-pointer"
+                        >
+                          {video.isActive ? (
+                            <>
+                              <ToggleLeft className="mr-2 h-4 w-4" />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <ToggleRight className="mr-2 h-4 w-4" />
+                              Activate
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => {
                             setSelectedVideos([video]);
                             setShowDuplicateDialog(true);
@@ -625,7 +799,11 @@ export default function ViralVideosPage() {
                           Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 cursor-pointer">
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(video)}
+                          className="text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -676,10 +854,17 @@ export default function ViralVideosPage() {
         </div>
       )}
 
-      {/* Upload Video Dialog */}
+      {/* Single Upload Video Dialog */}
       <UploadVideoDialog
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* Bulk Upload Video Dialog (Excel) */}
+      <BulkUploadVideoDialog
+        open={showBulkUploadDialog}
+        onOpenChange={setShowBulkUploadDialog}
         onSuccess={handleUploadSuccess}
       />
 
@@ -690,6 +875,222 @@ export default function ViralVideosPage() {
         selectedVideos={selectedVideos}
         onSuccess={handleDuplicateSuccess}
       />
+
+      {/* Edit Video Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Video</DialogTitle>
+            <DialogDescription>
+              Update video details for {selectedVideo?.videoCode}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="code">Video Code</Label>
+              <Input
+                id="code"
+                value={editFormData.code || ""}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, code: e.target.value }))
+                }
+                placeholder="Enter video code"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="url">Video URL</Label>
+              <Input
+                id="url"
+                value={editFormData.url || ""}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, url: e.target.value }))
+                }
+                placeholder="Enter video URL"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
+              <Input
+                id="thumbnailUrl"
+                value={editFormData.thumbnailUrl || ""}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    thumbnailUrl: e.target.value,
+                  }))
+                }
+                placeholder="Enter thumbnail URL"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="orientation">Orientation</Label>
+                <Select
+                  value={editFormData.orientation || ""}
+                  onValueChange={(val) =>
+                    setEditFormData((prev) => ({ ...prev, orientation: val }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select orientation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PORTRAIT">Portrait</SelectItem>
+                    <SelectItem value="LANDSCAPE">Landscape</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="context">Display Context</Label>
+                <Select
+                  value={editFormData.context || ""}
+                  onValueChange={(val) =>
+                    setEditFormData((prev) => ({ ...prev, context: val }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select context" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DISPLAY_CONTEXTS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="type">Video Type</Label>
+                <Select
+                  value={editFormData.type || ""}
+                  onValueChange={(val) =>
+                    setEditFormData((prev) => ({ ...prev, type: val }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(VIDEO_TYPES).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="position">Position</Label>
+                <Input
+                  id="position"
+                  type="number"
+                  value={editFormData.position ?? ""}
+                  onChange={(e) =>
+                    setEditFormData((prev) => ({
+                      ...prev,
+                      position: Number(e.target.value),
+                    }))
+                  }
+                  placeholder="Enter position"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Video</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete video "{selectedVideo?.videoCode}"?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Status Toggle Confirmation Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedVideo?.isActive ? "Deactivate" : "Activate"} Video
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {selectedVideo?.isActive ? "deactivate" : "activate"}{" "}
+              video "{selectedVideo?.videoCode}"?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleStatusConfirm}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : selectedVideo?.isActive ? (
+                "Deactivate"
+              ) : (
+                "Activate"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

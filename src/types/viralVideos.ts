@@ -41,8 +41,19 @@ export interface DuplicateVideoRequest {
 }
 
 export interface SelectedVideo {
-  batchId: number
   videoCode: string
+}
+
+// Request DTO for creating/updating videos
+export interface VideoRequest {
+  code?: string
+  url?: string
+  thumbnailUrl?: string
+  orientation?: string
+  context?: string
+  type?: string
+  position?: number
+  isActive?: boolean
 }
 
 export interface VideoUploadResponse {

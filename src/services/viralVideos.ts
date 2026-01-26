@@ -9,10 +9,8 @@ import type {
   DuplicateVideoRequest,
   VideoUploadResponse,
   BatchOption,
+  VideoRequest,
 } from '@/types/viralVideos'
-
-// Base URL for API calls
-const BASE_URL = '/api'
 
 // ============================================================================
 // VIRAL VIDEOS APIs
@@ -20,7 +18,7 @@ const BASE_URL = '/api'
 
 /**
  * Fetch paginated list of viral videos
- * GET /secure/viral-videos/api/v1/paginated
+ * GET /secure/api/v1/viral-videos?pageNo=0&pageSize=10&sortBy=position&sortDir=ASC&active=true
  */
 export const fetchViralVideos = async (
   filters: VideoFilters = {}
@@ -30,7 +28,11 @@ export const fetchViralVideos = async (
     pageSize: String(filters.pageSize ?? 10),
     sortBy: filters.sortBy ?? 'position',
     sortDir: filters.sortDir ?? 'ASC',
-    active: String(filters.active ?? true),
+  }
+
+  // Only add active filter if explicitly set
+  if (filters.active !== undefined) {
+    params.active = String(filters.active)
   }
 
   if (filters.batchId) params.batchId = String(filters.batchId)
@@ -40,7 +42,7 @@ export const fetchViralVideos = async (
 
   try {
     const response = await apiClient<VideoPaginatedResponse>(
-      '/secure/viral-videos/api/v1/paginated',
+      '/secure/api/v1/viral-videos',
       { params }
     )
 
@@ -80,8 +82,152 @@ export const fetchViralVideos = async (
 }
 
 /**
+ * Fetch video by ID
+ * GET /secure/api/v1/viral-videos/{id}
+ */
+export const fetchVideoById = async (id: string): Promise<VideoResponseDto> => {
+  console.log('[fetchVideoById] Fetching video:', id)
+
+  try {
+    const response = await apiClient<VideoResponseDto>(
+      `/secure/api/v1/viral-videos/${id}`
+    )
+
+    console.log('[fetchVideoById] Response:', response)
+
+    // Handle data wrapper
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (response as any).data as VideoResponseDto
+    }
+
+    return response
+  } catch (error) {
+    console.error('[fetchVideoById] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Create a new video
+ * POST /secure/api/v1/viral-videos?batchId={batchId}
+ */
+export const createVideo = async (
+  videoData: VideoRequest,
+  batchId: number
+): Promise<VideoResponseDto> => {
+  console.log('[createVideo] Creating video:', { videoData, batchId })
+
+  try {
+    const response = await apiClient<VideoResponseDto>(
+      `/secure/api/v1/viral-videos?batchId=${batchId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(videoData),
+      }
+    )
+
+    console.log('[createVideo] Response:', response)
+
+    // Handle data wrapper
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (response as any).data as VideoResponseDto
+    }
+
+    return response
+  } catch (error) {
+    console.error('[createVideo] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Update an existing video
+ * PATCH /secure/api/v1/viral-videos/{id}
+ */
+export const updateVideo = async (
+  id: string,
+  videoData: Partial<VideoRequest>
+): Promise<VideoResponseDto> => {
+  console.log('[updateVideo] Updating video:', { id, videoData })
+
+  try {
+    const response = await apiClient<VideoResponseDto>(
+      `/secure/api/v1/viral-videos/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(videoData),
+      }
+    )
+
+    console.log('[updateVideo] Response:', response)
+
+    // Handle data wrapper
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (response as any).data as VideoResponseDto
+    }
+
+    return response
+  } catch (error) {
+    console.error('[updateVideo] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Toggle video status (activate/deactivate)
+ * PATCH /secure/api/v1/viral-videos/{id}/status
+ */
+export const toggleVideoStatus = async (
+  id: string,
+  isActive: boolean
+): Promise<VideoResponseDto> => {
+  console.log('[toggleVideoStatus] Toggling status:', { id, isActive })
+
+  try {
+    const response = await apiClient<VideoResponseDto>(
+      `/secure/api/v1/viral-videos/${id}/status`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive }),
+      }
+    )
+
+    console.log('[toggleVideoStatus] Response:', response)
+
+    // Handle data wrapper
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (response as any).data as VideoResponseDto
+    }
+
+    return response
+  } catch (error) {
+    console.error('[toggleVideoStatus] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a video
+ * DELETE /secure/api/v1/viral-videos/{id}
+ */
+export const deleteVideo = async (id: string): Promise<void> => {
+  console.log('[deleteVideo] Deleting video:', id)
+
+  try {
+    await apiClient<void>(`/secure/api/v1/viral-videos/${id}`, {
+      method: 'DELETE',
+    })
+
+    console.log('[deleteVideo] Video deleted successfully')
+  } catch (error) {
+    console.error('[deleteVideo] Error:', error)
+    throw error
+  }
+}
+
+/**
  * Upload viral video files
- * POST /secure/viral-videos/api/v1/upload?batchId={batchId}
+ * POST /secure/api/v1/viral-videos/upload?batchId={batchId}
  */
 export const uploadViralVideos = async (
   payload: UploadVideoPayload
@@ -105,19 +251,16 @@ export const uploadViralVideos = async (
     formData.append('file', file, fileName)
   })
 
-  // Build URL with query parameters
-  const queryParams: string[] = []
-  queryParams.push(`batchId=${payload.batchId}`)
+  // Build URL with query parameters - match notes service pattern
+  const endpoint = `/secure/api/v1/viral-videos/upload?batchId=${payload.batchId}`
+  const url = `/api${endpoint}`
 
-  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : ''
-  const url = `${BASE_URL}/secure/viral-videos/api/v1/upload${queryString}`
-  
   console.log('[uploadViralVideos] Request URL:', url)
 
   const headers: HeadersInit = {
     // Don't set Content-Type for FormData, let browser set it with boundary
   }
-  
+
   if (accessToken.value) {
     headers['avToken'] = accessToken.value
   }
@@ -138,35 +281,35 @@ export const uploadViralVideos = async (
     if (!response.ok) {
       let error
       const contentType = response.headers.get('content-type')
-      
+
       try {
         if (contentType && contentType.includes('application/json')) {
           error = await response.json()
         } else {
           const textResponse = await response.text()
           console.log('[uploadViralVideos] Non-JSON error response:', textResponse)
-          error = { 
+          error = {
             message: textResponse || `HTTP Error ${response.status}: ${response.statusText}`,
             status: response.status,
-            statusText: response.statusText 
+            statusText: response.statusText
           }
         }
       } catch (parseError) {
         console.error('[uploadViralVideos] Error parsing response:', parseError)
-        error = { 
+        error = {
           message: `HTTP Error ${response.status}: ${response.statusText}`,
           status: response.status,
-          statusText: response.statusText 
+          statusText: response.statusText
         }
       }
-      
+
       console.error('[uploadViralVideos] Error response:', error)
       throw new Error(error.message || 'Upload failed')
     }
 
     const contentType = response.headers.get('content-type')
     let result
-    
+
     try {
       if (contentType && contentType.includes('application/json')) {
         result = await response.json()
@@ -187,7 +330,7 @@ export const uploadViralVideos = async (
         data: null
       }
     }
-    
+
     console.log('[uploadViralVideos] Success response:', result)
     return result
   } catch (error) {
@@ -207,7 +350,7 @@ export const duplicateViralVideos = async (
 
   try {
     const response = await apiClient<VideoUploadResponse>(
-      '/secure/viral-videos/api/v1/duplicate',
+      '/secure/api/v1/viral-videos/duplicate',
       {
         method: 'POST',
         body: JSON.stringify(payload),

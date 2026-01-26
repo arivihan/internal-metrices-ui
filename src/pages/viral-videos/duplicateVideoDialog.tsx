@@ -130,9 +130,9 @@ export function DuplicateVideoDialog({
     setIsSubmitting(true);
     try {
       // Prepare the duplicate request payload according to API spec
+      // API expects: { selectedVideos: [{ videoCode: "..." }], targetBatchIds: [...] }
       const duplicateRequest: DuplicateVideoRequest = {
         selectedVideos: selectedVideos.map((video) => ({
-          batchId: video.batchId,
           videoCode: video.videoCode,
         })),
         targetBatchIds: selectedBatchIds,
@@ -207,15 +207,22 @@ export function DuplicateVideoDialog({
                       key={video.id}
                       className="flex items-center gap-3 p-2 rounded-lg bg-background border"
                     >
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.videoCode}
-                        className="h-12 w-9 object-cover rounded"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://via.placeholder.com/36x48?text=No+Image";
-                        }}
-                      />
+                      {video.thumbnailUrl ? (
+                        <img
+                          src={video.thumbnailUrl}
+                          alt={video.videoCode}
+                          loading="lazy"
+                          className="h-12 w-9 object-cover rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            target.nextElementSibling?.classList.remove("hidden");
+                          }}
+                        />
+                      ) : null}
+                      <div className={`h-12 w-9 flex items-center justify-center bg-muted rounded ${video.thumbnailUrl ? "hidden" : ""}`}>
+                        <Video className="h-4 w-4 text-muted-foreground" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">
                           {video.videoCode}
