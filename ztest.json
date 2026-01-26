@@ -97,28 +97,40 @@
               "label": "Academic Year",
               "placeholder": "Select Academic Year",
               "type": "select",
-              "value": "academicYearId"
+              "value": "academicYearId",
+              "fetchOptionsUrl": "/secure/api/v1/academic-year?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
             },
             {
               "selectOptions": [],
               "label": "Exam",
               "placeholder": "Select Exam",
               "type": "select",
-              "value": "examId"
+              "value": "examId",
+              "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
             },
             {
               "selectOptions": [],
               "label": "Grade",
               "placeholder": "Select Grade",
               "type": "select",
-              "value": "gradeId"
+              "value": "gradeId",
+              "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
             },
             {
               "selectOptions": [],
               "label": "Stream",
               "placeholder": "Select Stream",
               "type": "select",
-              "value": "streamId"
+              "value": "streamId",
+              "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
             },
             {
               "selectOptions": [
@@ -261,7 +273,10 @@
         "label": "Exam",
         "placeholder": "Select Exam",
         "type": "select",
-        "value": "examId"
+        "value": "examId",
+        "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
       },
       {
         "selectOptions": [
@@ -286,14 +301,20 @@
         "label": "Grade",
         "placeholder": "Select Grade",
         "type": "select",
-        "value": "gradeId"
+        "value": "gradeId",
+        "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
       },
       {
         "selectOptions": [],
         "label": "Stream",
         "placeholder": "Select Stream",
         "type": "select",
-        "value": "streamId"
+        "value": "streamId",
+        "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
       },
       {
         "selectOptions": [
@@ -382,28 +403,44 @@
           "value": "displayName"
         },
         {
-          "label": "Academic Year Id",
-          "placeholder": "enter Academic Year",
-          "type": "text",
-          "value": "academicYearId"
+          "selectOptions": [],
+          "label": "Academic Year",
+          "placeholder": "Select Academic Year",
+          "type": "select",
+          "value": "academicYearId",
+          "fetchOptionsUrl": "/secure/api/v1/academic-year?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
         },
         {
-          "label": "Exam Id",
+          "selectOptions": [],
+          "label": "Exam",
           "placeholder": "Select Exam",
-          "type": "text",
-          "value": "examId"
+          "type": "select",
+          "value": "examId",
+          "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
         },
         {
-          "label": "Grade Id",
+          "selectOptions": [],
+          "label": "Grade",
           "placeholder": "Select Grade",
-          "type": "text",
-          "value": "gradeId"
+          "type": "select",
+          "value": "gradeId",
+          "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
         },
         {
-          "label": "Stream Id",
+          "selectOptions": [],
+          "label": "Stream",
           "placeholder": "Select Stream",
-          "type": "text",
-          "value": "streamId"
+          "type": "select",
+          "value": "streamId",
+          "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
         },
         {
           "selectOptions": [

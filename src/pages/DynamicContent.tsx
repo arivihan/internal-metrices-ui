@@ -788,14 +788,20 @@ const AdvancedSearchDialog = ({
           );
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
+          // Handle different response formats
+          if (response?.content && Array.isArray(response.content)) {
+            // Pagination format: {content: [...]}
+            options = response.content;
+          } else if (response?.data && Array.isArray(response.data)) {
+            // Data wrapper format: {data: [...]}
             options = response.data;
           } else if (Array.isArray(response)) {
+            // Direct array format
             options = response;
           }
 
           const transformedOptions = options.map((opt: any) => {
-            let label = opt[field.optionLabelKey] || opt.name || String(opt);
+            let label = opt[field.optionLabelKey] || opt.displayName || opt.name || String(opt);
             // If optionLabelKey2 exists, concatenate both labels
             if (field.optionLabelKey2) {
               const label2 = opt[field.optionLabelKey2] || "";
@@ -968,14 +974,20 @@ const SearchBar = ({
           );
 
           let options = [];
-          if (response?.data && Array.isArray(response.data)) {
+          // Handle different response formats
+          if (response?.content && Array.isArray(response.content)) {
+            // Pagination format: {content: [...]}
+            options = response.content;
+          } else if (response?.data && Array.isArray(response.data)) {
+            // Data wrapper format: {data: [...]}
             options = response.data;
           } else if (Array.isArray(response)) {
+            // Direct array format
             options = response;
           }
 
           const transformedOptions = options.map((opt: any) => {
-            let label = opt[field.optionLabelKey] || opt.name || String(opt);
+            let label = opt[field.optionLabelKey] || opt.displayName || opt.name || String(opt);
             // If optionLabelKey2 exists, concatenate both labels
             if (field.optionLabelKey2) {
               const label2 = opt[field.optionLabelKey2] || "";
