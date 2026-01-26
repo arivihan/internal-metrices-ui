@@ -779,12 +779,12 @@ export default function ViralVideosPage() {
                           {video.isActive ? (
                             <>
                               <ToggleLeft className="mr-2 h-4 w-4" />
-                              Deactivate
+                              Inactive
                             </>
                           ) : (
                             <>
                               <ToggleRight className="mr-2 h-4 w-4" />
-                              Activate
+                              Active
                             </>
                           )}
                         </DropdownMenuItem>

@@ -180,8 +180,8 @@ export function DuplicateVideoDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5 text-rose-500" />
             Duplicate Videos to Other Batches
@@ -193,7 +193,7 @@ export function DuplicateVideoDialog({
         </DialogHeader>
 
         {!showResult ? (
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6">
             {/* Selected Videos Summary */}
             <div className="space-y-3">
               <Label className="text-base font-medium flex items-center gap-2">
@@ -346,7 +346,7 @@ export function DuplicateVideoDialog({
           </div>
         ) : (
           // Result View
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
             <div
               className={`rounded-lg border p-6 text-center ${
                 result?.success ||
@@ -388,7 +388,7 @@ export function DuplicateVideoDialog({
           </div>
         )}
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="shrink-0 border-t pt-4">
           {!showResult ? (
             <>
               <Button
