@@ -78,13 +78,6 @@ const staticNavItems: DrawerItem[] = [
     accessibleToRoles: ["ADMIN"],
   },
   {
-    title: "Chapters",
-    type: "getData",
-    getDataUrl: "/chapters",
-    icon: "BookOpen",
-    accessibleToRoles: ["ADMIN"],
-  },
-  {
     title: "RBAC",
     type: "getData",
     getDataUrl: "/rbac",
