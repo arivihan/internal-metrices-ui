@@ -6,6 +6,8 @@ import {
   Download,
   MoreHorizontal,
   Copy,
+  Pencil,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { AddNotesDialog } from "./AddNotesDialog";
 import { DuplicateNotesDialog } from "./DuplicateNotesDialog";
+import { EditNotesDialog } from "./EditNotesDialog";
 import { fetchNotes } from "@/services/notes";
 import type { NotesResponseDto, NotesFilters } from "@/types/notes";
 
@@ -46,7 +49,9 @@ export default function NotesUploadPage() {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([]);
+  const [editingNote, setEditingNote] = useState<NotesResponseDto | null>(null);
   const [filters, setFilters] = useState<NotesFilters>({
     pageNo: 0,
     pageSize: 20,
@@ -129,6 +134,15 @@ export default function NotesUploadPage() {
   const handleDuplicateSuccess = () => {
     toast.success("Notes duplicated successfully!");
     setSelectedNotes([]); // Clear selections
+    loadNotes(); // Refresh the list
+  };
+
+  const handleEditClick = (note: NotesResponseDto) => {
+    setEditingNote(note);
+    setShowEditDialog(true);
+  };
+
+  const handleEditSuccess = () => {
     loadNotes(); // Refresh the list
   };
 
@@ -349,11 +363,19 @@ export default function NotesUploadPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => window.open(note.notesUrl, "_blank")}
+                          className="cursor-pointer"
                         >
+                          <ExternalLink className="mr-2 h-4 w-4" />
                           View Notes
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem
+                          onClick={() => handleEditClick(note)}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600 cursor-pointer">
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -413,6 +435,14 @@ export default function NotesUploadPage() {
         onOpenChange={setShowDuplicateDialog}
         selectedNotes={selectedNotes}
         onSuccess={handleDuplicateSuccess}
+      />
+
+      {/* Edit Notes Dialog */}
+      <EditNotesDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        note={editingNote}
+        onSuccess={handleEditSuccess}
       />
     </div>
   );

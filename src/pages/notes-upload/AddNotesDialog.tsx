@@ -9,13 +9,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,9 +41,6 @@ export function AddNotesDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [showFullDetails, setShowFullDetails] = useState(false);
-  const [uploadPreview, setUploadPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormData>({
     file: null,
@@ -236,52 +226,26 @@ export function AddNotesDialog({
 
     setIsSubmitting(true);
     try {
-      // Upload notes and get response
+      // Upload notes and get response - saves directly without confirmation
       const response = await uploadNotes({
         file: formData.file!,
         batchId: formData.batchId!,
       });
 
-      // Always show confirmation popup regardless of success/failure
       console.log("Upload response received:", response);
-      setUploadPreview(response);
-      setShowConfirmation(true);
+
+      // Show success and close dialog directly
+      toast.success(response?.message || "Notes uploaded successfully");
+      onSuccess();
+      handleClose();
     } catch (error) {
       console.error("Upload error:", error);
-      // Even on error, show the confirmation with error details
-      const errorResponse = {
-        success: false,
-        error: true,
-        message:
-          error instanceof Error ? error.message : "Failed to upload notes",
-        errors: [error instanceof Error ? error.message : "Unknown error"],
-      };
-      setUploadPreview(errorResponse);
-      setShowConfirmation(true);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload notes"
+      );
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleConfirmSave = async () => {
-    // For notes, the upload API directly saves the notes
-    // So we just need to show success and close
-    if (uploadPreview?.success || uploadPreview?.message) {
-      toast.success(uploadPreview.message || "Notes uploaded successfully");
-      onSuccess();
-      handleClose();
-      setShowConfirmation(false);
-      setShowFullDetails(false);
-      setUploadPreview(null);
-    } else {
-      toast.error(uploadPreview?.message || "Upload failed");
-    }
-  };
-
-  const handleCancelConfirmation = () => {
-    setShowConfirmation(false);
-    setShowFullDetails(false);
-    setUploadPreview(null);
   };
 
   return (
@@ -386,122 +350,6 @@ export function AddNotesDialog({
           </Button>
         </SheetFooter>
       </SheetContent>
-
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={showConfirmation}
-        onOpenChange={() => !isSubmitting && handleCancelConfirmation()}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>📝 Confirm Notes Upload</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Upload processing completed. Review the summary and click
-              "Confirm" to finalize.
-            </p>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Minimal Summary */}
-            <div className="rounded-lg border p-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                {uploadPreview?.error ? (
-                  <span className="text-red-600">
-                    ❌ Upload Issues Detected
-                  </span>
-                ) : (
-                  <span className="text-green-600">✅ Upload Processed</span>
-                )}
-              </h4>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <strong>File:</strong> {formData.file?.name}
-                </div>
-                <div>
-                  <strong>Size:</strong>{" "}
-                  {formData.file
-                    ? (formData.file.size / 1024).toFixed(1) + " KB"
-                    : "N/A"}
-                </div>
-                <div>
-                  <strong>Batch:</strong>{" "}
-                  {batches.find((b) => b.id === formData.batchId)?.name ||
-                    "Unknown"}
-                </div>
-                <div>
-                  <strong>Status:</strong>
-                  {uploadPreview?.error ? (
-                    <span className="text-red-600 font-medium">
-                      Needs Review
-                    </span>
-                  ) : (
-                    <span className="text-green-600 font-medium">
-                      Ready to Save
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {uploadPreview?.message && (
-                <div className="mt-3 p-2 bg-blue-50 rounded text-sm text-blue-700">
-                  <strong>Response:</strong> {uploadPreview.message}
-                </div>
-              )}
-
-              {uploadPreview?.errors && uploadPreview.errors.length > 0 && (
-                <div className="mt-3 p-2 bg-red-50 rounded text-sm text-red-700">
-                  <strong>Issues:</strong>{" "}
-                  {uploadPreview.errors.slice(0, 2).join(", ")}
-                  {uploadPreview.errors.length > 2 &&
-                    ` (and ${uploadPreview.errors.length - 2} more)`}
-                </div>
-              )}
-            </div>
-
-            {/* View Full Details Toggle */}
-            <div className="border rounded-lg">
-              <button
-                onClick={() => setShowFullDetails(!showFullDetails)}
-                className="w-full p-3 text-left hover:bg-gray-50 flex items-center justify-between"
-              >
-                <span className="font-medium text-sm">
-                  🔍 View Full Response Details
-                </span>
-                <span className="text-xs text-gray-500">
-                  {showFullDetails ? "▼ Hide" : "▶ Show"}
-                </span>
-              </button>
-
-              {showFullDetails && (
-                <div className="border-t p-4 max-h-96 overflow-y-auto">
-                  <pre className="text-xs bg-gray-100 p-3 rounded whitespace-pre-wrap break-words">
-                    {JSON.stringify(uploadPreview, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelConfirmation}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmSave}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              📝 Confirm Upload
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Sheet>
   );
 }

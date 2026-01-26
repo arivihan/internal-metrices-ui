@@ -69,3 +69,15 @@ export interface BatchOption {
   isActive?: boolean
   active?: boolean
 }
+
+// Update notes request (PATCH)
+export interface NotesUpdateRequest {
+  subjectName?: string
+  title?: string
+  notesBy?: string
+  notesUrl?: string
+  position?: number
+  locked?: boolean
+  notesType?: string
+  isActive?: boolean
+}

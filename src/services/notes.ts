@@ -1,6 +1,9 @@
 import { apiClient } from './apiClient'
 import { accessToken } from '@/signals/auth'
 
+// Use environment variable or fallback to proxy in development
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+
 // ============================================================================
 // API Response Types
 // ============================================================================
@@ -104,7 +107,7 @@ export const fetchNotes = async (
 
   try {
     const response = await apiClient<NotesPaginatedResponse>(
-      '/secure/api/v1/notes/paginated',
+      '/secure/api/v1/notes',
       { params }
     )
 
@@ -161,7 +164,7 @@ export const uploadNotes = async (payload: UploadNotesPayload): Promise<any> => 
   const params = new URLSearchParams()
   params.append('batchId', String(payload.batchId))
 
-  const url = `/secure/notes/api/v1/upload?${params.toString()}`
+  const url = `/secure/api/v1/notes/upload?${params.toString()}`
 
   const headers: HeadersInit = {}
   
@@ -174,7 +177,7 @@ export const uploadNotes = async (payload: UploadNotesPayload): Promise<any> => 
   console.log('[uploadNotes] Request headers:', headers)
 
   try {
-    const response = await fetch(`/api${url}`, {
+    const response = await fetch(`${BASE_URL}${url}`, {
       method: 'POST',
       headers,
       body: formData,
@@ -234,6 +237,42 @@ export const uploadNotes = async (payload: UploadNotesPayload): Promise<any> => 
 }
 
 /**
+ * Update a note
+ * PATCH /secure/api/v1/notes/{id}
+ */
+export const updateNote = async (
+  id: string,
+  data: Partial<{
+    code: string
+    title: string
+    url: string
+    accessType: string
+    type: string
+    position: number
+    isActive: boolean
+    subject: string
+  }>
+): Promise<any> => {
+  console.log('[updateNote] Updating note:', { id, data })
+
+  try {
+    const response = await apiClient<any>(
+      `/secure/api/v1/notes/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }
+    )
+
+    console.log('[updateNote] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[updateNote] Error:', error)
+    throw error
+  }
+}
+
+/**
  * Duplicate notes to multiple batches
  * POST /secure/notes/api/v1/duplicate
  */
@@ -242,7 +281,7 @@ export const duplicateNotes = async (payload: DuplicateNotesRequest): Promise<Up
 
   try {
     const response = await apiClient<UploadResponse>(
-      '/secure/notes/api/v1/duplicate',
+      '/secure/api/v1/notes/duplicate',
       {
         method: 'POST',
         body: JSON.stringify(payload),

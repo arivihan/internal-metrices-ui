@@ -1,41 +1,70 @@
 {
   "tableHeaders": [
     {
-      "Header": "Carousel Code",
-      "accessor": "carouselCode",
+      "Header": "Code",
+      "accessor": "code",
       "type": "text",
       "order": 2
     },
     {
-      "Header": "Screen Type",
-      "accessor": "screenType",
+      "Header": "Display Name",
+      "accessor": "displayName",
       "type": "text",
       "order": 3
     },
     {
-      "Header": "Visibility Type",
-      "accessor": "visibilityType",
+      "Header": "Exam",
+      "accessor": "examName",
       "type": "text",
       "order": 4
     },
     {
-      "Header": "URL",
-      "accessor": "url",
+      "Header": "Grade",
+      "accessor": "gradeName",
       "type": "text",
       "order": 5
     },
     {
-      "Header": "Status",
-      "accessor": "isActive",
-      "displayFormat": "status",
-      "type": "boolean",
+      "Header": "Academic Year",
+      "accessor": "academicYear",
+      "type": "text",
       "order": 6
     },
     {
-      "Header": "Created At",
-      "accessor": "createdAt",
-      "type": "datetime",
+      "Header": "Batch Type",
+      "accessor": "batchType",
+      "type": "text",
       "order": 7
+    },
+    {
+      "Header": "Duration",
+      "accessor": "durationMonths",
+      "type": "text",
+      "order": 8
+    },
+    {
+      "Header": "Start Date",
+      "accessor": "startDate",
+      "type": "text",
+      "order": 9
+    },
+    {
+      "Header": "End Date",
+      "accessor": "endDate",
+      "type": "text",
+      "order": 10
+    },
+    {
+      "Header": "Enrollment Count",
+      "accessor": "enrollmentCount",
+      "type": "text",
+      "order": 11
+    },
+    {
+      "Header": "Status",
+      "accessor": "isActive",
+      "type": "boolean",
+      "order": 12
     },
     {
       "Header": "Actions",
@@ -44,50 +73,112 @@
       "actions": [
         {
           "method": "GET",
-          "popupTitle": "View Carousel",
-          "viewFetchDetails": "/secure/api/v1/av-carousels/{id}",
+          "popupTitle": "View Batch",
+          "viewFetchDetails": "/secure/api/v1/batch/{id}",
           "title": "View",
           "type": "SHOW_POPUP"
         },
         {
           "popupFields": [
             {
-              "label": "Carousel Code",
-              "placeholder": "Enter Carousel Code",
+              "label": "Code",
+              "placeholder": "Enter Batch Code",
               "type": "text",
-              "value": "carouselCode"
+              "value": "code"
             },
             {
-              "label": "URL",
-              "placeholder": "Enter Image/Video URL",
+              "label": "Display Name",
+              "placeholder": "Enter Display Name",
               "type": "text",
-              "value": "url"
+              "value": "displayName"
             },
             {
-              "label": "Screen Type",
-              "placeholder": "Enter Screen Type (e.g., homeScreen)",
-              "type": "text",
-              "value": "screenType"
+              "selectOptions": [],
+              "label": "Academic Year",
+              "placeholder": "Select Academic Year",
+              "type": "select",
+              "value": "academicYearId"
+            },
+            {
+              "selectOptions": [],
+              "label": "Exam",
+              "placeholder": "Select Exam",
+              "type": "select",
+              "value": "examId"
+            },
+            {
+              "selectOptions": [],
+              "label": "Grade",
+              "placeholder": "Select Grade",
+              "type": "select",
+              "value": "gradeId"
+            },
+            {
+              "selectOptions": [],
+              "label": "Stream",
+              "placeholder": "Select Stream",
+              "type": "select",
+              "value": "streamId"
             },
             {
               "selectOptions": [
                 {
-                  "label": "Subscribed",
-                  "value": "SUBSCRIBED"
+                  "label": "REGULAR",
+                  "value": "REGULAR"
                 },
                 {
-                  "label": "Public",
-                  "value": "PUBLIC"
+                  "label": "FULL_TIME",
+                  "value": "FULL_TIME"
                 },
                 {
-                  "label": "Private",
-                  "value": "PRIVATE"
+                  "label": "PART_TIME",
+                  "value": "PART_TIME"
+                },
+                {
+                  "label": "CRASH_COURSE",
+                  "value": "CRASH_COURSE"
                 }
               ],
-              "label": "Visibility Type",
-              "placeholder": "Select Visibility Type",
+              "label": "Batch Type",
+              "placeholder": "Select Batch Type",
               "type": "select",
-              "value": "visibilityType"
+              "value": "batchType"
+            },
+            {
+              "label": "Duration (Months)",
+              "placeholder": "Enter Duration in Months",
+              "type": "number",
+              "value": "durationMonths"
+            },
+            {
+              "label": "Start Date",
+              "placeholder": "Select Start Date",
+              "type": "date",
+              "value": "startDate"
+            },
+            {
+              "label": "End Date",
+              "placeholder": "Select End Date",
+              "type": "date",
+              "value": "endDate"
+            },
+            {
+              "label": "Enrollment Start Date",
+              "placeholder": "Select Enrollment Start Date",
+              "type": "date",
+              "value": "enrollmentStartDate"
+            },
+            {
+              "label": "Enrollment End Date",
+              "placeholder": "Select Enrollment End Date",
+              "type": "date",
+              "value": "enrollmentEndDate"
+            },
+            {
+              "label": "Display Order",
+              "placeholder": "Enter Display Order",
+              "type": "number",
+              "value": "displayOrder"
             },
             {
               "selectOptions": [
@@ -100,131 +191,49 @@
                   "value": "false"
                 }
               ],
-              "displayFormat": "status",
               "label": "Status",
               "placeholder": "Select Status",
               "type": "select",
               "value": "isActive"
-            },
-            {
-              "label": "Batches",
-              "type": "repeater",
-              "value": "batches",
-              "fields": [
-                {
-                  "label": "Batch ID",
-                  "placeholder": "Enter Batch ID",
-                  "type": "number",
-                  "value": "batchId"
-                },
-                {
-                  "label": "Display Order",
-                  "placeholder": "Enter Display Order",
-                  "type": "number",
-                  "value": "displayOrder"
-                },
-                {
-                  "label": "Class Name",
-                  "placeholder": "Enter Class Name",
-                  "type": "text",
-                  "value": "className"
-                },
-                {
-                  "selectOptions": [
-                    {
-                      "label": "External Image",
-                      "value": "EXTERNAL_IMAGE"
-                    },
-                    {
-                      "label": "Internal Link",
-                      "value": "INTERNAL_LINK"
-                    },
-                    {
-                      "label": "External Link",
-                      "value": "EXTERNAL_LINK"
-                    }
-                  ],
-                  "label": "Navigation Type",
-                  "placeholder": "Select Navigation Type",
-                  "type": "select",
-                  "value": "navigationType"
-                },
-                {
-                  "label": "Activity Parameters",
-                  "placeholder": "Add key-value pairs",
-                  "type": "keyvalue",
-                  "value": "activityParams"
-                },
-                {
-                  "label": "Parameters",
-                  "placeholder": "Enter Parameters (JSON)",
-                  "type": "json",
-                  "value": "parameter"
-                }
-              ]
             }
           ],
           "popupSubmitText": "Save Changes",
-          "method": "PUT",
-          "popupTitle": "Edit Carousel",
-          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}",
+          "method": "PATCH",
+          "popupTitle": "Edit Batch",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}",
           "title": "Edit",
           "type": "SHOW_POPUP"
         },
         {
           "popupFields": [
             {
-              "disabled": true,
-              "label": "Carousel Code",
-              "placeholder": "Carousel Code",
+              "label": "Code",
+              "placeholder": "Enter Batch Code",
               "type": "text",
-              "value": "carouselCode"
+              "value": "code"
             },
             {
-              "disabled": true,
-              "label": "Screen Type",
-              "placeholder": "Screen Type",
+              "label": "Display Name",
+              "placeholder": "Enter Display Name",
               "type": "text",
-              "value": "screenType"
+              "value": "displayName"
             }
           ],
           "popupSubmitText": "Delete",
           "method": "DELETE",
-          "popupTitle": "Are You Sure?",
-          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}",
+          "popupTitle": "Are You Sure!",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}",
           "title": "Delete",
           "type": "SHOW_POPUP"
         },
         {
           "method": "PATCH",
           "statusField": "isActive",
-          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}/status",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}/status",
           "title": "{statusToggle}",
           "type": "STATUS_TOGGLE",
           "inactiveLabel": "Inactive",
           "activeLabel": "Active"
-        },
-        {
-          "popupFields": [
-            {
-              "label": "Source Batch ID",
-              "placeholder": "Enter Source Batch ID",
-              "type": "number",
-              "value": "sourceBatchId"
-            },
-            {
-              "label": "Target Batch IDs",
-              "placeholder": "Enter Target Batch IDs (comma-separated)",
-              "type": "multiselect",
-              "value": "targetBatchIds"
-            }
-          ],
-          "popupSubmitText": "Copy",
-          "method": "POST",
-          "popupTitle": "Copy Carousel to Batches",
-          "popupSubmitUrl": "/secure/api/v1/av-carousels/{id}/copy",
-          "title": "Copy to Batch",
-          "type": "SHOW_POPUP"
         },
         {
           "method": "GET",
@@ -234,7 +243,7 @@
           "type": "SHOW_POPUP"
         }
       ],
-      "order": 8
+      "order": 13
     }
   ],
   "search": {
@@ -243,21 +252,48 @@
     "fields": [
       {
         "label": "Search",
-        "placeholder": "Enter Carousel Code or Screen Type",
+        "placeholder": "Enter Code or Name",
         "type": "text",
         "value": "search"
       },
       {
-        "label": "Batch ID",
-        "placeholder": "Enter Batch ID",
-        "type": "number",
-        "value": "batchId"
+        "selectOptions": [],
+        "label": "Exam",
+        "placeholder": "Select Exam",
+        "type": "select",
+        "value": "examId"
       },
       {
-        "label": "Screen Type",
-        "placeholder": "Enter Screen Type",
-        "type": "text",
-        "value": "screenType"
+        "selectOptions": [
+          {
+            "label": "English",
+            "type": "select",
+            "value": "ENGLISH"
+          },
+          {
+            "label": "Hindi",
+            "type": "select",
+            "value": "HINDI"
+          }
+        ],
+        "label": "Languages",
+        "placeholder": "Select Language",
+        "type": "select",
+        "value": "language"
+      },
+      {
+        "selectOptions": [],
+        "label": "Grade",
+        "placeholder": "Select Grade",
+        "type": "select",
+        "value": "gradeId"
+      },
+      {
+        "selectOptions": [],
+        "label": "Stream",
+        "placeholder": "Select Stream",
+        "type": "select",
+        "value": "streamId"
       },
       {
         "selectOptions": [
@@ -270,11 +306,10 @@
             "value": "false"
           }
         ],
-        "displayFormat": "status",
         "label": "Status",
         "placeholder": "Select Status",
         "type": "select",
-        "value": "active"
+        "value": "activeFlag"
       },
       {
         "selectOptions": [
@@ -283,31 +318,27 @@
             "value": "id"
           },
           {
-            "label": "Carousel Code",
-            "value": "carouselCode"
+            "label": "Code",
+            "value": "code"
           },
           {
-            "label": "Screen Type",
-            "value": "screenType"
-          },
-          {
-            "label": "Visibility Type",
-            "value": "visibilityType"
-          },
-          {
-            "label": "Is Active",
-            "value": "isActive"
+            "label": "Display Name",
+            "value": "displayName"
           },
           {
             "label": "Display Order",
             "value": "displayOrder"
           },
           {
-            "label": "Created At",
+            "label": "Start Date",
+            "value": "startDate"
+          },
+          {
+            "label": "CreatedAt",
             "value": "createdAt"
           },
           {
-            "label": "Updated At",
+            "label": "UpdatedAt",
             "value": "updatedAt"
           }
         ],
@@ -328,57 +359,127 @@
           }
         ],
         "label": "Sort Order",
-        "placeholder": "Sort Order",
+        "placeholder": "Sort By Order",
         "type": "select",
         "value": "sortDir"
       }
     ],
-    "searchActionUrl": "/secure/api/v1/av-carousels"
+    "searchActionUrl": "/secure/api/v1/batch"
   },
   "buttons": [
     {
       "popupFields": [
         {
-          "label": "Carousel Code",
-          "placeholder": "Enter Carousel Code",
+          "label": "Code",
+          "placeholder": "Enter Batch Code",
           "type": "text",
-          "value": "carouselCode",
-          "required": true
+          "value": "code"
         },
         {
-          "label": "URL",
-          "placeholder": "Enter Image/Video URL",
+          "label": "Display Name",
+          "placeholder": "Enter Display Name",
           "type": "text",
-          "value": "url",
-          "required": true
+          "value": "displayName"
         },
         {
-          "label": "Screen Type",
-          "placeholder": "Enter Screen Type (e.g., homeScreen)",
+          "label": "Academic Year Id",
+          "placeholder": "enter Academic Year",
           "type": "text",
-          "value": "screenType",
-          "required": true
+          "value": "academicYearId"
+        },
+        {
+          "label": "Exam Id",
+          "placeholder": "Select Exam",
+          "type": "text",
+          "value": "examId"
+        },
+        {
+          "label": "Grade Id",
+          "placeholder": "Select Grade",
+          "type": "text",
+          "value": "gradeId"
+        },
+        {
+          "label": "Stream Id",
+          "placeholder": "Select Stream",
+          "type": "text",
+          "value": "streamId"
         },
         {
           "selectOptions": [
             {
-              "label": "Subscribed",
-              "value": "SUBSCRIBED"
+              "label": "REGULAR",
+              "value": "REGULAR"
             },
             {
-              "label": "Public",
-              "value": "PUBLIC"
+              "label": "FULL_TIME",
+              "value": "FULL_TIME"
             },
             {
-              "label": "Private",
-              "value": "PRIVATE"
+              "label": "PART_TIME",
+              "value": "PART_TIME"
+            },
+            {
+              "label": "CRASH_COURSE",
+              "value": "CRASH_COURSE"
             }
           ],
-          "label": "Visibility Type",
-          "placeholder": "Select Visibility Type",
+          "label": "Batch Type",
+          "placeholder": "Select Batch Type",
           "type": "select",
-          "value": "visibilityType",
-          "required": true
+          "value": "batchType"
+        },
+        {
+          "label": "Duration (Months)",
+          "placeholder": "Enter Duration in Months",
+          "type": "number",
+          "value": "durationMonths"
+        },
+        {
+          "label": "Start Date",
+          "placeholder": "Select Start Date",
+          "type": "date",
+          "value": "startDate"
+        },
+        {
+          "label": "End Date",
+          "placeholder": "Select End Date",
+          "type": "date",
+          "value": "endDate"
+        },
+        {
+          "label": "Enrollment Start Date",
+          "placeholder": "Select Enrollment Start Date",
+          "type": "date",
+          "value": "enrollmentStartDate"
+        },
+        {
+          "label": "Enrollment End Date",
+          "placeholder": "Select Enrollment End Date",
+          "type": "date",
+          "value": "enrollmentEndDate"
+        },
+        {
+          "label": "Display Order",
+          "placeholder": "Enter Display Order",
+          "type": "number",
+          "value": "displayOrder"
+        },
+        {
+          "selectOptions": [
+            {
+              "label": "English",
+              "value": "ENGLISH"
+            },
+            {
+              "label": "Hindi",
+              "value": "HINDI"
+            }
+          ],
+          "label": "Language ",
+          "placeholder": "Select Language",
+          "type": "select",
+          "value": "language"
         },
         {
           "selectOptions": [
@@ -387,123 +488,24 @@
               "value": "true"
             },
             {
-              "label": "Inactive",
+              "label": "InActive",
               "value": "false"
             }
           ],
-          "displayFormat": "status",
-          "label": "Status",
+          "label": "Status ",
           "placeholder": "Select Status",
           "type": "select",
-          "value": "isActive",
-          "required": true
-        },
-        {
-          "label": "Batches",
-          "type": "repeater",
-          "value": "batches",
-          "fields": [
-            {
-              "label": "Batch ID",
-              "placeholder": "Enter Batch ID",
-              "type": "number",
-              "value": "batchId",
-              "required": true
-            },
-            {
-              "label": "Display Order",
-              "placeholder": "Enter Display Order",
-              "type": "number",
-              "value": "displayOrder"
-            },
-            {
-              "label": "Class Name",
-              "placeholder": "Enter Class Name",
-              "type": "text",
-              "value": "className"
-            },
-            {
-              "selectOptions": [
-                {
-                  "label": "External Image",
-                  "value": "EXTERNAL_IMAGE"
-                },
-                {
-                  "label": "Internal Link",
-                  "value": "INTERNAL_LINK"
-                },
-                {
-                  "label": "External Link",
-                  "value": "EXTERNAL_LINK"
-                }
-              ],
-              "label": "Navigation Type",
-              "placeholder": "Select Navigation Type",
-              "type": "select",
-              "value": "navigationType"
-            },
-            {
-              "label": "Activity Parameters",
-              "placeholder": "Add key-value pairs",
-              "type": "keyvalue",
-              "value": "activityParams"
-            },
-            {
-              "label": "Parameters",
-              "placeholder": "Enter Parameters (JSON)",
-              "type": "json",
-              "value": "parameter"
-            }
-          ]
+          "value": "IsActive"
         }
       ],
       "popupSubmitText": "Create",
       "method": "POST",
-      "popupTitle": "Create Carousel",
-      "popupSubmitUrl": "/secure/api/v1/av-carousels",
-      "title": "Add New Carousel",
+      "popupTitle": "Create Batch",
+      "popupSubmitUrl": "/secure/api/v1/batch",
+      "title": "Add New Batch",
       "type": "SHOW_POPUP"
     }
   ],
-  "auditButton": {
-    "icon": "History",
-    "label": "View Audit Log",
-    "type": "AUDIT_TRAIL",
-    "auditFetchUrl": "/secure/api/v1/audit-logs/table",
-    "entityName": "AvCarouselEntity"
-  },
-  "auditTableHeaders": [
-    {
-      "Header": "Carousel Code",
-      "accessor": "carouselCode",
-      "type": "text",
-      "order": 2
-    },
-    {
-      "Header": "Screen Type",
-      "accessor": "screenType",
-      "type": "text",
-      "order": 3
-    },
-    {
-      "Header": "Visibility Type",
-      "accessor": "visibilityType",
-      "type": "text",
-      "order": 4
-    },
-    {
-      "Header": "URL",
-      "accessor": "url",
-      "type": "text",
-      "order": 5
-    },
-    {
-      "Header": "Status",
-      "accessor": "isActive",
-      "type": "boolean",
-      "order": 6
-    }
-  ],
-  "getDataUrl": "/secure/api/v1/av-carousels",
+  "getDataUrl": "/secure/api/v1/batch",
   "searchable": true
 }
