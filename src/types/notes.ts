@@ -21,6 +21,7 @@ export interface NotesFilters {
   batchId?: number
   subjectName?: string
   notesType?: string
+  search?: string
 }
 
 export interface NotesPaginatedResponse {

@@ -168,6 +168,19 @@ export const ViewDetailsPopup = ({ open, onClose, data, title }) => {
       .trim();
   };
 
+  // Helper function to clean up field names by removing common prefixes
+  const cleanFieldKey = (key: string): string => {
+    // Remove common prefixes like "Data.", "data.", "Response.", etc.
+    const prefixesToRemove = ["Data.", "data.", "Response.", "response.", "Result.", "result."];
+    let cleanedKey = key;
+    for (const prefix of prefixesToRemove) {
+      if (cleanedKey.startsWith(prefix)) {
+        cleanedKey = cleanedKey.substring(prefix.length);
+      }
+    }
+    return cleanedKey;
+  };
+
   // Helper function to flatten nested objects into parent.child format
   const flattenObject = (obj: any, prefix = ""): Array<[string, any]> => {
     const result: Array<[string, any]> = [];
@@ -183,6 +196,12 @@ export const ViewDetailsPopup = ({ open, onClose, data, title }) => {
         excludeFields.includes(key.toLowerCase())
       )
         return;
+
+      // Skip the "data" or "Data" key itself but process its contents
+      if (key.toLowerCase() === "data" && typeof value === "object" && value !== null) {
+        result.push(...flattenObject(value, prefix));
+        return;
+      }
 
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
@@ -217,7 +236,8 @@ export const ViewDetailsPopup = ({ open, onClose, data, title }) => {
   };
 
   // Convert object to array of key-value pairs, excluding internal fields
-  const dataEntries = flattenObject(data);
+  // Also clean up any remaining "Data." prefixes from field names
+  const dataEntries = flattenObject(data).map(([key, value]) => [cleanFieldKey(key), value] as [string, any]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

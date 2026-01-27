@@ -72,7 +72,7 @@ export const fetchChapters = async (
 
   try {
     const response = await apiClient<ChapterPaginatedResponse>(
-      '/secure/api/v1/batch-chapters',
+      '/secure/api/v1/chapter',
       { params }
     )
 
@@ -233,7 +233,7 @@ export const saveChapterUpload = async (
 export const mapChapters = async (
   payload: MapChapterPayload
 ): Promise<ApiResponse<ChapterMappingResultDto[]>> => {
-  const url = `${BASE_URL}/secure/api/v1/chapter-mappings`
+  const url = `${BASE_URL}/secure/api/v1/chapter/map`
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',

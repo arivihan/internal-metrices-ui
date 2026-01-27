@@ -51,6 +51,7 @@ export interface NotesFilters {
   batchId?: number
   subjectName?: string
   notesType?: string
+  search?: string
 }
 
 export interface NotesPaginatedResponse extends PaginatedResponse<NotesResponseDto> {}
@@ -102,6 +103,7 @@ export const fetchNotes = async (
   if (filters.batchId) params.batchId = String(filters.batchId)
   if (filters.subjectName) params.subjectName = filters.subjectName
   if (filters.notesType) params.notesType = filters.notesType
+  if (filters.search) params.search = filters.search
 
   console.log('[fetchNotes] Request params:', params)
 
@@ -272,6 +274,155 @@ export const updateNote = async (
   }
 }
 
+// ============================================================================
+// AUDIT TRAIL Types
+// ============================================================================
+
+export interface AuditTrailEntry {
+  id: string
+  entityName: string
+  entityId: string
+  actionType: string
+  performedBy: string
+  timestamp: string
+  oldValue: Record<string, any> | null
+  newValue: Record<string, any> | null
+}
+
+export interface AuditTrailPaginatedResponse {
+  content: AuditTrailEntry[]
+  pageNumber: number
+  pageSize: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
+// ============================================================================
+// AUDIT TRAIL APIs
+// ============================================================================
+
+/**
+ * Fetch row-wise audit trail for a specific note
+ * GET /secure/api/v1/audit-logs/row?entityName=Notes&entityId={id}&pageNo=0&pageSize=10
+ */
+export const fetchNoteAuditTrail = async (
+  noteId: string,
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<AuditTrailPaginatedResponse> => {
+  console.log('[fetchNoteAuditTrail] Fetching audit trail for note:', noteId)
+
+  try {
+    const params: Record<string, string> = {
+      entityName: 'NotesEntity',
+      entityId: noteId,
+      pageNo: String(pageNo),
+      pageSize: String(pageSize),
+    }
+
+    const response = await apiClient<any>(
+      '/secure/api/v1/audit-logs/row',
+      { params }
+    )
+
+    console.log('[fetchNoteAuditTrail] Response:', response)
+
+    // Handle different response formats
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        return response.data as AuditTrailPaginatedResponse
+      }
+      if ('content' in response) {
+        return response as AuditTrailPaginatedResponse
+      }
+    }
+
+    return {
+      content: [],
+      pageNumber: 0,
+      pageSize: pageSize,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+  } catch (error) {
+    console.error('[fetchNoteAuditTrail] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch table-wise audit trail for all notes
+ * GET /secure/api/v1/audit-logs?entityName=Notes&pageNo=0&pageSize=10
+ */
+export const fetchNotesTableAuditTrail = async (
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<AuditTrailPaginatedResponse> => {
+  console.log('[fetchNotesTableAuditTrail] Fetching table audit trail')
+
+  try {
+    const params: Record<string, string> = {
+      entityName: 'NotesEntity',
+      pageNo: String(pageNo),
+      pageSize: String(pageSize),
+    }
+
+    const response = await apiClient<any>(
+      '/secure/api/v1/audit-logs/table',
+      { params }
+    )
+
+    console.log('[fetchNotesTableAuditTrail] Response:', response)
+
+    // Handle different response formats
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        return response.data as AuditTrailPaginatedResponse
+      }
+      if ('content' in response) {
+        return response as AuditTrailPaginatedResponse
+      }
+    }
+
+    return {
+      content: [],
+      pageNumber: 0,
+      pageSize: pageSize,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+  } catch (error) {
+    console.error('[fetchNotesTableAuditTrail] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a note
+ * DELETE /secure/api/v1/notes/{id}
+ */
+export const deleteNote = async (id: string): Promise<any> => {
+  console.log('[deleteNote] Deleting note:', id)
+
+  try {
+    const response = await apiClient<any>(
+      `/secure/api/v1/notes/${id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    console.log('[deleteNote] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[deleteNote] Error:', error)
+    throw error
+  }
+}
+
 /**
  * Duplicate notes to multiple batches
  * POST /secure/notes/api/v1/duplicate
@@ -350,6 +501,110 @@ export const fetchAllBatchesForNotes = async (params?: {
     return mappedBatches
   } catch (error) {
     console.error('[fetchAllBatchesForNotes] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch batches with pagination for dropdown
+ * GET /secure/api/v1/batch with pagination params
+ */
+export interface BatchFilters {
+  pageNo?: number
+  pageSize?: number
+  search?: string
+  sortBy?: string
+  sortDir?: 'ASC' | 'DESC'
+  activeFlag?: boolean
+  examId?: number
+  gradeId?: number
+  streamId?: number
+}
+
+export interface BatchPaginatedResponse {
+  content: any[]
+  pageNumber: number
+  pageSize: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
+export const fetchBatchesPaginated = async (
+  filters: BatchFilters = {}
+): Promise<BatchPaginatedResponse> => {
+  const params: Record<string, string> = {
+    pageNo: String(filters.pageNo ?? 0),
+    pageSize: String(filters.pageSize ?? 10),
+    sortBy: filters.sortBy ?? 'displayOrder',
+    sortDir: filters.sortDir ?? 'ASC',
+  }
+
+  if (filters.search) params.search = filters.search
+  if (filters.activeFlag !== undefined) params.activeFlag = String(filters.activeFlag)
+  if (filters.examId) params.examId = String(filters.examId)
+  if (filters.gradeId) params.gradeId = String(filters.gradeId)
+  if (filters.streamId) params.streamId = String(filters.streamId)
+
+  console.log('[fetchBatchesPaginated] Request params:', params)
+
+  try {
+    const response = await apiClient<any>(
+      '/secure/api/v1/batch',
+      { params }
+    )
+
+    console.log('[fetchBatchesPaginated] Response:', response)
+
+    // Handle different response formats
+    let result: BatchPaginatedResponse = {
+      content: [],
+      pageNumber: 0,
+      pageSize: filters.pageSize ?? 10,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        const data = response.data
+        result = {
+          content: data.content || [],
+          pageNumber: data.pageNumber ?? data.number ?? 0,
+          pageSize: data.pageSize ?? data.size ?? 10,
+          totalElements: data.totalElements ?? 0,
+          totalPages: data.totalPages ?? 1,
+          last: data.last ?? true,
+        }
+      } else if ('content' in response) {
+        result = {
+          content: response.content || [],
+          pageNumber: response.pageNumber ?? response.number ?? 0,
+          pageSize: response.pageSize ?? response.size ?? 10,
+          totalElements: response.totalElements ?? 0,
+          totalPages: response.totalPages ?? 1,
+          last: response.last ?? true,
+        }
+      }
+    }
+
+    // Map batches to include display name
+    result.content = result.content.map((batch: any) => ({
+      id: batch.id,
+      name: batch.displayName || batch.name || batch.code || `Batch ${batch.id}`,
+      code: batch.code,
+      displayName: batch.displayName,
+      language: batch.language,
+      examName: batch.examName,
+      gradeName: batch.gradeName,
+      streamName: batch.streamName,
+      isActive: batch.isActive,
+    }))
+
+    return result
+  } catch (error) {
+    console.error('[fetchBatchesPaginated] Error:', error)
     throw error
   }
 }

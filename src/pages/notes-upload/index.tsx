@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Download,
   MoreHorizontal,
   Copy,
   Pencil,
   ExternalLink,
+  History,
+  ChevronDown,
+  Loader2,
+  RotateCcw,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,14 +32,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { AddNotesDialog } from "./AddNotesDialog";
 import { DuplicateNotesDialog } from "./DuplicateNotesDialog";
 import { EditNotesDialog } from "./EditNotesDialog";
-import { fetchNotes } from "@/services/notes";
+import { fetchNotes, deleteNote, fetchNoteAuditTrail, fetchNotesTableAuditTrail, fetchBatchesPaginated } from "@/services/notes";
 import type { NotesResponseDto, NotesFilters } from "@/types/notes";
+import { AuditTrailPopup } from "@/components/AuditTrailPopup";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const NOTES_TYPES = {
   PREVIOUS_YEAR_PAPER: "Previous Year Paper",
@@ -52,6 +79,23 @@ export default function NotesUploadPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([]);
   const [editingNote, setEditingNote] = useState<NotesResponseDto | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<NotesResponseDto | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Audit Trail state
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false);
+  const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
+  const [auditTrailLoading, setAuditTrailLoading] = useState(false);
+  const [auditTrailTitle, setAuditTrailTitle] = useState("Audit Trail");
+  const [auditTrailPagination, setAuditTrailPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const [currentAuditNoteId, setCurrentAuditNoteId] = useState<string | null>(null);
+  const [isTableAudit, setIsTableAudit] = useState(false);
   const [filters, setFilters] = useState<NotesFilters>({
     pageNo: 0,
     pageSize: 20,
@@ -61,6 +105,19 @@ export default function NotesUploadPage() {
   });
   const [totalElements, setTotalElements] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Batch dropdown state
+  const [batches, setBatches] = useState<any[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [batchSearchQuery, setBatchSearchQuery] = useState("");
+  const [batchPagination, setBatchPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
+  const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
 
   useEffect(() => {
     loadNotes();
@@ -96,10 +153,109 @@ export default function NotesUploadPage() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    // You can implement search logic here
-    // For now, just trigger a reload
-    loadNotes();
+    setFilters((prev) => ({
+      ...prev,
+      search: query || undefined,
+      pageNo: 0, // Reset to first page on search
+    }));
   };
+
+  // Batch loading functions
+  const loadBatches = async (pageNo: number = 0, search?: string) => {
+    setBatchesLoading(true);
+    try {
+      const response = await fetchBatchesPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+        activeFlag: true,
+        sortBy: "displayOrder",
+        sortDir: "ASC",
+      });
+
+      if (pageNo === 0) {
+        setBatches(response.content || []);
+      } else {
+        setBatches((prev) => [...prev, ...(response.content || [])]);
+      }
+
+      setBatchPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? 10,
+      });
+    } catch (error) {
+      console.error("[NotesUploadPage] Failed to load batches:", error);
+      toast.error("Failed to load batches");
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const handleBatchSearch = (query: string) => {
+    setBatchSearchQuery(query);
+    loadBatches(0, query);
+  };
+
+  const handleBatchSelect = (batch: any | null) => {
+    setSelectedBatch(batch);
+    setFilters((prev) => ({
+      ...prev,
+      batchId: batch?.id || undefined,
+      pageNo: 0,
+    }));
+    setBatchDropdownOpen(false);
+  };
+
+  const handleLoadMoreBatches = () => {
+    if (batchPagination.currentPage < batchPagination.totalPages - 1) {
+      loadBatches(batchPagination.currentPage + 1, batchSearchQuery);
+    }
+  };
+
+  const handleSortChange = (sortBy: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      sortBy,
+      pageNo: 0,
+    }));
+  };
+
+  const handleSortDirChange = (sortDir: "ASC" | "DESC") => {
+    setFilters((prev) => ({
+      ...prev,
+      sortDir,
+      pageNo: 0,
+    }));
+  };
+
+  const handleStatusChange = (status: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      active: status === "all" ? undefined : status === "active",
+      pageNo: 0,
+    }));
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSelectedBatch(null);
+    setFilters({
+      pageNo: 0,
+      pageSize: 20,
+      sortBy: "position",
+      sortDir: "ASC",
+      active: true,
+    });
+  };
+
+  // Load batches when dropdown opens
+  useEffect(() => {
+    if (batchDropdownOpen && batches.length === 0) {
+      loadBatches(0);
+    }
+  }, [batchDropdownOpen]);
 
   const handleUploadSuccess = () => {
     toast.success("Notes uploaded successfully!");
@@ -146,6 +302,92 @@ export default function NotesUploadPage() {
     loadNotes(); // Refresh the list
   };
 
+  const handleDeleteClick = (note: NotesResponseDto) => {
+    setNoteToDelete(note);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!noteToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteNote(noteToDelete.id);
+      toast.success("Note deleted successfully!");
+      setDeleteDialogOpen(false);
+      setNoteToDelete(null);
+      loadNotes(); // Refresh the list
+    } catch (error) {
+      console.error("[NotesUploadPage] Failed to delete note:", error);
+      toast.error(
+        "Failed to delete note: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Audit Trail handlers
+  const handleRowAuditClick = async (note: NotesResponseDto) => {
+    setCurrentAuditNoteId(note.id);
+    setIsTableAudit(false);
+    setAuditTrailTitle(`Audit Trail - ${note.title}`);
+    setAuditTrailOpen(true);
+    await fetchAuditTrailPage(note.id, 0, false);
+  };
+
+  const handleTableAuditClick = async () => {
+    setCurrentAuditNoteId(null);
+    setIsTableAudit(true);
+    setAuditTrailTitle("Notes Table Audit Trail");
+    setAuditTrailOpen(true);
+    await fetchAuditTrailPage(null, 0, true);
+  };
+
+  const fetchAuditTrailPage = async (
+    noteId: string | null,
+    pageNo: number,
+    tableAudit: boolean,
+    pageSizeParam?: number
+  ) => {
+    const size = pageSizeParam ?? auditTrailPagination.pageSize;
+    setAuditTrailLoading(true);
+    try {
+      let response;
+      if (tableAudit) {
+        response = await fetchNotesTableAuditTrail(pageNo, size);
+      } else if (noteId) {
+        response = await fetchNoteAuditTrail(noteId, pageNo, size);
+      } else {
+        return;
+      }
+
+      setAuditTrailData(response.content || []);
+      setAuditTrailPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? size,
+      });
+    } catch (error) {
+      console.error("[NotesUploadPage] Failed to fetch audit trail:", error);
+      toast.error("Failed to load audit trail");
+      setAuditTrailData([]);
+    } finally {
+      setAuditTrailLoading(false);
+    }
+  };
+
+  const handleAuditPageChange = (newPage: number) => {
+    fetchAuditTrailPage(currentAuditNoteId, newPage, isTableAudit);
+  };
+
+  const handleAuditPageSizeChange = (newPageSize: number) => {
+    // Reset to first page when changing page size
+    fetchAuditTrailPage(currentAuditNoteId, 0, isTableAudit, newPageSize);
+  };
+
   const getNotesTypeDisplay = (type: string) => {
     return NOTES_TYPES[type as keyof typeof NOTES_TYPES] || type;
   };
@@ -181,6 +423,10 @@ export default function NotesUploadPage() {
               Duplicate ({selectedNotes.length})
             </Button>
           )}
+          <Button variant="outline" onClick={handleTableAuditClick}>
+            <History className="mr-2 h-4 w-4" />
+            Table Audit
+          </Button>
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Upload Notes
@@ -189,26 +435,166 @@ export default function NotesUploadPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notes..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-8"
-            />
-          </div>
+      <div className="flex items-center gap-3 overflow-visible">
+        {/* Search Field */}
+        <div className="relative w-60 shrink-0">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search title, subject, notesBy..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-8"
+          />
         </div>
-        <Button variant="outline">
-          <Filter className="mr-2 h-4 w-4" />
-          Filters
+
+        {/* Batch Dropdown with Pagination */}
+        <Popover open={batchDropdownOpen} onOpenChange={setBatchDropdownOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={batchDropdownOpen}
+              className="w-48 justify-between shrink-0"
+            >
+              <span className="truncate">{selectedBatch ? selectedBatch.name : "Select Batch..."}</span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60 p-0" align="start">
+            <div className="p-2 border-b">
+              <Input
+                placeholder="Search batches..."
+                value={batchSearchQuery}
+                onChange={(e) => handleBatchSearch(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="max-h-60 overflow-y-auto scrollbar-hide">
+              {/* Clear selection option */}
+              <div
+                className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                onClick={() => handleBatchSelect(null)}
+              >
+                <Check
+                  className={`mr-2 h-4 w-4 ${
+                    !selectedBatch ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+                All Batches
+              </div>
+              {batchesLoading && batches.length === 0 ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm">Loading...</span>
+                </div>
+              ) : batches.length === 0 ? (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  No batches found.
+                </div>
+              ) : (
+                <>
+                  {batches.map((batch) => (
+                    <div
+                      key={batch.id}
+                      className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                      onClick={() => handleBatchSelect(batch)}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          selectedBatch?.id === batch.id
+                            ? "opacity-100"
+                            : "opacity-0"
+                        }`}
+                      />
+                      <div className="flex-1 truncate">
+                        <span>{batch.name}</span>
+                        {batch.code && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({batch.code})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Load More Button */}
+                  {batchPagination.currentPage < batchPagination.totalPages - 1 && (
+                    <div className="p-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleLoadMoreBatches}
+                        disabled={batchesLoading}
+                      >
+                        {batchesLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Load More ({batchPagination.totalElements - batches.length} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Sort By Dropdown */}
+        <Select
+          value={filters.sortBy || "position"}
+          onValueChange={handleSortChange}
+        >
+          <SelectTrigger className="w-32 shrink-0">
+            <SelectValue placeholder="Sort By" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="position">Position</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+            <SelectItem value="subjectName">Subject</SelectItem>
+            <SelectItem value="notesBy">Notes By</SelectItem>
+            <SelectItem value="notesType">Type</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Sort Direction Dropdown */}
+        <Select
+          value={filters.sortDir || "ASC"}
+          onValueChange={(value) => handleSortDirChange(value as "ASC" | "DESC")}
+        >
+          <SelectTrigger className="w-28 shrink-0">
+            <SelectValue placeholder="Sort Dir" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ASC">Ascending</SelectItem>
+            <SelectItem value="DESC">Descending</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Status Filter */}
+        <Select
+          value={filters.active === undefined ? "all" : filters.active ? "active" : "inactive"}
+          onValueChange={handleStatusChange}
+        >
+          <SelectTrigger className="w-28 shrink-0">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Reset Filters Button */}
+        <Button variant="outline" size="icon" onClick={handleResetFilters} title="Reset Filters" className="shrink-0">
+          <RotateCcw className="h-4 w-4" />
         </Button>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export
-        </Button>
+
+        {/* Spacer */}
+        <div className="flex-1 min-w-0" />
+
+        {/* Export Button */}
+        
       </div>
 
       {/* Stats */}
@@ -375,8 +761,18 @@ export default function NotesUploadPage() {
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600 cursor-pointer">
+                        <DropdownMenuItem
+                          className="text-red-600 cursor-pointer"
+                          onClick={() => handleDeleteClick(note)}
+                        >
                           Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleRowAuditClick(note)}
+                          className="cursor-pointer"
+                        >
+                          <History className="mr-2 h-4 w-4" />
+                          Audit Trail
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -443,6 +839,48 @@ export default function NotesUploadPage() {
         onOpenChange={setShowEditDialog}
         note={editingNote}
         onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the note "{noteToDelete?.title}". This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Audit Trail Popup */}
+      <AuditTrailPopup
+        open={auditTrailOpen}
+        onClose={() => {
+          setAuditTrailOpen(false);
+          setAuditTrailData([]);
+          setCurrentAuditNoteId(null);
+        }}
+        data={auditTrailData}
+        title={auditTrailTitle}
+        currentPage={auditTrailPagination.currentPage}
+        totalPages={auditTrailPagination.totalPages}
+        totalElements={auditTrailPagination.totalElements}
+        pageSize={auditTrailPagination.pageSize}
+        isLoading={auditTrailLoading}
+        onPageChange={handleAuditPageChange}
+        onPageSizeChange={handleAuditPageSizeChange}
       />
     </div>
   );

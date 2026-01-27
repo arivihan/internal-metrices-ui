@@ -1149,7 +1149,10 @@ interface PaginationProps {
   totalItems: number;
   isSearchResults: boolean;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 const Pagination = ({
   currentPage,
@@ -1158,14 +1161,40 @@ const Pagination = ({
   totalItems,
   isSearchResults,
   onPageChange,
+  onPageSizeChange,
 }: PaginationProps) => {
   if (totalItems === 0) return null;
 
+  const startItem = currentPage * pageSize + 1;
+  const endItem = Math.min((currentPage + 1) * pageSize, totalItems);
+
   return (
     <div className="flex items-center justify-between border-t px-4 py-3">
-      <p className="text-sm text-muted-foreground">
-        {totalItems} {isSearchResults ? "results" : "items"}
-      </p>
+      <div className="flex items-center gap-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {startItem}-{endItem} of {totalItems} {isSearchResults ? "results" : "items"}
+        </p>
+        {onPageSizeChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Rows per page:</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
       {totalPages > 1 && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
@@ -1559,12 +1588,6 @@ export default function DynamicContent() {
 
       console.log("✅ Status toggled successfully:", response);
 
-      // Update the row data in the table
-      const updatedData = tableData.value.map((item) =>
-        item.id === rowData.id ? { ...item, [statusField]: newStatus } : item
-      );
-      tableData.value = updatedData;
-
       showAlert({
         title: "Success",
         description: `Status changed to ${
@@ -1572,6 +1595,34 @@ export default function DynamicContent() {
         }`,
         variant: "default",
       });
+
+      // Refresh the table data from the server
+      if (layoutData.value?.getDataUrl) {
+        console.log("🔄 Refreshing table data after status toggle");
+        try {
+          await fetchTableData(layoutData.value.getDataUrl);
+          console.log("✅ Table data refreshed after status toggle");
+        } catch (refreshError) {
+          console.error("⚠️ Could not refresh table data:", refreshError);
+        }
+      }
+
+      // If we're in TabsViewer, also refresh the active tab data
+      if (activeTab && layoutData.value?.tabs) {
+        const activeTabConfig = layoutData.value.tabs.find(
+          (t: any) => t.tabId === activeTab
+        );
+        if (activeTabConfig?.getDataUrl) {
+          console.log(`🔄 Refreshing tab data for ${activeTab} after status toggle`);
+          try {
+            const currentPage = tabPagination[activeTab]?.currentPage ?? 0;
+            await handleTabChange(activeTab, activeTabConfig.getDataUrl, currentPage);
+            console.log(`✅ Tab data refreshed for ${activeTab}`);
+          } catch (tabRefreshError) {
+            console.error(`⚠️ Could not refresh tab data:`, tabRefreshError);
+          }
+        }
+      }
 
       // Close confirmation dialog
       setConfirmDialogOpen(false);
@@ -2482,6 +2533,113 @@ export default function DynamicContent() {
     }
   };
 
+  // Handle page size change
+  const handlePageSizeChange = async (newPageSize: number) => {
+    // Reset to first page when page size changes
+    setCurrentPage(0);
+
+    const layout = layoutData.value;
+    if (!layout?.getDataUrl) return;
+
+    // Determine if we're in search mode or normal pagination mode
+    const isSearchMode = searchResults !== null;
+    const apiUrl = isSearchMode
+      ? layout.search?.searchActionUrl
+      : layout.getDataUrl;
+
+    if (!apiUrl) return;
+
+    // Build parameters with new page size
+    const params: Record<string, string> = {
+      level: "SYSTEM",
+      pageNo: "0",
+      pageSize: String(newPageSize),
+    };
+
+    // If in search mode, include all search fields
+    if (isSearchMode && layout.search?.fields) {
+      layout.search.fields.forEach((field: any) => {
+        const value = (searchData as Record<string, any>)[field.value];
+        params[field.value] = value || "";
+      });
+    }
+
+    console.log("📄 Page size change request params:", params);
+
+    try {
+      const { dynamicRequest } = await import("@/services/apiClient");
+      const method = isSearchMode ? layout.search?.method || "GET" : "GET";
+
+      const response = await dynamicRequest(apiUrl, method, undefined, {
+        params,
+      });
+
+      console.log("📦 Page size change response:", response);
+
+      // Handle wrapped response
+      let responseData: any = response;
+      if (
+        (response as any)?.data &&
+        typeof (response as any).data === "object"
+      ) {
+        responseData = (response as any).data;
+      }
+
+      let results = [];
+      let paginationInfo: any = {};
+
+      if (
+        (responseData as any)?.content &&
+        Array.isArray((responseData as any).content)
+      ) {
+        results = (responseData as any).content;
+        paginationInfo = {
+          currentPage: 0,
+          pageSize: newPageSize,
+          totalPages: (responseData as any).totalPages ?? 1,
+          totalElements: (responseData as any).totalElements ?? 0,
+        };
+      } else if (
+        (responseData as any)?.data &&
+        Array.isArray((responseData as any).data)
+      ) {
+        results = (responseData as any).data;
+        paginationInfo = {
+          currentPage: 0,
+          pageSize: newPageSize,
+          totalPages: 1,
+          totalElements: results.length,
+        };
+      } else if (Array.isArray(responseData)) {
+        results = responseData;
+        paginationInfo = {
+          currentPage: 0,
+          pageSize: newPageSize,
+          totalPages: 1,
+          totalElements: results.length,
+        };
+      }
+
+      // Update the appropriate data based on mode
+      if (isSearchMode) {
+        setSearchResults(results);
+      } else {
+        tableData.value = results;
+      }
+
+      // Update pagination info
+      pagination.value = paginationInfo;
+    } catch (error) {
+      console.error("❌ Page size change error:", error);
+      showAlert({
+        title: "Failed to Change Page Size",
+        description:
+          error instanceof Error ? error.message : "Failed to fetch data",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSearch = async () => {
     const layout = layoutData.value;
     if (!layout?.search?.searchActionUrl) {
@@ -3216,44 +3374,15 @@ export default function DynamicContent() {
 
                       {/* Pagination */}
                       {totalPages > 0 && (
-                        <div className="flex items-center justify-between border-t px-4 py-3">
-                          <p className="text-sm text-muted-foreground">
-                            {totalItems} items
-                          </p>
-                          {totalPages > 1 && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                Page {currentPage + 1} of {totalPages}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8"
-                                  onClick={() =>
-                                    handlePageChange(
-                                      Math.max(0, currentPage - 1)
-                                    )
-                                  }
-                                  disabled={currentPage === 0}
-                                >
-                                  <ChevronLeft className="size-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8"
-                                  onClick={() =>
-                                    handlePageChange(currentPage + 1)
-                                  }
-                                  disabled={currentPage >= totalPages - 1}
-                                >
-                                  <ChevronRight className="size-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          pageSize={pageSize}
+                          totalItems={totalItems}
+                          isSearchResults={searchResults !== null || hasSearchCriteria}
+                          onPageChange={handlePageChange}
+                          onPageSizeChange={handlePageSizeChange}
+                        />
                       )}
                     </>
                   )}
@@ -3469,6 +3598,23 @@ export default function DynamicContent() {
                   if (layoutData.value?.getDataUrl) {
                     await fetchTableData(layoutData.value.getDataUrl);
                     console.log("✅ Table data refreshed");
+                  }
+
+                  // If we're in TabsViewer, also refresh the active tab data
+                  if (activeTab && layoutData.value?.tabs) {
+                    const activeTabConfig = layoutData.value.tabs.find(
+                      (t: any) => t.tabId === activeTab
+                    );
+                    if (activeTabConfig?.getDataUrl) {
+                      console.log(`🔄 Refreshing tab data for ${activeTab} after deletion`);
+                      try {
+                        const currentPage = tabPagination[activeTab]?.currentPage ?? 0;
+                        await handleTabChange(activeTab, activeTabConfig.getDataUrl, currentPage);
+                        console.log(`✅ Tab data refreshed for ${activeTab}`);
+                      } catch (tabRefreshError) {
+                        console.error(`⚠️ Could not refresh tab data:`, tabRefreshError);
+                      }
+                    }
                   }
                 } catch (error: any) {
                   console.error("❌ Delete error:", error);
