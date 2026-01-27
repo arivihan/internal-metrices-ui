@@ -20,6 +20,7 @@ import { useAuthInit } from "@/hooks/useAuthInit";
 import { Toaster } from "@/components/ui/sonner";
 import NotesUploadPage from "./pages/notes-upload";
 import ViralVideosPage from "./pages/viral-videos";
+import ReelsPage from "./pages/reels";
 import FileManagement from "./pages/files/FileManagement";
 import ServiceStatusPage from "@/pages/service-status";
 import HomePageDynamic from "./pages/homepage-dynamic";
@@ -90,6 +91,7 @@ function App() {
 
             <Route path="/dashboard/chapters" element={<Chapters />} />
             <Route path="/dashboard/notes" element={<NotesUploadPage />} />
+            <Route path="/dashboard/reels-upload" element={<ReelsPage />} />
             <Route
               path="/dashboard/viral-videos"
               element={<ViralVideosPage />}
