@@ -21,8 +21,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { copyHomeScreenCard } from "@/services/homeScreenCards";
+import {
+  copyHomeScreenCard,
+  fetchHomeScreenCardById,
+} from "@/services/homeScreenCards";
 import type { HomeScreenCardListResponse } from "@/types/homeScreenCards";
 import { ICON_MEDIA_TYPES, VISIBILITY_TYPES } from "@/types/homeScreenCards";
 
@@ -40,6 +50,11 @@ interface CopyCardDialogProps {
   onSuccess: () => void;
 }
 
+interface CardBatchInfo {
+  batchId: number;
+  batchCode?: string;
+}
+
 export function CopyCardDialog({
   open,
   onOpenChange,
@@ -48,18 +63,51 @@ export function CopyCardDialog({
   onSuccess,
 }: CopyCardDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState<number[]>([]);
+  const [sourceBatchId, setSourceBatchId] = useState<number | null>(null);
+  const [cardBatches, setCardBatches] = useState<CardBatchInfo[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  // Reset state when dialog opens
+  // Load card details to get source batches
   useEffect(() => {
-    if (open) {
+    if (open && card) {
+      loadCardDetails();
       setSelectedBatchIds([]);
+      setSourceBatchId(null);
       setShowResult(false);
       setResult(null);
     }
-  }, [open]);
+  }, [open, card]);
+
+  const loadCardDetails = async () => {
+    if (!card) return;
+
+    setIsLoading(true);
+    try {
+      const details = await fetchHomeScreenCardById(card.id);
+      console.log("[CopyCardDialog] Card details:", details);
+
+      if (details.batches && details.batches.length > 0) {
+        setCardBatches(
+          details.batches.map((b) => ({
+            batchId: b.batchId,
+            batchCode: b.batchCode,
+          }))
+        );
+        // Auto-select the first batch as source
+        setSourceBatchId(details.batches[0].batchId);
+      } else {
+        setCardBatches([]);
+      }
+    } catch (error) {
+      console.error("[CopyCardDialog] Failed to load card details:", error);
+      toast.error("Failed to load card details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleClose = () => {
     if (!isSubmitting) {
@@ -75,21 +123,38 @@ export function CopyCardDialog({
     }
   };
 
+  // Filter out batches that are already associated with this card
+  const availableTargetBatches = batches.filter(
+    (b) => !cardBatches.some((cb) => cb.batchId === b.id)
+  );
+
   const handleSelectAllBatches = (checked: boolean) => {
     if (checked) {
-      setSelectedBatchIds(batches.map((b) => b.id));
+      setSelectedBatchIds(availableTargetBatches.map((b) => b.id));
     } else {
       setSelectedBatchIds([]);
     }
   };
 
   const isAllBatchesSelected =
-    batches.length > 0 && selectedBatchIds.length === batches.length;
+    availableTargetBatches.length > 0 &&
+    selectedBatchIds.length === availableTargetBatches.length;
   const isIndeterminateBatches =
-    selectedBatchIds.length > 0 && selectedBatchIds.length < batches.length;
+    selectedBatchIds.length > 0 &&
+    selectedBatchIds.length < availableTargetBatches.length;
 
   const handleCopy = async () => {
-    if (!card || selectedBatchIds.length === 0) {
+    if (!card) {
+      toast.error("No card selected");
+      return;
+    }
+
+    if (!sourceBatchId) {
+      toast.error("Please select a source batch");
+      return;
+    }
+
+    if (selectedBatchIds.length === 0) {
       toast.error("Please select at least one target batch");
       return;
     }
@@ -98,10 +163,12 @@ export function CopyCardDialog({
     try {
       console.log("[CopyCardDialog] Copying card:", {
         cardId: card.id,
+        sourceBatchId,
         targetBatchIds: selectedBatchIds,
       });
 
       const response = await copyHomeScreenCard(card.id, {
+        sourceBatchId,
         targetBatchIds: selectedBatchIds,
       });
 
@@ -134,6 +201,11 @@ export function CopyCardDialog({
     handleClose();
   };
 
+  const getBatchName = (batchId: number) => {
+    const batch = batches.find((b) => b.id === batchId);
+    return batch?.name || `Batch ${batchId}`;
+  };
+
   if (!card) return null;
 
   return (
@@ -149,7 +221,14 @@ export function CopyCardDialog({
           </p>
         </DialogHeader>
 
-        {!showResult ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              Loading card details...
+            </span>
+          </div>
+        ) : !showResult ? (
           <div className="space-y-6">
             {/* Card Summary */}
             <div className="space-y-3">
@@ -191,10 +270,10 @@ export function CopyCardDialog({
                       <Badge
                         variant="secondary"
                         className={
-                          card.visibilityType === "VISIBLE"
+                          card.visibilityType === "ALL"
                             ? "bg-green-100 text-green-700 text-xs"
-                            : card.visibilityType === "HIDDEN"
-                            ? "bg-gray-100 text-gray-600 text-xs"
+                            : card.visibilityType === "SUBSCRIBED"
+                            ? "bg-blue-100 text-blue-700 text-xs"
                             : "bg-yellow-100 text-yellow-700 text-xs"
                         }
                       >
@@ -221,13 +300,50 @@ export function CopyCardDialog({
 
             <Separator />
 
+            {/* Source Batch Selection */}
+            {cardBatches.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-base font-medium">
+                  Source Batch <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={sourceBatchId?.toString() || ""}
+                  onValueChange={(val) => setSourceBatchId(Number(val))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source batch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cardBatches.map((cb) => (
+                      <SelectItem key={cb.batchId} value={String(cb.batchId)}>
+                        {getBatchName(cb.batchId)}
+                        {cb.batchCode && ` (${cb.batchCode})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select which batch configuration to copy from
+                </p>
+              </div>
+            )}
+
+            {cardBatches.length === 0 && (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+                <AlertCircle className="h-4 w-4 inline mr-2" />
+                This card has no batch configurations to copy from.
+              </div>
+            )}
+
+            <Separator />
+
             {/* Target Batch Selection */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">
                   Select Target Batches
                 </Label>
-                {batches.length > 0 && (
+                {availableTargetBatches.length > 0 && (
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={isAllBatchesSelected}
@@ -244,12 +360,12 @@ export function CopyCardDialog({
 
               <ScrollArea className="h-56 rounded-md border">
                 <div className="p-3 space-y-2">
-                  {batches.length === 0 ? (
+                  {availableTargetBatches.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No batches available
+                      No additional batches available to copy to
                     </div>
                   ) : (
-                    batches.map((batch) => {
+                    availableTargetBatches.map((batch) => {
                       const isSelected = selectedBatchIds.includes(batch.id);
 
                       return (
@@ -327,6 +443,10 @@ export function CopyCardDialog({
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>Card Copied:</div>
                 <div className="font-medium">{card.title}</div>
+                <div>Source Batch:</div>
+                <div className="font-medium">
+                  {sourceBatchId ? getBatchName(sourceBatchId) : "-"}
+                </div>
                 <div>Target Batches:</div>
                 <div className="font-medium">{selectedBatchIds.length}</div>
               </div>
@@ -340,13 +460,19 @@ export function CopyCardDialog({
               <Button
                 variant="outline"
                 onClick={handleClose}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoading}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCopy}
-                disabled={isSubmitting || selectedBatchIds.length === 0}
+                disabled={
+                  isSubmitting ||
+                  isLoading ||
+                  selectedBatchIds.length === 0 ||
+                  !sourceBatchId ||
+                  cardBatches.length === 0
+                }
                 className="bg-indigo-500 hover:bg-indigo-600 text-white"
               >
                 {isSubmitting && (

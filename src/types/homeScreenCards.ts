@@ -2,9 +2,9 @@
 // Home Screen Cards Types
 // ============================================================================
 
-export type IconMediaType = 'IMAGE' | 'LOTTIE' | 'SVG'
-export type VisibilityType = 'VISIBLE' | 'HIDDEN' | 'CONDITIONAL' | 'SUBSCRIBED'
-export type NavigationType = 'ACTIVITY' | 'DEEP_LINK' | 'WEB_VIEW' | 'EXTERNAL' | 'EXTERNAL_IMAGE'
+export type IconMediaType = 'IMAGE' | 'GIF' | 'DYNAMIC_IMAGE'
+export type VisibilityType = 'SUBSCRIBED' | 'NON_SUBSCRIBED' | 'ALL'
+export type NavigationType = 'EXTERNAL_IMAGE' | 'EXTERNAL_PDF' | 'EXTERNAL_LINK' | 'CLASS_PARAMS' | 'DEEPLINK' | 'INTERNAL_LINK' | 'INTERNAL_NOTE'
 
 // Card Batch Detail for responses
 export interface CardBatchDetailResponse {
@@ -108,6 +108,7 @@ export interface HomeScreenCardFilters {
 
 // Copy card request
 export interface CopyCardRequest {
+  sourceBatchId: number
   targetBatchIds: number[]
 }
 
@@ -122,21 +123,22 @@ export interface ApiResponse<T> {
 // Constants for dropdowns
 export const ICON_MEDIA_TYPES: Record<IconMediaType, string> = {
   IMAGE: 'Image',
-  LOTTIE: 'Lottie Animation',
-  SVG: 'SVG',
+  GIF: 'GIF',
+  DYNAMIC_IMAGE: 'Dynamic Image',
 }
 
 export const VISIBILITY_TYPES: Record<VisibilityType, string> = {
-  VISIBLE: 'Visible',
-  HIDDEN: 'Hidden',
-  CONDITIONAL: 'Conditional',
   SUBSCRIBED: 'Subscribed',
+  NON_SUBSCRIBED: 'Non-Subscribed',
+  ALL: 'All',
 }
 
 export const NAVIGATION_TYPES: Record<NavigationType, string> = {
-  ACTIVITY: 'Activity',
-  DEEP_LINK: 'Deep Link',
-  WEB_VIEW: 'Web View',
-  EXTERNAL: 'External',
   EXTERNAL_IMAGE: 'External Image',
+  EXTERNAL_PDF: 'External PDF',
+  EXTERNAL_LINK: 'External Link',
+  CLASS_PARAMS: 'Class Params',
+  DEEPLINK: 'Deeplink',
+  INTERNAL_LINK: 'Internal Link',
+  INTERNAL_NOTE: 'Internal Note',
 }

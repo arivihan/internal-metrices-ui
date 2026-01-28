@@ -276,7 +276,7 @@ export default function HomeScreenCardsPage() {
 
   // Stats calculations
   const activeCards = cards.filter((c) => c.isActive).length;
-  const visibleCards = cards.filter((c) => c.visibilityType === "VISIBLE").length;
+  const allVisibilityCards = cards.filter((c) => c.visibilityType === "ALL").length;
 
   return (
     <div className="flex h-full flex-col space-y-6">
@@ -420,15 +420,15 @@ export default function HomeScreenCardsPage() {
           </div>
         </div>
 
-        {/* Visible Cards */}
+        {/* All Visibility Cards */}
         <div className="rounded-md border border-border bg-card px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xl font-semibold text-foreground leading-tight">
-                {visibleCards}
+                {allVisibilityCards}
               </div>
               <p className="text-xs text-muted-foreground leading-tight">
-                Visible Cards
+                All Visibility
               </p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
@@ -553,18 +553,14 @@ export default function HomeScreenCardsPage() {
                       style={{ backgroundColor: card.iconBackgroundColor || "#f3f4f6" }}
                     >
                       {card.icon ? (
-                        card.iconMediaType === "IMAGE" || card.iconMediaType === "SVG" ? (
-                          <img
-                            src={card.icon}
-                            alt={card.title}
-                            className="h-8 w-8 object-contain"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <Image className="h-6 w-6 text-muted-foreground" />
-                        )
+                        <img
+                          src={card.icon}
+                          alt={card.title}
+                          className="h-8 w-8 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
                       ) : (
                         <Image className="h-6 w-6 text-muted-foreground" />
                       )}
@@ -601,10 +597,10 @@ export default function HomeScreenCardsPage() {
                     <Badge
                       variant="secondary"
                       className={
-                        card.visibilityType === "VISIBLE"
+                        card.visibilityType === "ALL"
                           ? "bg-green-100 text-green-700"
-                          : card.visibilityType === "HIDDEN"
-                          ? "bg-gray-100 text-gray-600"
+                          : card.visibilityType === "SUBSCRIBED"
+                          ? "bg-blue-100 text-blue-700"
                           : "bg-yellow-100 text-yellow-700"
                       }
                     >

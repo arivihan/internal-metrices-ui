@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Languages,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,18 +27,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 import { createHomeScreenCard } from "@/services/homeScreenCards";
 import type {
-  HomeScreenCardCreateRequest,
-  CardBatchRequest,
   IconMediaType,
   VisibilityType,
   NavigationType,
@@ -68,40 +65,23 @@ interface KeyValuePair {
   value: string;
 }
 
-interface LanguageParams {
-  language: string;
-  params: KeyValuePair[];
-  isOpen: boolean;
-}
-
 interface BatchFormData {
   batchId: number | null;
   displayOrder: number;
   className: string;
   navigationType: NavigationType;
   activityParams: KeyValuePair[];
-  languageParams: LanguageParams[];
+  parameterJson: string; // Simple JSON string for parameter
   isOpen: boolean;
 }
-
-const LANGUAGES = [
-  { code: "en", name: "English" },
-  { code: "hi", name: "Hindi" },
-  { code: "te", name: "Telugu" },
-  { code: "ta", name: "Tamil" },
-  { code: "kn", name: "Kannada" },
-  { code: "mr", name: "Marathi" },
-  { code: "gu", name: "Gujarati" },
-  { code: "bn", name: "Bengali" },
-];
 
 const initialBatchFormData: BatchFormData = {
   batchId: null,
   displayOrder: 0,
   className: "",
-  navigationType: "ACTIVITY",
+  navigationType: "CLASS_PARAMS",
   activityParams: [],
-  languageParams: [],
+  parameterJson: "{}",
   isOpen: true,
 };
 
@@ -120,8 +100,7 @@ export function CreateCardDialog({
   const [iconMediaType, setIconMediaType] = useState<IconMediaType>("IMAGE");
   const [tag, setTag] = useState("");
   const [tagBackgroundColor, setTagBackgroundColor] = useState("#e5e7eb");
-  const [visibility, setVisibility] = useState<VisibilityType>("VISIBLE");
-  const [isActive, setIsActive] = useState(true);
+  const [visibility, setVisibility] = useState<VisibilityType>("ALL");
 
   // Batches array
   const [batchesForms, setBatchesForms] = useState<BatchFormData[]>([
@@ -142,9 +121,8 @@ export function CreateCardDialog({
     setIconMediaType("IMAGE");
     setTag("");
     setTagBackgroundColor("#e5e7eb");
-    setVisibility("VISIBLE");
-    setIsActive(true);
-    setBatchesForms([{ ...initialBatchFormData, activityParams: [], languageParams: [] }]);
+    setVisibility("ALL");
+    setBatchesForms([{ ...initialBatchFormData, activityParams: [] }]);
   };
 
   const handleClose = () => {
@@ -156,7 +134,7 @@ export function CreateCardDialog({
   const addBatch = () => {
     setBatchesForms((prev) => [
       ...prev,
-      { ...initialBatchFormData, activityParams: [], languageParams: [], isOpen: true },
+      { ...initialBatchFormData, activityParams: [], isOpen: true },
     ]);
   };
 
@@ -231,137 +209,6 @@ export function CreateCardDialog({
     );
   };
 
-  // Language Params handlers
-  const addLanguage = (batchIndex: number) => {
-    const batch = batchesForms[batchIndex];
-    const usedLanguages = batch.languageParams.map((lp) => lp.language);
-    const availableLanguages = LANGUAGES.filter((l) => !usedLanguages.includes(l.code));
-
-    if (availableLanguages.length === 0) {
-      toast.error("All languages have been added");
-      return;
-    }
-
-    setBatchesForms((prev) =>
-      prev.map((b, i) =>
-        i === batchIndex
-          ? {
-              ...b,
-              languageParams: [
-                ...b.languageParams,
-                { language: availableLanguages[0].code, params: [], isOpen: true },
-              ],
-            }
-          : b
-      )
-    );
-  };
-
-  const removeLanguage = (batchIndex: number, langIndex: number) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.filter((_, li) => li !== langIndex),
-            }
-          : batch
-      )
-    );
-  };
-
-  const updateLanguageCode = (batchIndex: number, langIndex: number, newLang: string) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.map((lp, li) =>
-                li === langIndex ? { ...lp, language: newLang } : lp
-              ),
-            }
-          : batch
-      )
-    );
-  };
-
-  const toggleLanguageOpen = (batchIndex: number, langIndex: number) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.map((lp, li) =>
-                li === langIndex ? { ...lp, isOpen: !lp.isOpen } : lp
-              ),
-            }
-          : batch
-      )
-    );
-  };
-
-  const addLanguageParam = (batchIndex: number, langIndex: number) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.map((lp, li) =>
-                li === langIndex
-                  ? { ...lp, params: [...lp.params, { key: "", value: "" }] }
-                  : lp
-              ),
-            }
-          : batch
-      )
-    );
-  };
-
-  const removeLanguageParam = (batchIndex: number, langIndex: number, paramIndex: number) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.map((lp, li) =>
-                li === langIndex
-                  ? { ...lp, params: lp.params.filter((_, pi) => pi !== paramIndex) }
-                  : lp
-              ),
-            }
-          : batch
-      )
-    );
-  };
-
-  const updateLanguageParam = (
-    batchIndex: number,
-    langIndex: number,
-    paramIndex: number,
-    field: "key" | "value",
-    value: string
-  ) => {
-    setBatchesForms((prev) =>
-      prev.map((batch, i) =>
-        i === batchIndex
-          ? {
-              ...batch,
-              languageParams: batch.languageParams.map((lp, li) =>
-                li === langIndex
-                  ? {
-                      ...lp,
-                      params: lp.params.map((param, pi) =>
-                        pi === paramIndex ? { ...param, [field]: value } : param
-                      ),
-                    }
-                  : lp
-              ),
-            }
-          : batch
-      )
-    );
-  };
-
   // Convert key-value pairs to JSON object
   const keyValuePairsToObject = (pairs: KeyValuePair[]): Record<string, any> => {
     const obj: Record<string, any> = {};
@@ -377,17 +224,14 @@ export function CreateCardDialog({
     return obj;
   };
 
-  // Convert language params to parameter object
-  const languageParamsToObject = (
-    langParams: LanguageParams[]
-  ): Record<string, Record<string, any>> => {
-    const obj: Record<string, Record<string, any>> = {};
-    langParams.forEach((lp) => {
-      if (lp.language) {
-        obj[lp.language] = keyValuePairsToObject(lp.params);
-      }
-    });
-    return obj;
+  // Parse parameter JSON string safely
+  const parseParameterJson = (jsonStr: string): Record<string, Record<string, any>> => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch {
+      return {};
+    }
   };
 
   const validateForm = (): boolean => {
@@ -407,6 +251,14 @@ export function CreateCardDialog({
         toast.error(`Please select a batch for Batch ${i + 1}`);
         return false;
       }
+
+      // Validate parameter JSON
+      try {
+        JSON.parse(batch.parameterJson);
+      } catch {
+        toast.error(`Invalid JSON in Parameter field for Batch ${i + 1}`);
+        return false;
+      }
     }
 
     return true;
@@ -418,28 +270,41 @@ export function CreateCardDialog({
     setIsSubmitting(true);
 
     try {
-      const batchesData: CardBatchRequest[] = batchesForms.map((batch) => ({
-        batchId: batch.batchId!,
-        displayOrder: batch.displayOrder,
-        className: batch.className,
-        navigationType: batch.navigationType,
-        activityParams: keyValuePairsToObject(batch.activityParams),
-        parameter: languageParamsToObject(batch.languageParams),
-      }));
+      const batchesData = batchesForms.map((batch) => {
+        const batchData: any = {
+          batchId: batch.batchId!,
+          displayOrder: batch.displayOrder,
+          className: batch.className,
+          navigationType: batch.navigationType,
+          activityParams: keyValuePairsToObject(batch.activityParams),
+        };
 
-      const requestData: HomeScreenCardCreateRequest = {
+        // Only include parameter if it has content
+        const paramObj = parseParameterJson(batch.parameterJson);
+        if (Object.keys(paramObj).length > 0) {
+          batchData.parameter = paramObj;
+        }
+
+        return batchData;
+      });
+
+      // Build request without isActive (server controls this)
+      const requestData: any = {
         title: title.trim(),
         icon: icon.trim(),
         iconBackgroundColor,
         iconMediaType,
-        tag: tag.trim() || undefined,
-        tagBackgroundColor: tag.trim() ? tagBackgroundColor : undefined,
         visibility,
-        isActive,
         batches: batchesData,
       };
 
-      console.log("[CreateCardDialog] Creating card:", requestData);
+      // Only include tag fields if tag has a value
+      if (tag.trim()) {
+        requestData.tag = tag.trim();
+        requestData.tagBackgroundColor = tagBackgroundColor;
+      }
+
+      console.log("[CreateCardDialog] Creating card:", JSON.stringify(requestData, null, 2));
 
       await createHomeScreenCard(requestData);
 
@@ -460,10 +325,6 @@ export function CreateCardDialog({
     if (!batchId) return "Select Batch";
     const batch = batches.find((b) => b.id === batchId);
     return batch?.name || `Batch ${batchId}`;
-  };
-
-  const getLanguageName = (code: string) => {
-    return LANGUAGES.find((l) => l.code === code)?.name || code;
   };
 
   return (
@@ -609,23 +470,7 @@ export function CreateCardDialog({
                 </Select>
               </div>
 
-              {/* Active Status */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isActive" className="text-base">
-                    Active Status
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable to make the card visible to users
-                  </p>
-                </div>
-                <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
               </div>
-            </div>
 
             <Separator />
 
@@ -840,166 +685,20 @@ export function CreateCardDialog({
                         )}
                       </div>
 
-                      {/* Parameters (Language-based Key-Value Pairs) */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="flex items-center gap-2">
-                            <Languages className="h-4 w-4" />
-                            Parameters (by Language)
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => addLanguage(batchIndex)}
-                            className="h-7 text-xs"
-                          >
-                            <Plus className="mr-1 h-3 w-3" />
-                            Add Language
-                          </Button>
-                        </div>
-
-                        {batch.languageParams.length === 0 ? (
-                          <div className="text-sm text-muted-foreground text-center py-3 border border-dashed rounded-lg">
-                            No language parameters. Click "Add Language" to add.
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {batch.languageParams.map((langParam, langIndex) => (
-                              <div
-                                key={langIndex}
-                                className="border rounded-lg bg-muted/30"
-                              >
-                                <div
-                                  className="flex items-center justify-between p-3 cursor-pointer"
-                                  onClick={() => toggleLanguageOpen(batchIndex, langIndex)}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Select
-                                      value={langParam.language}
-                                      onValueChange={(value) =>
-                                        updateLanguageCode(batchIndex, langIndex, value)
-                                      }
-                                    >
-                                      <SelectTrigger
-                                        className="w-32 h-8"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {LANGUAGES.filter(
-                                          (l) =>
-                                            l.code === langParam.language ||
-                                            !batch.languageParams.some(
-                                              (lp) => lp.language === l.code
-                                            )
-                                        ).map((lang) => (
-                                          <SelectItem key={lang.code} value={lang.code}>
-                                            {lang.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <span className="text-sm text-muted-foreground">
-                                      ({langParam.params.length} params)
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeLanguage(batchIndex, langIndex);
-                                      }}
-                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                    {langParam.isOpen ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
-                                  </div>
-                                </div>
-
-                                {langParam.isOpen && (
-                                  <div className="p-3 pt-0 space-y-2">
-                                    <div className="flex justify-end">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => addLanguageParam(batchIndex, langIndex)}
-                                        className="h-6 text-xs"
-                                      >
-                                        <Plus className="mr-1 h-3 w-3" />
-                                        Add Param
-                                      </Button>
-                                    </div>
-
-                                    {langParam.params.length === 0 ? (
-                                      <div className="text-xs text-muted-foreground text-center py-2">
-                                        No params for {getLanguageName(langParam.language)}
-                                      </div>
-                                    ) : (
-                                      langParam.params.map((param, paramIndex) => (
-                                        <div
-                                          key={paramIndex}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <Input
-                                            placeholder="Key"
-                                            value={param.key}
-                                            onChange={(e) =>
-                                              updateLanguageParam(
-                                                batchIndex,
-                                                langIndex,
-                                                paramIndex,
-                                                "key",
-                                                e.target.value
-                                              )
-                                            }
-                                            className="flex-1 h-8 text-sm"
-                                          />
-                                          <span className="text-muted-foreground">:</span>
-                                          <Input
-                                            placeholder="Value"
-                                            value={param.value}
-                                            onChange={(e) =>
-                                              updateLanguageParam(
-                                                batchIndex,
-                                                langIndex,
-                                                paramIndex,
-                                                "value",
-                                                e.target.value
-                                              )
-                                            }
-                                            className="flex-1 h-8 text-sm"
-                                          />
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              removeLanguageParam(batchIndex, langIndex, paramIndex)
-                                            }
-                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      {/* Parameter (JSON Textarea) */}
+                      <div className="space-y-2">
+                        <Label>Parameter</Label>
+                        <Textarea
+                          placeholder="{}"
+                          value={batch.parameterJson}
+                          onChange={(e) =>
+                            updateBatch(batchIndex, "parameterJson", e.target.value)
+                          }
+                          className="font-mono text-sm min-h-[100px]"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Enter valid JSON object
+                        </p>
                       </div>
                     </div>
                   </CollapsibleContent>
