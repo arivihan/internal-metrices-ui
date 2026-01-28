@@ -19,13 +19,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import {
-  duplicateViralVideos,
+  mapViralVideos,
   fetchAllBatchesForVideos,
 } from "@/services/viralVideos";
 import type {
   VideoResponseDto,
   BatchOption,
-  DuplicateVideoRequest,
+  MapVideoRequest,
 } from "@/types/viralVideos";
 import { VIDEO_TYPES } from "@/types/viralVideos";
 
@@ -106,7 +106,7 @@ export function DuplicateVideoDialog({
 
   // Get unique source batches from selected videos
   const sourceBatches = Array.from(
-    new Set(selectedVideos.map((video) => video.batchId))
+    new Set(selectedVideos.flatMap((video) => video.batches?.map((b) => b.batchId) || []))
   );
 
   // Filter out source batches from selectable batches
@@ -129,38 +129,39 @@ export function DuplicateVideoDialog({
 
     setIsSubmitting(true);
     try {
-      // Prepare the duplicate request payload according to API spec
-      // API expects: { selectedVideos: [{ videoCode: "..." }], targetBatchIds: [...] }
-      const duplicateRequest: DuplicateVideoRequest = {
+      // Prepare the map request payload according to API spec
+      // API expects: { selectedVideos: [{ videoId: number, displayOrder: number }], targetBatchIds: [...] }
+      const mapRequest: MapVideoRequest = {
         selectedVideos: selectedVideos.map((video) => ({
-          videoCode: video.videoCode,
+          videoId: Number(video.id),
+          displayOrder: video.displayOrder,
         })),
         targetBatchIds: selectedBatchIds,
       };
 
       console.log(
-        "[DuplicateVideoDialog] Duplicating videos:",
-        duplicateRequest
+        "[DuplicateVideoDialog] Mapping videos:",
+        mapRequest
       );
 
-      const response = await duplicateViralVideos(duplicateRequest);
+      const response = await mapViralVideos(mapRequest);
 
       setResult(response);
       setShowResult(true);
 
       if (response.success || response.message) {
-        toast.success(response.message || "Videos successfully copied");
+        toast.success(response.message || "Videos successfully mapped");
       }
     } catch (error) {
-      console.error("[DuplicateVideoDialog] Duplication error:", error);
+      console.error("[DuplicateVideoDialog] Mapping error:", error);
       setResult({
         success: false,
         message:
-          error instanceof Error ? error.message : "Failed to duplicate videos",
+          error instanceof Error ? error.message : "Failed to map videos",
       });
       setShowResult(true);
       toast.error(
-        error instanceof Error ? error.message : "Failed to duplicate videos"
+        error instanceof Error ? error.message : "Failed to map videos"
       );
     } finally {
       setIsSubmitting(false);
@@ -210,7 +211,7 @@ export function DuplicateVideoDialog({
                       {video.thumbnailUrl ? (
                         <img
                           src={video.thumbnailUrl}
-                          alt={video.videoCode}
+                          alt={video.code}
                           loading="lazy"
                           className="h-12 w-9 object-cover rounded"
                           onError={(e) => {
@@ -225,15 +226,17 @@ export function DuplicateVideoDialog({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">
-                          {video.videoCode}
+                          {video.code}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {getVideoTypeDisplay(video.videoType)} • Position #
-                          {video.position}
+                          {getVideoTypeDisplay(video.type)} • Order #
+                          {video.displayOrder}
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs shrink-0">
-                        Batch {video.batchId}
+                        {video.batches?.length > 0
+                          ? video.batches.map(b => b.batchName).join(", ")
+                          : "-"}
                       </Badge>
                     </div>
                   ))}
@@ -249,7 +252,7 @@ export function DuplicateVideoDialog({
             <Separator />
 
             {/* Target Batch Selection */}
-            <div className="space-y-3">
+            <div className="space-y-3 ">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">
                   Select Target Batches
@@ -294,10 +297,7 @@ export function DuplicateVideoDialog({
                             key={batch.id}
                             className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
                               isSourceBatch
-                                ? "bg-gray-50 opacity-60"
-                                : isSelected
-                                ? "bg-rose-50 border-rose-200"
-                                : "hover:bg-muted/50"
+                               
                             }`}
                           >
                             <Checkbox

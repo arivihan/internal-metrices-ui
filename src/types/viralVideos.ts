@@ -1,14 +1,20 @@
+export interface VideoBatchInfo {
+  batchId: number
+  batchName: string
+  batchCode: string
+}
+
 export interface VideoResponseDto {
   id: string
-  videoUrl: string
+  url: string
   thumbnailUrl: string
   videoOrientation: 'PORTRAIT' | 'LANDSCAPE'
   displayContext: string
-  position: number
-  batchId: number
+  displayOrder: number
   isActive: boolean
-  videoType: string
-  videoCode: string
+  type: string
+  code: string
+  batches: VideoBatchInfo[]
 }
 
 export interface VideoFilters {
@@ -35,13 +41,20 @@ export interface UploadVideoPayload {
   batchId: number
 }
 
-export interface DuplicateVideoRequest {
-  selectedVideos: SelectedVideo[]
+export interface MapVideoRequest {
+  selectedVideos: SelectedVideoForMap[]
   targetBatchIds: number[]
 }
 
-export interface SelectedVideo {
-  videoCode: string
+export interface SelectedVideoForMap {
+  videoId: number
+  displayOrder: number
+}
+
+export interface MapVideoResponse {
+  message: string
+  code: number
+  success: boolean
 }
 
 // Request DTO for creating/updating videos
@@ -52,7 +65,7 @@ export interface VideoRequest {
   orientation?: string
   context?: string
   type?: string
-  position?: number
+  displayOrder?: number
   isActive?: boolean
 }
 
@@ -96,7 +109,8 @@ export const VIDEO_ORIENTATIONS: Record<string, string> = {
 // Display contexts
 export const DISPLAY_CONTEXTS: Record<string, string> = {
   HOMESCREEN: 'Home Screen',
-  COURSE_PAGE: 'Course Page',
-  PROFILE: 'Profile',
+  TOPPER_SCREEN: 'Topper Screen',
+  SUBSCRIPTION_SCREEN: 'Subscription Screen',
+  ONBOARDING_SCREEN: 'Onboarding Screen',
   OTHER: 'Other',
 }

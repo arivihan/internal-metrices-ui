@@ -10,6 +10,7 @@ export interface NotesResponseDto {
   batchId: number
   isActive: boolean
   notesCode: string
+  accessType?: string
 }
 
 export interface NotesFilters {

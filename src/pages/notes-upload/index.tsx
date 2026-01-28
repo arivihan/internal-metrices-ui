@@ -9,6 +9,8 @@ import {
   ExternalLink,
   History,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   RotateCcw,
   Check,
@@ -173,11 +175,8 @@ export default function NotesUploadPage() {
         sortDir: "ASC",
       });
 
-      if (pageNo === 0) {
-        setBatches(response.content || []);
-      } else {
-        setBatches((prev) => [...prev, ...(response.content || [])]);
-      }
+      // Replace batches for page-based navigation
+      setBatches(response.content || []);
 
       setBatchPagination({
         currentPage: response.pageNumber ?? pageNo,
@@ -208,7 +207,13 @@ export default function NotesUploadPage() {
     setBatchDropdownOpen(false);
   };
 
-  const handleLoadMoreBatches = () => {
+  const handlePrevBatchPage = () => {
+    if (batchPagination.currentPage > 0) {
+      loadBatches(batchPagination.currentPage - 1, batchSearchQuery);
+    }
+  };
+
+  const handleNextBatchPage = () => {
     if (batchPagination.currentPage < batchPagination.totalPages - 1) {
       loadBatches(batchPagination.currentPage + 1, batchSearchQuery);
     }
@@ -454,13 +459,13 @@ export default function NotesUploadPage() {
               variant="outline"
               role="combobox"
               aria-expanded={batchDropdownOpen}
-              className="w-48 justify-between shrink-0"
+              className="w-56 justify-between shrink-0"
             >
               <span className="truncate">{selectedBatch ? selectedBatch.name : "Select Batch..."}</span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-60 p-0" align="start">
+          <PopoverContent className="w-80 p-0" align="start" side="bottom" sideOffset={4}>
             <div className="p-2 border-b">
               <Input
                 placeholder="Search batches..."
@@ -469,20 +474,20 @@ export default function NotesUploadPage() {
                 className="h-8"
               />
             </div>
-            <div className="max-h-60 overflow-y-auto scrollbar-hide">
+            <div className="max-h-72 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {/* Clear selection option */}
               <div
                 className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
                 onClick={() => handleBatchSelect(null)}
               >
                 <Check
-                  className={`mr-2 h-4 w-4 ${
+                  className={`mr-2 h-4 w-4 shrink-0 ${
                     !selectedBatch ? "opacity-100" : "opacity-0"
                   }`}
                 />
-                All Batches
+                <span>All Batches</span>
               </div>
-              {batchesLoading && batches.length === 0 ? (
+              {batchesLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="ml-2 text-sm">Loading...</span>
@@ -500,42 +505,51 @@ export default function NotesUploadPage() {
                       onClick={() => handleBatchSelect(batch)}
                     >
                       <Check
-                        className={`mr-2 h-4 w-4 ${
+                        className={`mr-2 h-4 w-4 shrink-0 ${
                           selectedBatch?.id === batch.id
                             ? "opacity-100"
                             : "opacity-0"
                         }`}
                       />
-                      <div className="flex-1 truncate">
-                        <span>{batch.name}</span>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-medium truncate">{batch.displayName || batch.name}</span>
                         {batch.code && (
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            ({batch.code})
+                          <span className="text-xs text-muted-foreground truncate">
+                            {batch.code}
                           </span>
                         )}
                       </div>
                     </div>
                   ))}
-                  {/* Load More Button */}
-                  {batchPagination.currentPage < batchPagination.totalPages - 1 && (
-                    <div className="p-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={handleLoadMoreBatches}
-                        disabled={batchesLoading}
-                      >
-                        {batchesLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Load More ({batchPagination.totalElements - batches.length} remaining)
-                      </Button>
-                    </div>
-                  )}
                 </>
               )}
             </div>
+            {/* Pagination Controls */}
+            {batchPagination.totalPages > 1 && (
+              <div className="flex items-center justify-between p-2 border-t bg-background">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePrevBatchPage}
+                  disabled={batchesLoading || batchPagination.currentPage === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Prev
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {batchPagination.currentPage + 1} of {batchPagination.totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNextBatchPage}
+                  disabled={batchesLoading || batchPagination.currentPage >= batchPagination.totalPages - 1}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
           </PopoverContent>
         </Popover>
 

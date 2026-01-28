@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X, ChevronDown, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -12,14 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 
-import { uploadNotes, fetchAllBatchesForNotes } from "@/services/notes";
+import { uploadNotes, fetchBatchesPaginated } from "@/services/notes";
 import type { BatchOption } from "@/types/notes";
 
 interface AddNotesDialogProps {
@@ -47,33 +46,47 @@ export function AddNotesDialog({
     batchId: null,
   });
 
-  // Batch options
+  // Batch options with pagination
   const [batches, setBatches] = useState<BatchOption[]>([]);
+  const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+  const [batchSearchQuery, setBatchSearchQuery] = useState("");
+  const [selectedBatchName, setSelectedBatchName] = useState("");
+  const [batchPagination, setBatchPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load batch options
   useEffect(() => {
     if (open) {
-      loadBatchOptions();
+      loadBatchOptions(0, "");
     }
   }, [open]);
 
-  const loadBatchOptions = async () => {
+  const loadBatchOptions = async (pageNo: number = 0, search: string = "") => {
     setLoading(true);
     try {
       console.log("[AddNotesDialog] Loading batch options...");
-      const batchesRes = await fetchAllBatchesForNotes({ activeFlag: true });
-      console.log("[AddNotesDialog] Batch options loaded:", batchesRes);
-      setBatches(batchesRes);
+      const response = await fetchBatchesPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+        activeFlag: true,
+      });
 
-      if (batchesRes.length === 0) {
-        toast.warning("No active batches found");
-      } else {
-        console.log(
-          "[AddNotesDialog] Set batches:",
-          batchesRes.length,
-          "items"
-        );
-      }
+      // Use mapped batches from the service
+      setBatches(response.content as BatchOption[]);
+      setBatchPagination({
+        currentPage: response.pageNumber,
+        totalPages: response.totalPages,
+        totalElements: response.totalElements,
+        pageSize: response.pageSize,
+      });
+
+      console.log("[AddNotesDialog] Batch options loaded:", response.content.length, "items");
     } catch (error) {
       console.error("[AddNotesDialog] Failed to load batch options:", error);
       toast.error(
@@ -86,6 +99,34 @@ export function AddNotesDialog({
     }
   };
 
+  const handleBatchSearch = (query: string) => {
+    setBatchSearchQuery(query);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadBatchOptions(0, query);
+    }, 300);
+  };
+
+  const handlePrevBatchPage = () => {
+    if (batchPagination.currentPage > 0) {
+      loadBatchOptions(batchPagination.currentPage - 1, batchSearchQuery);
+    }
+  };
+
+  const handleNextBatchPage = () => {
+    if (batchPagination.currentPage < batchPagination.totalPages - 1) {
+      loadBatchOptions(batchPagination.currentPage + 1, batchSearchQuery);
+    }
+  };
+
+  const handleBatchSelect = (batch: BatchOption) => {
+    setFormData((prev) => ({ ...prev, batchId: batch.id }));
+    setSelectedBatchName(batch.name);
+    setBatchDropdownOpen(false);
+  };
+
   // Reset form when sheet opens
   useEffect(() => {
     if (open) {
@@ -93,6 +134,8 @@ export function AddNotesDialog({
         file: null,
         batchId: null,
       });
+      setSelectedBatchName("");
+      setBatchSearchQuery("");
     }
   }, [open]);
 
@@ -256,6 +299,116 @@ export function AddNotesDialog({
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-6">
+          {/* Batch Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="batch">
+              Select Batch <span className="text-destructive">*</span>
+            </Label>
+            <Popover
+              open={batchDropdownOpen}
+              onOpenChange={setBatchDropdownOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {selectedBatchName || "Choose a batch..."}
+                  </span>
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-100 p-0"
+                align="start"
+                side="bottom"
+                sideOffset={4}
+              >
+                <div className="p-2 border-b">
+                  <Input
+                    placeholder="Search batches..."
+                    value={batchSearchQuery}
+                    onChange={(e) => handleBatchSearch(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div className="max-h-100 overflow-y-auto">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="ml-2 text-sm">Loading...</span>
+                    </div>
+                  ) : batches.length === 0 ? (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      No batches found.
+                    </div>
+                  ) : (
+                    <>
+                      {batches.map((batch) => (
+                        <div
+                          key={batch.id}
+                          className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                          onClick={() => handleBatchSelect(batch)}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 shrink-0 ${
+                              formData.batchId === batch.id
+                                ? "opacity-100"
+                                : "opacity-0"
+                            }`}
+                          />
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="font-medium truncate">
+                              {batch.name}
+                            </span>
+                            {batch.examName && batch.gradeName && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                {batch.examName} • {batch.gradeName} •{" "}
+                                {batch.language}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+                {/* Pagination Controls */}
+                {batchPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between p-2 border-t bg-background">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handlePrevBatchPage}
+                      disabled={loading || batchPagination.currentPage === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Prev
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Page {batchPagination.currentPage + 1} of{" "}
+                      {batchPagination.totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNextBatchPage}
+                      disabled={
+                        loading ||
+                        batchPagination.currentPage >=
+                          batchPagination.totalPages - 1
+                      }
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
           {/* File Upload */}
           <div className="space-y-2">
             <Label>
@@ -300,42 +453,6 @@ export function AddNotesDialog({
                 </Button>
               </div>
             )}
-          </div>
-
-          {/* Batch Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="batch">
-              Select Batch <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={formData.batchId?.toString() || ""}
-              onValueChange={(value) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  batchId: value ? Number(value) : null,
-                }))
-              }
-              disabled={loading}
-            >
-              <SelectTrigger id="batch">
-                <SelectValue placeholder="Choose a batch" />
-              </SelectTrigger>
-              <SelectContent>
-                {batches.map((batch) => (
-                  <SelectItem key={batch.id} value={String(batch.id)}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{batch.name}</span>
-                      {batch.examName && batch.gradeName && (
-                        <span className="text-xs text-muted-foreground">
-                          {batch.examName} • {batch.gradeName} •{" "}
-                          {batch.language}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

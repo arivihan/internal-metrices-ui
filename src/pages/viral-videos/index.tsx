@@ -15,6 +15,7 @@ import {
   Upload,
   FileSpreadsheet,
   ChevronDown,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -76,7 +77,10 @@ import {
   updateVideo,
   deleteVideo,
   toggleVideoStatus,
+  fetchVideoAuditTrail,
+  fetchVideosTableAuditTrail,
 } from "@/services/viralVideos";
+import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 import type {
   VideoResponseDto,
   VideoFilters,
@@ -100,7 +104,7 @@ export default function ViralVideosPage() {
   const [filters, setFilters] = useState<VideoFilters>({
     pageNo: 0,
     pageSize: 20,
-    sortBy: "position",
+    sortBy: "displayOrder",
     sortDir: "ASC",
     active: true,
   });
@@ -118,6 +122,20 @@ export default function ViralVideosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<VideoRequest>>({});
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  // Audit Trail state
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false);
+  const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
+  const [auditTrailLoading, setAuditTrailLoading] = useState(false);
+  const [auditTrailTitle, setAuditTrailTitle] = useState("Audit Trail");
+  const [auditTrailPagination, setAuditTrailPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const [currentAuditVideoId, setCurrentAuditVideoId] = useState<string | null>(null);
+  const [isTableAudit, setIsTableAudit] = useState(false);
 
   useEffect(() => {
     loadVideos();
@@ -170,7 +188,7 @@ export default function ViralVideosPage() {
     // Filter locally by video code
     if (query.trim()) {
       const filtered = videos.filter((v) =>
-        v.videoCode.toLowerCase().includes(query.toLowerCase())
+        v.code.toLowerCase().includes(query.toLowerCase())
       );
       setVideos(filtered);
     } else {
@@ -218,13 +236,13 @@ export default function ViralVideosPage() {
   const handleEditClick = (video: VideoResponseDto) => {
     setSelectedVideo(video);
     setEditFormData({
-      code: video.videoCode,
-      url: video.videoUrl,
+      code: video.code,
+      url: video.url,
       thumbnailUrl: video.thumbnailUrl,
       orientation: video.videoOrientation,
       context: video.displayContext,
-      type: video.videoType,
-      position: video.position,
+      type: video.type,
+      displayOrder: video.displayOrder,
       isActive: video.isActive,
     });
     setEditDialogOpen(true);
@@ -296,6 +314,66 @@ export default function ViralVideosPage() {
     }
   };
 
+  // Audit Trail handlers
+  const handleRowAuditClick = async (video: VideoResponseDto) => {
+    setCurrentAuditVideoId(video.id);
+    setIsTableAudit(false);
+    setAuditTrailTitle(`Audit Trail - ${video.code}`);
+    setAuditTrailOpen(true);
+    await fetchAuditTrailPage(video.id, 0, false);
+  };
+
+  const handleTableAuditClick = async () => {
+    setCurrentAuditVideoId(null);
+    setIsTableAudit(true);
+    setAuditTrailTitle("Viral Videos Table Audit Trail");
+    setAuditTrailOpen(true);
+    await fetchAuditTrailPage(null, 0, true);
+  };
+
+  const fetchAuditTrailPage = async (
+    videoId: string | null,
+    pageNo: number,
+    tableAudit: boolean,
+    pageSizeParam?: number
+  ) => {
+    const size = pageSizeParam ?? auditTrailPagination.pageSize;
+    setAuditTrailLoading(true);
+    try {
+      let response;
+      if (tableAudit) {
+        response = await fetchVideosTableAuditTrail(pageNo, size);
+      } else if (videoId) {
+        response = await fetchVideoAuditTrail(videoId, pageNo, size);
+      } else {
+        return;
+      }
+
+      setAuditTrailData(response.content || []);
+      setAuditTrailPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? size,
+      });
+    } catch (error) {
+      console.error("[ViralVideosPage] Failed to fetch audit trail:", error);
+      toast.error("Failed to load audit trail");
+      setAuditTrailData([]);
+    } finally {
+      setAuditTrailLoading(false);
+    }
+  };
+
+  const handleAuditPageChange = (newPage: number) => {
+    fetchAuditTrailPage(currentAuditVideoId, newPage, isTableAudit);
+  };
+
+  const handleAuditPageSizeChange = (newPageSize: number) => {
+    // Reset to first page when changing page size
+    fetchAuditTrailPage(currentAuditVideoId, 0, isTableAudit, newPageSize);
+  };
+
   const getVideoTypeDisplay = (type: string) => {
     return VIDEO_TYPES[type] || type;
   };
@@ -306,11 +384,6 @@ export default function ViralVideosPage() {
     ) : (
       <Monitor className="h-4 w-4" />
     );
-  };
-
-  const getBatchName = (batchId: number) => {
-    const batch = batches.find((b) => b.id === batchId);
-    return batch?.name || `Batch ${batchId}`;
   };
 
   const handleFilterByBatch = (batchId: string) => {
@@ -351,7 +424,9 @@ export default function ViralVideosPage() {
   const portraitVideos = videos.filter(
     (v) => v.videoOrientation === "PORTRAIT"
   ).length;
-  const uniqueBatches = new Set(videos.map((v) => v.batchId)).size;
+  const uniqueBatches = new Set(
+    videos.flatMap((v) => v.batches?.map((b) => b.batchId) || [])
+  ).size;
 
   return (
     <div className="flex h-full flex-col space-y-6">
@@ -383,6 +458,10 @@ export default function ViralVideosPage() {
               Duplicate ({selectedVideos.length})
             </Button>
           )}
+          <Button variant="outline" onClick={handleTableAuditClick}>
+            <History className="mr-2 h-4 w-4" />
+            Table Audit
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-rose-500 hover:bg-rose-600">
@@ -484,7 +563,7 @@ export default function ViralVideosPage() {
             setFilters({
               pageNo: 0,
               pageSize: 20,
-              sortBy: "position",
+              sortBy: "displayOrder",
               sortDir: "ASC",
               active: true,
             });
@@ -586,7 +665,7 @@ export default function ViralVideosPage() {
               <TableHead>Orientation</TableHead>
               <TableHead>Display Context</TableHead>
               <TableHead>Batch</TableHead>
-              <TableHead>Position</TableHead>
+              <TableHead>Display Order</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
@@ -659,7 +738,7 @@ export default function ViralVideosPage() {
                       onCheckedChange={(checked) =>
                         handleSelectVideo(video, checked as boolean)
                       }
-                      aria-label={`Select video ${video.videoCode}`}
+                      aria-label={`Select video ${video.code}`}
                     />
                   </TableCell>
                   <TableCell>
@@ -671,7 +750,7 @@ export default function ViralVideosPage() {
                       ) : (
                         <img
                           src={video.thumbnailUrl}
-                          alt={video.videoCode}
+                          alt={video.code}
                           loading="lazy"
                           className="h-16 w-12 object-cover rounded-md border shadow-sm"
                           onError={() => {
@@ -681,7 +760,7 @@ export default function ViralVideosPage() {
                       )}
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md cursor-pointer"
-                        onClick={() => video.videoUrl && window.open(video.videoUrl, "_blank")}
+                        onClick={() => video.url && window.open(video.url, "_blank")}
                       >
                         <Play className="h-6 w-6 text-white" />
                       </div>
@@ -690,7 +769,7 @@ export default function ViralVideosPage() {
                   <TableCell>
                     <div>
                       <div className="font-medium text-sm">
-                        {video.videoCode}
+                        {video.code}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         ID: {video.id}
@@ -702,7 +781,7 @@ export default function ViralVideosPage() {
                       variant="outline"
                       className="bg-rose-50 text-rose-700 border-rose-200"
                     >
-                      {getVideoTypeDisplay(video.videoType)}
+                      {getVideoTypeDisplay(video.type)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -721,11 +800,15 @@ export default function ViralVideosPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{getBatchName(video.batchId)}</div>
+                    <div className="text-sm">
+                      {video.batches?.length > 0
+                        ? video.batches.map(b => b.batchName).join(", ")
+                        : "-"}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono">
-                      #{video.position}
+                      #{video.displayOrder}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -749,7 +832,7 @@ export default function ViralVideosPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => window.open(video.videoUrl, "_blank")}
+                          onClick={() => window.open(video.url, "_blank")}
                           className="cursor-pointer"
                         >
                           <Play className="mr-2 h-4 w-4" />
@@ -805,6 +888,14 @@ export default function ViralVideosPage() {
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleRowAuditClick(video)}
+                          className="cursor-pointer"
+                        >
+                          <History className="mr-2 h-4 w-4" />
+                          Audit Trail
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -882,7 +973,7 @@ export default function ViralVideosPage() {
           <DialogHeader>
             <DialogTitle>Edit Video</DialogTitle>
             <DialogDescription>
-              Update video details for {selectedVideo?.videoCode}
+              Update video details for {selectedVideo?.code}
             </DialogDescription>
           </DialogHeader>
 
@@ -990,18 +1081,18 @@ export default function ViralVideosPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="position">Position</Label>
+                <Label htmlFor="displayOrder">Display Order</Label>
                 <Input
-                  id="position"
+                  id="displayOrder"
                   type="number"
-                  value={editFormData.position ?? ""}
+                  value={editFormData.displayOrder ?? ""}
                   onChange={(e) =>
                     setEditFormData((prev) => ({
                       ...prev,
-                      position: Number(e.target.value),
+                      displayOrder: Number(e.target.value),
                     }))
                   }
-                  placeholder="Enter position"
+                  placeholder="Enter display order"
                 />
               </div>
             </div>
@@ -1035,7 +1126,7 @@ export default function ViralVideosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Video</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete video "{selectedVideo?.videoCode}"?
+              Are you sure you want to delete video "{selectedVideo?.code}"?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1091,6 +1182,25 @@ export default function ViralVideosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Audit Trail Popup */}
+      <AuditTrailPopup
+        open={auditTrailOpen}
+        onClose={() => {
+          setAuditTrailOpen(false);
+          setAuditTrailData([]);
+          setCurrentAuditVideoId(null);
+        }}
+        data={auditTrailData}
+        title={auditTrailTitle}
+        currentPage={auditTrailPagination.currentPage}
+        totalPages={auditTrailPagination.totalPages}
+        totalElements={auditTrailPagination.totalElements}
+        pageSize={auditTrailPagination.pageSize}
+        isLoading={auditTrailLoading}
+        onPageChange={handleAuditPageChange}
+        onPageSizeChange={handleAuditPageSizeChange}
+      />
     </div>
   );
 }

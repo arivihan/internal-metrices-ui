@@ -6,7 +6,8 @@ import type {
   VideoFilters,
   VideoPaginatedResponse,
   UploadVideoPayload,
-  DuplicateVideoRequest,
+  MapVideoRequest,
+  MapVideoResponse,
   VideoUploadResponse,
   BatchOption,
   VideoRequest,
@@ -42,7 +43,7 @@ export const fetchViralVideos = async (
 
   try {
     const response = await apiClient<VideoPaginatedResponse>(
-      '/secure/api/v1/viral-videos',
+      '/secure/api/v1/videos',
       { params }
     )
 
@@ -90,7 +91,7 @@ export const fetchVideoById = async (id: string): Promise<VideoResponseDto> => {
 
   try {
     const response = await apiClient<VideoResponseDto>(
-      `/secure/api/v1/viral-videos/${id}`
+      `/secure/api/v1/videos/${id}`
     )
 
     console.log('[fetchVideoById] Response:', response)
@@ -119,7 +120,7 @@ export const createVideo = async (
 
   try {
     const response = await apiClient<VideoResponseDto>(
-      `/secure/api/v1/viral-videos?batchId=${batchId}`,
+      `/secure/api/v1/videos?batchId=${batchId}`,
       {
         method: 'POST',
         body: JSON.stringify(videoData),
@@ -152,7 +153,7 @@ export const updateVideo = async (
 
   try {
     const response = await apiClient<VideoResponseDto>(
-      `/secure/api/v1/viral-videos/${id}`,
+      `/secure/api/v1/videos/${id}`,
       {
         method: 'PATCH',
         body: JSON.stringify(videoData),
@@ -185,7 +186,7 @@ export const toggleVideoStatus = async (
 
   try {
     const response = await apiClient<VideoResponseDto>(
-      `/secure/api/v1/viral-videos/${id}/status`,
+      `/secure/api/v1/videos/${id}/status`,
       {
         method: 'PATCH',
         body: JSON.stringify({ isActive }),
@@ -214,7 +215,7 @@ export const deleteVideo = async (id: string): Promise<void> => {
   console.log('[deleteVideo] Deleting video:', id)
 
   try {
-    await apiClient<void>(`/secure/api/v1/viral-videos/${id}`, {
+    await apiClient<void>(`/secure/api/v1/videos/${id}`, {
       method: 'DELETE',
     })
 
@@ -252,7 +253,7 @@ export const uploadViralVideos = async (
   })
 
   // Build URL with query parameters - match notes service pattern
-  const endpoint = `/secure/api/v1/viral-videos/upload?batchId=${payload.batchId}`
+  const endpoint = `/secure/api/v1/videos/upload?batchId=${payload.batchId}`
   const url = `/api${endpoint}`
 
   console.log('[uploadViralVideos] Request URL:', url)
@@ -340,27 +341,121 @@ export const uploadViralVideos = async (
 }
 
 /**
- * Duplicate viral videos to multiple batches
- * POST /secure/viral-videos/api/v1/duplicate
+ * Map (duplicate) viral videos to multiple batches
+ * POST /secure/api/v1/videos/map
  */
-export const duplicateViralVideos = async (
-  payload: DuplicateVideoRequest
-): Promise<VideoUploadResponse> => {
-  console.log('[duplicateViralVideos] Starting duplication with payload:', payload)
+export const mapViralVideos = async (
+  payload: MapVideoRequest
+): Promise<MapVideoResponse> => {
+  console.log('[mapViralVideos] Starting video mapping with payload:', payload)
 
   try {
-    const response = await apiClient<VideoUploadResponse>(
-      '/secure/api/v1/viral-videos/duplicate',
+    const response = await apiClient<MapVideoResponse>(
+      '/secure/api/v1/videos/map',
       {
         method: 'POST',
         body: JSON.stringify(payload),
       }
     )
 
-    console.log('[duplicateViralVideos] Response:', response)
+    console.log('[mapViralVideos] Response:', response)
     return response
   } catch (error) {
-    console.error('[duplicateViralVideos] Error:', error)
+    console.error('[mapViralVideos] Error:', error)
+    throw error
+  }
+}
+
+// ============================================================================
+// AUDIT TRAIL APIs
+// ============================================================================
+
+/**
+ * Fetch audit trail for a specific video
+ * GET /secure/api/v1/audit-logs/row?entityName=VideoEntity&entityId={id}&pageNo=0&pageSize=10
+ */
+export const fetchVideoAuditTrail = async (
+  videoId: string,
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<any> => {
+  console.log('[fetchVideoAuditTrail] Fetching audit trail for video:', videoId)
+
+  try {
+    const params: Record<string, string> = {
+      entityName: 'VideoEntity',
+      entityId: videoId,
+      pageNo: String(pageNo),
+      pageSize: String(pageSize),
+    }
+
+    const response = await apiClient<any>('/secure/api/v1/audit-logs/row', {
+      params,
+    })
+
+    console.log('[fetchVideoAuditTrail] Response:', response)
+
+    // Handle different response formats
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        return response.data
+      }
+      return response
+    }
+
+    return {
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      pageSize,
+      pageNumber: pageNo,
+    }
+  } catch (error) {
+    console.error('[fetchVideoAuditTrail] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch table-wide audit trail for all viral videos
+ * GET /secure/api/v1/audit-logs/table?entityName=VideoEntity&pageNo=0&pageSize=10
+ */
+export const fetchVideosTableAuditTrail = async (
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<any> => {
+  console.log('[fetchVideosTableAuditTrail] Fetching table audit trail')
+
+  try {
+    const params: Record<string, string> = {
+      entityName: 'VideoEntity',
+      pageNo: String(pageNo),
+      pageSize: String(pageSize),
+    }
+
+    const response = await apiClient<any>('/secure/api/v1/audit-logs/table', {
+      params,
+    })
+
+    console.log('[fetchVideosTableAuditTrail] Response:', response)
+
+    // Handle different response formats
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        return response.data
+      }
+      return response
+    }
+
+    return {
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      pageSize,
+      pageNumber: pageNo,
+    }
+  } catch (error) {
+    console.error('[fetchVideosTableAuditTrail] Error:', error)
     throw error
   }
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Loader2, Save } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Save, ChevronDown, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -20,8 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-import { updateNote } from "@/services/notes";
+import { updateNote, fetchSubjectsPaginated, type SubjectOption } from "@/services/notes";
 import type { NotesResponseDto } from "@/types/notes";
 
 interface EditNotesDialogProps {
@@ -30,17 +35,17 @@ interface EditNotesDialogProps {
   note: NotesResponseDto | null;
   onSuccess: () => void;
 }
-
+// ,PREVIOUS_YEAR_PAPER,,
 const NOTES_TYPES = {
   PREVIOUS_YEAR_PAPER: "Previous Year Paper",
-  NOTES: "Notes",
-  SAMPLE_PAPER: "Sample Paper",
-  PRACTICE_SET: "Practice Set",
+  TOPPER_NOTES: "Topper Notes",
+  NCERT_SOLUTION: "NCERT Solution",
+  IMPORTANT_NOTES: "Important Notes",
 };
 
 const ACCESS_TYPES = {
-  LOCKED: "Locked",
-  UNLOCKED: "Unlocked",
+  BASIC: "Basic",
+  PREMIUM: "Premium",
 };
 
 interface FormData {
@@ -52,6 +57,7 @@ interface FormData {
   position: number;
   isActive: boolean;
   subject: string;
+  notesBy: string;
 }
 
 export function EditNotesDialog({
@@ -61,16 +67,89 @@ export function EditNotesDialog({
   onSuccess,
 }: EditNotesDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [subjectDropdownOpen, setSubjectDropdownOpen] = useState(false);
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
+  const [subjectPagination, setSubjectPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [formData, setFormData] = useState<FormData>({
     code: "",
     title: "",
     url: "",
-    accessType: "UNLOCKED",
+    accessType: "BASIC",
     type: "NOTES",
     position: 0,
     isActive: true,
     subject: "",
+    notesBy: "",
   });
+
+  // Fetch subjects when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadSubjects(0, "");
+    }
+  }, [open]);
+
+  const loadSubjects = async (pageNo: number = 0, search: string = "") => {
+    setSubjectsLoading(true);
+    try {
+      const response = await fetchSubjectsPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+      });
+
+      // Replace subjects for page-based navigation
+      setSubjects(response.content);
+
+      setSubjectPagination({
+        currentPage: response.pageNumber,
+        totalPages: response.totalPages,
+        totalElements: response.totalElements,
+        pageSize: response.pageSize,
+      });
+    } catch (error) {
+      console.error("Failed to load subjects:", error);
+      toast.error("Failed to load subjects");
+    } finally {
+      setSubjectsLoading(false);
+    }
+  };
+
+  const handleSubjectSearch = (query: string) => {
+    setSubjectSearchQuery(query);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadSubjects(0, query);
+    }, 300);
+  };
+
+  const handlePrevSubjectPage = () => {
+    if (subjectPagination.currentPage > 0) {
+      loadSubjects(subjectPagination.currentPage - 1, subjectSearchQuery);
+    }
+  };
+
+  const handleNextSubjectPage = () => {
+    if (subjectPagination.currentPage < subjectPagination.totalPages - 1) {
+      loadSubjects(subjectPagination.currentPage + 1, subjectSearchQuery);
+    }
+  };
+
+  const handleSubjectSelect = (subject: SubjectOption) => {
+    setFormData((prev) => ({ ...prev, subject: subject.displayName }));
+    setSubjectDropdownOpen(false);
+  };
 
   // Populate form when note changes
   useEffect(() => {
@@ -79,11 +158,12 @@ export function EditNotesDialog({
         code: note.notesCode || "",
         title: note.title || "",
         url: note.notesUrl || "",
-        accessType: note.locked ? "LOCKED" : "UNLOCKED",
+        accessType: note.accessType || "BASIC",
         type: note.notesType || "NOTES",
         position: note.position || 0,
         isActive: note.isActive ?? true,
         subject: note.subjectName || "",
+        notesBy: note.notesBy || "",
       });
     }
   }, [note]);
@@ -122,6 +202,7 @@ export function EditNotesDialog({
         position: formData.position,
         isActive: formData.isActive,
         subject: formData.subject,
+        notesBy: formData.notesBy,
       });
 
       toast.success("Note updated successfully");
@@ -162,6 +243,96 @@ export function EditNotesDialog({
               placeholder="Enter code"
             />
           </div>
+          {/* Subject */}
+          <div className="grid gap-2">
+            <Label htmlFor="subject">Subject</Label>
+            <Popover
+              open={subjectDropdownOpen}
+              onOpenChange={setSubjectDropdownOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {formData.subject || "Select subject..."}
+                  </span>
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <div className="p-2 border-b">
+                  <Input
+                    placeholder="Search subjects..."
+                    value={subjectSearchQuery}
+                    onChange={(e) => handleSubjectSearch(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div>
+                  {subjectsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="ml-2 text-sm">Loading...</span>
+                    </div>
+                  ) : subjects.length === 0 ? (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      No subjects found.
+                    </div>
+                  ) : (
+                    <>
+                      {subjects.map((subject) => (
+                        <div
+                          key={subject.id}
+                          className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                          onClick={() => handleSubjectSelect(subject)}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              formData.subject === subject.displayName
+                                ? "opacity-100"
+                                : "opacity-0"
+                            }`}
+                          />
+                          <span className="truncate flex-1">
+                            {subject.displayName} ({subject.code})
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+                {/* Pagination Controls */}
+                {subjectPagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handlePrevSubjectPage}
+                      disabled={subjectsLoading || subjectPagination.currentPage === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Prev
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {subjectPagination.currentPage + 1} / {subjectPagination.totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNextSubjectPage}
+                      disabled={subjectsLoading || subjectPagination.currentPage >= subjectPagination.totalPages - 1}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
 
           {/* Title */}
           <div className="grid gap-2">
@@ -175,6 +346,19 @@ export function EditNotesDialog({
                 setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
               placeholder="Enter title"
+            />
+          </div>
+
+          {/* Notes By */}
+          <div className="grid gap-2">
+            <Label htmlFor="notesBy">Notes By</Label>
+            <Input
+              id="notesBy"
+              value={formData.notesBy}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, notesBy: e.target.value }))
+              }
+              placeholder="Enter author/creator name"
             />
           </div>
 
@@ -259,9 +443,7 @@ export function EditNotesDialog({
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
                 <Label htmlFor="isActive">Active</Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable/disable
-                </p>
+                <p className="text-xs text-muted-foreground">Enable/disable</p>
               </div>
               <Switch
                 id="isActive"

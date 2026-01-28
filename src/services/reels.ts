@@ -168,13 +168,14 @@ export const updateReel = async (
 
 /**
  * Delete reels by IDs
- * DELETE /secure/api/v1/reels/[reelIds]
+ * DELETE /secure/api/v1/reels/{reelIds}
  */
 export const deleteReels = async (reelIds: number[]): Promise<string> => {
   console.log('[deleteReels] Deleting reels:', reelIds)
 
   try {
-    const response = await apiClient<any>(`/secure/api/v1/reels/[${reelIds.join(',')}]`, {
+    // Format: /secure/api/v1/reels/1,2,3 (comma-separated IDs without brackets)
+    const response = await apiClient<any>(`/secure/api/v1/reels?reelIds=${reelIds.join(',')}`, {
       method: 'DELETE',
     })
 

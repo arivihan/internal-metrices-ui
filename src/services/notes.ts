@@ -253,6 +253,7 @@ export const updateNote = async (
     position: number
     isActive: boolean
     subject: string
+    notesBy: string
   }>
 ): Promise<any> => {
   console.log('[updateNote] Updating note:', { id, data })
@@ -528,6 +529,105 @@ export interface BatchPaginatedResponse {
   totalElements: number
   totalPages: number
   last: boolean
+}
+
+// ============================================================================
+// SUBJECT APIs
+// ============================================================================
+
+export interface SubjectOption {
+  id: number
+  code: string
+  displayName: string
+  isActive?: boolean
+}
+
+export interface SubjectFilters {
+  pageNo?: number
+  pageSize?: number
+  search?: string
+  sortBy?: string
+  sortDir?: 'ASC' | 'DESC'
+}
+
+export interface SubjectPaginatedResponse {
+  content: SubjectOption[]
+  pageNumber: number
+  pageSize: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
+/**
+ * Fetch paginated subjects for dropdown selection
+ * GET /secure/api/v1/subject
+ */
+export const fetchSubjectsPaginated = async (
+  filters: SubjectFilters = {}
+): Promise<SubjectPaginatedResponse> => {
+  const params: Record<string, string> = {
+    pageNo: String(filters.pageNo ?? 0),
+    pageSize: String(filters.pageSize ?? 10),
+    sortBy: filters.sortBy ?? 'displayName',
+    sortDir: filters.sortDir ?? 'ASC',
+  }
+
+  if (filters.search) params.search = filters.search
+
+  console.log('[fetchSubjectsPaginated] Request params:', params)
+
+  try {
+    const response = await apiClient<any>('/secure/api/v1/subject', { params })
+
+    console.log('[fetchSubjectsPaginated] Raw response:', response)
+
+    let result: SubjectPaginatedResponse = {
+      content: [],
+      pageNumber: 0,
+      pageSize: filters.pageSize ?? 10,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        const data = response.data
+        result = {
+          content: data.content || [],
+          pageNumber: data.pageNumber ?? data.number ?? 0,
+          pageSize: data.pageSize ?? data.size ?? 10,
+          totalElements: data.totalElements ?? 0,
+          totalPages: data.totalPages ?? 1,
+          last: data.last ?? true,
+        }
+      } else if ('content' in response) {
+        result = {
+          content: response.content || [],
+          pageNumber: response.pageNumber ?? response.number ?? 0,
+          pageSize: response.pageSize ?? response.size ?? 10,
+          totalElements: response.totalElements ?? 0,
+          totalPages: response.totalPages ?? 1,
+          last: response.last ?? true,
+        }
+      }
+    }
+
+    // Map subjects to include display name and code
+    result.content = result.content.map((subject: any) => ({
+      id: subject.id,
+      code: subject.code || '',
+      displayName: subject.displayName || subject.name || '',
+      isActive: subject.isActive,
+    }))
+
+    console.log('[fetchSubjectsPaginated] Result:', result)
+    return result
+  } catch (error) {
+    console.error('[fetchSubjectsPaginated] Error:', error)
+    throw error
+  }
 }
 
 export const fetchBatchesPaginated = async (

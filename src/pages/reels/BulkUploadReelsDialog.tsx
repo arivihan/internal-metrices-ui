@@ -1,5 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Info, Download } from "lucide-react";
+import {
+  Loader2,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Download,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -12,6 +24,12 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -80,46 +98,204 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
   const [gradesLoading, setGradesLoading] = useState(false);
   const [streamsLoading, setStreamsLoading] = useState(false);
 
+  // Dropdown open states
+  const [examDropdownOpen, setExamDropdownOpen] = useState(false);
+  const [gradeDropdownOpen, setGradeDropdownOpen] = useState(false);
+  const [streamDropdownOpen, setStreamDropdownOpen] = useState(false);
+
+  // Search query states
+  const [examSearchQuery, setExamSearchQuery] = useState("");
+  const [gradeSearchQuery, setGradeSearchQuery] = useState("");
+  const [streamSearchQuery, setStreamSearchQuery] = useState("");
+
+  // Pagination states
+  const [examPagination, setExamPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const [gradePagination, setGradePagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+  const [streamPagination, setStreamPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  });
+
+  // Search timeout refs
+  const examSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gradeSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (open) {
-      loadInitialData();
+      loadExams(0, "");
+      loadGrades(0, "");
+      loadStreams(0, "");
       resetDialog();
     }
   }, [open]);
 
-  const loadInitialData = async () => {
-    // Load exams
+  // Exam pagination handlers
+  const loadExams = async (pageNo: number = 0, search: string = "") => {
     setExamsLoading(true);
     try {
-      const response = await fetchExamsPaginated({ pageNo: 0, pageSize: 50, active: true });
+      const response = await fetchExamsPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+        active: true,
+      });
       setExams(response.content || []);
+      setExamPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? 10,
+      });
     } catch (error) {
       console.error("Failed to load exams:", error);
+      setExams([]);
     } finally {
       setExamsLoading(false);
     }
+  };
 
-    // Load grades
+  const handleExamSearch = (query: string) => {
+    setExamSearchQuery(query);
+    if (examSearchTimeoutRef.current) {
+      clearTimeout(examSearchTimeoutRef.current);
+    }
+    examSearchTimeoutRef.current = setTimeout(() => {
+      loadExams(0, query);
+    }, 300);
+  };
+
+  const handlePrevExamPage = () => {
+    if (examPagination.currentPage > 0) {
+      loadExams(examPagination.currentPage - 1, examSearchQuery);
+    }
+  };
+
+  const handleNextExamPage = () => {
+    if (examPagination.currentPage < examPagination.totalPages - 1) {
+      loadExams(examPagination.currentPage + 1, examSearchQuery);
+    }
+  };
+
+  const handleExamSelect = (exam: ExamOption | null) => {
+    setSelectedExam(exam);
+    setExamDropdownOpen(false);
+  };
+
+  // Grade pagination handlers
+  const loadGrades = async (pageNo: number = 0, search: string = "") => {
     setGradesLoading(true);
     try {
-      const response = await fetchGradesPaginated({ pageNo: 0, pageSize: 50, active: true });
+      const response = await fetchGradesPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+        active: true,
+      });
       setGrades(response.content || []);
+      setGradePagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? 10,
+      });
     } catch (error) {
       console.error("Failed to load grades:", error);
+      setGrades([]);
     } finally {
       setGradesLoading(false);
     }
+  };
 
-    // Load streams
+  const handleGradeSearch = (query: string) => {
+    setGradeSearchQuery(query);
+    if (gradeSearchTimeoutRef.current) {
+      clearTimeout(gradeSearchTimeoutRef.current);
+    }
+    gradeSearchTimeoutRef.current = setTimeout(() => {
+      loadGrades(0, query);
+    }, 300);
+  };
+
+  const handlePrevGradePage = () => {
+    if (gradePagination.currentPage > 0) {
+      loadGrades(gradePagination.currentPage - 1, gradeSearchQuery);
+    }
+  };
+
+  const handleNextGradePage = () => {
+    if (gradePagination.currentPage < gradePagination.totalPages - 1) {
+      loadGrades(gradePagination.currentPage + 1, gradeSearchQuery);
+    }
+  };
+
+  const handleGradeSelect = (grade: GradeOption | null) => {
+    setSelectedGrade(grade);
+    setGradeDropdownOpen(false);
+  };
+
+  // Stream pagination handlers
+  const loadStreams = async (pageNo: number = 0, search: string = "") => {
     setStreamsLoading(true);
     try {
-      const response = await fetchStreamsPaginated({ pageNo: 0, pageSize: 50, active: true });
+      const response = await fetchStreamsPaginated({
+        pageNo,
+        pageSize: 10,
+        search: search || undefined,
+        active: true,
+      });
       setStreams(response.content || []);
+      setStreamPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 1,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? 10,
+      });
     } catch (error) {
       console.error("Failed to load streams:", error);
+      setStreams([]);
     } finally {
       setStreamsLoading(false);
     }
+  };
+
+  const handleStreamSearch = (query: string) => {
+    setStreamSearchQuery(query);
+    if (streamSearchTimeoutRef.current) {
+      clearTimeout(streamSearchTimeoutRef.current);
+    }
+    streamSearchTimeoutRef.current = setTimeout(() => {
+      loadStreams(0, query);
+    }, 300);
+  };
+
+  const handlePrevStreamPage = () => {
+    if (streamPagination.currentPage > 0) {
+      loadStreams(streamPagination.currentPage - 1, streamSearchQuery);
+    }
+  };
+
+  const handleNextStreamPage = () => {
+    if (streamPagination.currentPage < streamPagination.totalPages - 1) {
+      loadStreams(streamPagination.currentPage + 1, streamSearchQuery);
+    }
+  };
+
+  const handleStreamSelect = (stream: StreamOption | null) => {
+    setSelectedStream(stream);
+    setStreamDropdownOpen(false);
   };
 
   const resetDialog = () => {
@@ -130,6 +306,9 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
     setSelectedStream(null);
     setLanguage("ENGLISH");
     setUploadResponse(null);
+    setExamSearchQuery("");
+    setGradeSearchQuery("");
+    setStreamSearchQuery("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -299,64 +478,304 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Exam Dropdown with Pagination */}
                   <div className="grid gap-2">
                     <Label>Exam</Label>
-                    <Select
-                      value={selectedExam?.id?.toString() || "none"}
-                      onValueChange={(v) => setSelectedExam(v === "none" ? null : exams.find((e) => e.id === parseInt(v)) || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Exam (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Exam</SelectItem>
-                        {exams.map((exam) => (
-                          <SelectItem key={exam.id} value={exam.id.toString()}>
-                            {exam.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={examDropdownOpen} onOpenChange={setExamDropdownOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {selectedExam?.name || "Select Exam (optional)"}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <div className="p-2 border-b">
+                          <Input
+                            placeholder="Search exams..."
+                            value={examSearchQuery}
+                            onChange={(e) => handleExamSearch(e.target.value)}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          {/* No Exam option */}
+                          <div
+                            className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                            onClick={() => handleExamSelect(null)}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 shrink-0 ${
+                                !selectedExam ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            <span>No Exam</span>
+                          </div>
+                          {examsLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="ml-2 text-sm">Loading...</span>
+                            </div>
+                          ) : exams.length === 0 ? (
+                            <div className="py-4 text-center text-sm text-muted-foreground">
+                              No exams found.
+                            </div>
+                          ) : (
+                            exams.map((exam) => (
+                              <div
+                                key={exam.id}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                                onClick={() => handleExamSelect(exam)}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 shrink-0 ${
+                                    selectedExam?.id === exam.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium truncate">{exam.name}</span>
+                                  {exam.code && (
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {exam.code}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {examPagination.totalPages > 1 && (
+                          <div className="flex items-center justify-between p-2 border-t bg-background">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handlePrevExamPage}
+                              disabled={examsLoading || examPagination.currentPage === 0}
+                            >
+                              <ChevronLeft className="h-4 w-4 mr-1" />
+                              Prev
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              Page {examPagination.currentPage + 1} of {examPagination.totalPages}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleNextExamPage}
+                              disabled={examsLoading || examPagination.currentPage >= examPagination.totalPages - 1}
+                            >
+                              Next
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
+                  {/* Grade Dropdown with Pagination */}
                   <div className="grid gap-2">
                     <Label>Grade</Label>
-                    <Select
-                      value={selectedGrade?.id?.toString() || "none"}
-                      onValueChange={(v) => setSelectedGrade(v === "none" ? null : grades.find((g) => g.id === parseInt(v)) || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Grade (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Grade</SelectItem>
-                        {grades.map((grade) => (
-                          <SelectItem key={grade.id} value={grade.id.toString()}>
-                            {grade.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={gradeDropdownOpen} onOpenChange={setGradeDropdownOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {selectedGrade?.name || "Select Grade (optional)"}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <div className="p-2 border-b">
+                          <Input
+                            placeholder="Search grades..."
+                            value={gradeSearchQuery}
+                            onChange={(e) => handleGradeSearch(e.target.value)}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          {/* No Grade option */}
+                          <div
+                            className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                            onClick={() => handleGradeSelect(null)}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 shrink-0 ${
+                                !selectedGrade ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            <span>No Grade</span>
+                          </div>
+                          {gradesLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="ml-2 text-sm">Loading...</span>
+                            </div>
+                          ) : grades.length === 0 ? (
+                            <div className="py-4 text-center text-sm text-muted-foreground">
+                              No grades found.
+                            </div>
+                          ) : (
+                            grades.map((grade) => (
+                              <div
+                                key={grade.id}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                                onClick={() => handleGradeSelect(grade)}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 shrink-0 ${
+                                    selectedGrade?.id === grade.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium truncate">{grade.name}</span>
+                                  {grade.code && (
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {grade.code}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {gradePagination.totalPages > 1 && (
+                          <div className="flex items-center justify-between p-2 border-t bg-background">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handlePrevGradePage}
+                              disabled={gradesLoading || gradePagination.currentPage === 0}
+                            >
+                              <ChevronLeft className="h-4 w-4 mr-1" />
+                              Prev
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              Page {gradePagination.currentPage + 1} of {gradePagination.totalPages}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleNextGradePage}
+                              disabled={gradesLoading || gradePagination.currentPage >= gradePagination.totalPages - 1}
+                            >
+                              Next
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
+                  {/* Stream Dropdown with Pagination */}
                   <div className="grid gap-2">
                     <Label>Stream</Label>
-                    <Select
-                      value={selectedStream?.id?.toString() || "none"}
-                      onValueChange={(v) => setSelectedStream(v === "none" ? null : streams.find((s) => s.id === parseInt(v)) || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Stream (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Stream</SelectItem>
-                        {streams.map((stream) => (
-                          <SelectItem key={stream.id} value={stream.id.toString()}>
-                            {stream.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={streamDropdownOpen} onOpenChange={setStreamDropdownOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {selectedStream?.name || "Select Stream (optional)"}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <div className="p-2 border-b">
+                          <Input
+                            placeholder="Search streams..."
+                            value={streamSearchQuery}
+                            onChange={(e) => handleStreamSearch(e.target.value)}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          {/* No Stream option */}
+                          <div
+                            className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                            onClick={() => handleStreamSelect(null)}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 shrink-0 ${
+                                !selectedStream ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            <span>No Stream</span>
+                          </div>
+                          {streamsLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="ml-2 text-sm">Loading...</span>
+                            </div>
+                          ) : streams.length === 0 ? (
+                            <div className="py-4 text-center text-sm text-muted-foreground">
+                              No streams found.
+                            </div>
+                          ) : (
+                            streams.map((stream) => (
+                              <div
+                                key={stream.id}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
+                                onClick={() => handleStreamSelect(stream)}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 shrink-0 ${
+                                    selectedStream?.id === stream.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <span className="font-medium truncate">{stream.name}</span>
+                                  {stream.code && (
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {stream.code}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {streamPagination.totalPages > 1 && (
+                          <div className="flex items-center justify-between p-2 border-t bg-background">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handlePrevStreamPage}
+                              disabled={streamsLoading || streamPagination.currentPage === 0}
+                            >
+                              <ChevronLeft className="h-4 w-4 mr-1" />
+                              Prev
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              Page {streamPagination.currentPage + 1} of {streamPagination.totalPages}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleNextStreamPage}
+                              disabled={streamsLoading || streamPagination.currentPage >= streamPagination.totalPages - 1}
+                            >
+                              Next
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="grid gap-2">
