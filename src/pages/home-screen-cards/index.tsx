@@ -58,6 +58,7 @@ import {
 import { CreateCardDialog } from "./CreateCardDialog";
 import { EditCardDialog } from "./EditCardDialog";
 import { CopyCardDialog } from "./CopyCardDialog";
+import { ViewCardDetailsDialog } from "./ViewCardDetailsDialog";
 import {
   fetchHomeScreenCards,
   fetchAllBatchesForCards,
@@ -85,6 +86,8 @@ export default function HomeScreenCardsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
+  const [viewingCardId, setViewingCardId] = useState<number | null>(null);
   const [selectedCards, setSelectedCards] = useState<HomeScreenCardListResponse[]>([]);
   const [selectedCard, setSelectedCard] = useState<HomeScreenCardListResponse | null>(null);
   const [batches, setBatches] = useState<BatchOption[]>([]);
@@ -181,6 +184,12 @@ export default function HomeScreenCardsPage() {
     cards.length > 0 && selectedCards.length === cards.length;
   const isIndeterminate =
     selectedCards.length > 0 && selectedCards.length < cards.length;
+
+  // Handle View Details
+  const handleViewDetailsClick = (card: HomeScreenCardListResponse) => {
+    setViewingCardId(card.id);
+    setShowViewDetailsDialog(true);
+  };
 
   // Handle Edit Card
   const handleEditClick = (card: HomeScreenCardListResponse) => {
@@ -633,6 +642,13 @@ export default function HomeScreenCardsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
+                          onClick={() => handleViewDetailsClick(card)}
+                          className="cursor-pointer"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleEditClick(card)}
                           className="cursor-pointer"
                         >
@@ -742,6 +758,13 @@ export default function HomeScreenCardsPage() {
         onSuccess={handleSuccess}
         card={selectedCard}
         batches={batches}
+      />
+
+      {/* View Card Details Dialog */}
+      <ViewCardDetailsDialog
+        open={showViewDetailsDialog}
+        onOpenChange={setShowViewDetailsDialog}
+        cardId={viewingCardId}
       />
 
       {/* Delete Confirmation Dialog */}
