@@ -215,18 +215,17 @@ export const toggleHomeScreenCardStatus = async (
 }
 
 /**
- * Copy home screen card to another batch
- * POST /secure/api/v1/home-screen-cards/{id}/copy
+ * Copy/Map home screen cards to target batches
+ * POST /secure/api/v1/home-screen-cards/map
  */
 export const copyHomeScreenCard = async (
-  id: number,
   request: CopyCardRequest
 ): Promise<ApiResponse<void>> => {
-  console.log('[copyHomeScreenCard] Copying card:', { id, request })
+  console.log('[copyHomeScreenCard] Mapping cards:', request)
 
   try {
     const response = await apiClient<ApiResponse<void>>(
-      `/secure/api/v1/home-screen-cards/${id}/copy`,
+      `/secure/api/v1/home-screen-cards/map`,
       {
         method: 'POST',
         body: JSON.stringify(request),

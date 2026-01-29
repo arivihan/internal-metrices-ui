@@ -284,13 +284,13 @@ export default function HomeScreenCardsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <LayoutGrid className="h-8 w-8 text-indigo-500" />
+            <LayoutGrid className="h-8 w-8 text-cyan-500" />
             Home Screen Cards
           </h1>
           <p className="text-muted-foreground">
             Manage home screen cards for different batches
             {selectedCards.length > 0 && (
-              <span className="ml-2 text-indigo-600 font-medium">
+              <span className="ml-2 text-cyan-600 font-medium">
                 • {selectedCards.length} card
                 {selectedCards.length > 1 ? "s" : ""} selected
               </span>
@@ -305,7 +305,7 @@ export default function HomeScreenCardsPage() {
                 setSelectedCard(selectedCards[0]);
                 setShowCopyDialog(true);
               }}
-              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
             >
               <Copy className="mr-2 h-4 w-4" />
               Copy ({selectedCards.length})
@@ -313,7 +313,7 @@ export default function HomeScreenCardsPage() {
           )}
           <Button
             onClick={() => setShowCreateDialog(true)}
-            className="bg-indigo-500 hover:bg-indigo-600"
+            className="bg-cyan-500 hover:bg-cyan-600"
           >
             <Plus className="mr-2 h-4 w-4" />
             Create Card
@@ -397,8 +397,8 @@ export default function HomeScreenCardsPage() {
                 Total Cards
               </p>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
-              <LayoutGrid className="h-4 w-4 text-indigo-400" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10">
+              <LayoutGrid className="h-4 w-4 text-cyan-400" />
             </div>
           </div>
         </div>
@@ -527,7 +527,7 @@ export default function HomeScreenCardsPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowCreateDialog(true)}
-                      className="text-indigo-500 border-indigo-200 hover:bg-indigo-50"
+                      className="text-cyan-500 border-cyan-200 hover:bg-cyan-50"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create Card
@@ -589,7 +589,7 @@ export default function HomeScreenCardsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                    <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
                       {ICON_MEDIA_TYPES[card.iconMediaType] || card.iconMediaType}
                     </Badge>
                   </TableCell>

@@ -14,6 +14,7 @@ import type {
   ExamOption,
   GradeOption,
   StreamOption,
+  SupportedLanguage,
 } from '@/types/reels'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -263,8 +264,18 @@ export const bulkUploadReels = async (
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(error || 'Upload failed')
+      // Try to parse as JSON to get the message field
+      try {
+        const errorData = await response.json()
+        throw new Error(errorData.message || errorData.error || 'Upload failed')
+      } catch (parseError) {
+        // If JSON parsing fails, try text
+        if (parseError instanceof Error && parseError.message !== 'Upload failed') {
+          throw parseError
+        }
+        const errorText = await response.text()
+        throw new Error(errorText || 'Upload failed')
+      }
     }
 
     const result = await response.json()
@@ -598,6 +609,197 @@ export const fetchStreamsPaginated = async (
     return result
   } catch (error) {
     console.error('[fetchStreamsPaginated] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch paginated list of grades filtered by exam
+ * GET /secure/api/v1/exam-grades?examId={examId}&pageNo=0&pageSize=10
+ */
+export const fetchGradesByExam = async (
+  examId: number,
+  filters: {
+    pageNo?: number
+    pageSize?: number
+    search?: string
+  } = {}
+): Promise<PaginatedDropdownResponse<GradeOption>> => {
+  const params: Record<string, string> = {
+    examId: String(examId),
+    pageNo: String(filters.pageNo ?? 0),
+    pageSize: String(filters.pageSize ?? 10),
+  }
+
+  if (filters.search) params.search = filters.search
+
+  console.log('[fetchGradesByExam] Request params:', params)
+
+  try {
+    const response = await apiClient<any>('/secure/api/v1/exam-grades', { params })
+
+    console.log('[fetchGradesByExam] Response:', response)
+
+    let result: PaginatedDropdownResponse<GradeOption> = {
+      content: [],
+      pageNumber: 0,
+      pageSize: filters.pageSize ?? 10,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        const data = response.data
+        result = {
+          content: data.content || [],
+          pageNumber: data.pageNumber ?? data.number ?? 0,
+          pageSize: data.pageSize ?? data.size ?? 10,
+          totalElements: data.totalElements ?? 0,
+          totalPages: data.totalPages ?? 1,
+          last: data.last ?? true,
+        }
+      } else if ('content' in response) {
+        result = {
+          content: response.content || [],
+          pageNumber: response.pageNumber ?? response.number ?? 0,
+          pageSize: response.pageSize ?? response.size ?? 10,
+          totalElements: response.totalElements ?? 0,
+          totalPages: response.totalPages ?? 1,
+          last: response.last ?? true,
+        }
+      } else if (Array.isArray(response)) {
+        result.content = response
+        result.totalElements = response.length
+        result.totalPages = 1
+      }
+    }
+
+    // Normalize content to GradeOption format
+    result.content = result.content.map((grade: any) => ({
+      id: grade.gradeId ?? grade.id,
+      name: grade.gradeName ?? grade.name,
+      code: grade.gradeCode ?? grade.code,
+      isActive: grade.isActive,
+    }))
+
+    return result
+  } catch (error) {
+    console.error('[fetchGradesByExam] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch paginated list of streams filtered by exam and grade
+ * GET /secure/api/v1/exam-grade-streams?examId={examId}&gradeId={gradeId}&page=0&size=10
+ */
+export const fetchStreamsByExamGrade = async (
+  examId: number,
+  gradeId: number,
+  filters: {
+    pageNo?: number
+    pageSize?: number
+    search?: string
+  } = {}
+): Promise<PaginatedDropdownResponse<StreamOption>> => {
+  const params: Record<string, string> = {
+    examId: String(examId),
+    gradeId: String(gradeId),
+    page: String(filters.pageNo ?? 0),
+    size: String(filters.pageSize ?? 10),
+  }
+
+  if (filters.search) params.search = filters.search
+
+  console.log('[fetchStreamsByExamGrade] Request params:', params)
+
+  try {
+    const response = await apiClient<any>('/secure/api/v1/exam-grade-streams', { params })
+
+    console.log('[fetchStreamsByExamGrade] Response:', response)
+
+    let result: PaginatedDropdownResponse<StreamOption> = {
+      content: [],
+      pageNumber: 0,
+      pageSize: filters.pageSize ?? 10,
+      totalElements: 0,
+      totalPages: 0,
+      last: true,
+    }
+
+    if (response && typeof response === 'object') {
+      if ('data' in response && response.data) {
+        const data = response.data
+        result = {
+          content: data.content || [],
+          pageNumber: data.pageNumber ?? data.number ?? 0,
+          pageSize: data.pageSize ?? data.size ?? 10,
+          totalElements: data.totalElements ?? 0,
+          totalPages: data.totalPages ?? 1,
+          last: data.last ?? true,
+        }
+      } else if ('content' in response) {
+        result = {
+          content: response.content || [],
+          pageNumber: response.pageNumber ?? response.number ?? 0,
+          pageSize: response.pageSize ?? response.size ?? 10,
+          totalElements: response.totalElements ?? 0,
+          totalPages: response.totalPages ?? 1,
+          last: response.last ?? true,
+        }
+      } else if (Array.isArray(response)) {
+        result.content = response
+        result.totalElements = response.length
+        result.totalPages = 1
+      }
+    }
+
+    // Normalize content to StreamOption format
+    result.content = result.content.map((stream: any) => ({
+      id: stream.streamId ?? stream.id,
+      name: stream.streamName ?? stream.name,
+      code: stream.streamCode ?? stream.code,
+      isActive: stream.isActive,
+    }))
+
+    return result
+  } catch (error) {
+    console.error('[fetchStreamsByExamGrade] Error:', error)
+    throw error
+  }
+}
+
+// ============================================================================
+// LANGUAGE APIs
+// ============================================================================
+
+/**
+ * Fetch supported languages
+ * GET /secure/api/v1/languages/supported
+ */
+export const fetchSupportedLanguages = async (): Promise<SupportedLanguage[]> => {
+  console.log('[fetchSupportedLanguages] Fetching supported languages')
+
+  try {
+    const response = await apiClient<any>('/secure/api/v1/languages/supported')
+
+    console.log('[fetchSupportedLanguages] Response:', response)
+
+    // Handle different response structures
+    if (response && typeof response === 'object') {
+      if ('data' in response && Array.isArray(response.data)) {
+        return response.data as SupportedLanguage[]
+      }
+      if (Array.isArray(response)) {
+        return response as SupportedLanguage[]
+      }
+    }
+
+    return []
+  } catch (error) {
+    console.error('[fetchSupportedLanguages] Error:', error)
     throw error
   }
 }

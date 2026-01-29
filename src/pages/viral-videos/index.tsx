@@ -71,6 +71,7 @@ import { Loader2, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { UploadVideoDialog } from "./UploadVideoDialog";
 import { BulkUploadVideoDialog } from "./BulkUploadVideoDialog";
 import { DuplicateVideoDialog } from "./DuplicateVideoDialog";
+import { ViewVideoDetailsDialog } from "./ViewVideoDetailsDialog";
 import {
   fetchViralVideos,
   fetchAllBatchesForVideos,
@@ -122,6 +123,10 @@ export default function ViralVideosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<VideoRequest>>({});
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  // View Details state
+  const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
+  const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
   // Audit Trail state
   const [auditTrailOpen, setAuditTrailOpen] = useState(false);
@@ -312,6 +317,12 @@ export default function ViralVideosPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle View Details
+  const handleViewDetailsClick = (video: VideoResponseDto) => {
+    setViewingVideoId(video.id);
+    setShowViewDetailsDialog(true);
   };
 
   // Audit Trail handlers
@@ -525,7 +536,7 @@ export default function ViralVideosPage() {
         </Select>
 
         {/* Video Type Filter */}
-        <Select
+        {/* <Select
           value={filters.videoType || "all"}
           onValueChange={handleFilterByType}
         >
@@ -540,7 +551,7 @@ export default function ViralVideosPage() {
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select> */}
 
         {/* Status Filter */}
         <Select
@@ -847,6 +858,13 @@ export default function ViralVideosPage() {
                           <ExternalLink className="mr-2 h-4 w-4" />
                           View Thumbnail
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleViewDetailsClick(video)}
+                          className="cursor-pointer"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleEditClick(video)}
@@ -965,6 +983,13 @@ export default function ViralVideosPage() {
         onOpenChange={setShowDuplicateDialog}
         selectedVideos={selectedVideos}
         onSuccess={handleDuplicateSuccess}
+      />
+
+      {/* View Video Details Dialog */}
+      <ViewVideoDetailsDialog
+        open={showViewDetailsDialog}
+        onOpenChange={setShowViewDetailsDialog}
+        videoId={viewingVideoId}
       />
 
       {/* Edit Video Dialog */}

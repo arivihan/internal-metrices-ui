@@ -16,6 +16,8 @@ import {
   ThumbsUp,
   Play,
   Filter,
+  ShieldQuestionMark,
+  Film,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +74,7 @@ import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 
 import {
   fetchReels,
+  fetchReelById,
   deleteReels,
   updateReelStatus,
   fetchReelAuditTrail,
@@ -131,6 +134,11 @@ export default function ReelsPage() {
   });
   const [currentAuditReelId, setCurrentAuditReelId] = useState<number | null>(null);
   const [isTableAudit, setIsTableAudit] = useState(false);
+
+  // View Detail state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailReel, setDetailReel] = useState<ReelResponseDto | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   // Filters state
   const [filters, setFilters] = useState<ReelFilters>({
@@ -573,6 +581,21 @@ export default function ReelsPage() {
     setShowEditDialog(true);
   };
 
+  const handleViewDetail = async (reel: ReelResponseDto) => {
+    setDetailLoading(true);
+    setDetailDialogOpen(true);
+    try {
+      const detail = await fetchReelById(reel.id);
+      setDetailReel(detail);
+    } catch (error) {
+      console.error("Failed to fetch reel details:", error);
+      toast.error("Failed to load reel details");
+      setDetailDialogOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const handleDeleteClick = (reel: ReelResponseDto) => {
     setReelsToDelete([reel]);
     setDeleteDialogOpen(true);
@@ -716,7 +739,8 @@ export default function ReelsPage() {
             Manage and upload reels for the app
             {selectedReels.length > 0 && (
               <span className="ml-2 text-cyan-600">
-                • {selectedReels.length} reel{selectedReels.length > 1 ? "s" : ""} selected
+                • {selectedReels.length} reel
+                {selectedReels.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
@@ -736,14 +760,25 @@ export default function ReelsPage() {
             <History className="mr-2 h-4 w-4" />
             Table Audit
           </Button>
-          <Button variant="outline" onClick={() => setShowBulkUploadDialog(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Bulk Upload
-          </Button>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Reel
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Reel
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowAddDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Single Upload
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowBulkUploadDialog(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Bulk Upload
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -762,7 +797,13 @@ export default function ReelsPage() {
 
         {/* Status Filter */}
         <Select
-          value={filters.isActive === undefined ? "all" : filters.isActive ? "active" : "inactive"}
+          value={
+            filters.isActive === undefined
+              ? "all"
+              : filters.isActive
+                ? "active"
+                : "inactive"
+          }
           onValueChange={handleStatusChange}
         >
           <SelectTrigger className="w-28 shrink-0">
@@ -776,7 +817,10 @@ export default function ReelsPage() {
         </Select>
 
         {/* Sort By */}
-        <Select value={filters.sortBy || "createdAt"} onValueChange={handleSortChange}>
+        <Select
+          value={filters.sortBy || "createdAt"}
+          onValueChange={handleSortChange}
+        >
           <SelectTrigger className="w-28 shrink-0">
             <SelectValue placeholder="Sort By" />
           </SelectTrigger>
@@ -791,7 +835,9 @@ export default function ReelsPage() {
         {/* Sort Direction */}
         <Select
           value={filters.sortDir || "DESC"}
-          onValueChange={(value) => handleSortDirChange(value as "ASC" | "DESC")}
+          onValueChange={(value) =>
+            handleSortDirChange(value as "ASC" | "DESC")
+          }
         >
           <SelectTrigger className="w-28 shrink-0">
             <SelectValue placeholder="Sort Dir" />
@@ -810,7 +856,10 @@ export default function ReelsPage() {
         >
           <Filter className="mr-2 h-4 w-4" />
           More Filters
-          {(filters.isGlobal !== undefined || filters.language || filters.difficultyLevel || selectedTags.length > 0) && (
+          {(filters.isGlobal !== undefined ||
+            filters.language ||
+            filters.difficultyLevel ||
+            selectedTags.length > 0) && (
             <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
               {[
                 filters.isGlobal !== undefined ? 1 : 0,
@@ -823,20 +872,34 @@ export default function ReelsPage() {
         </Button>
 
         {/* Reset Filters */}
-        <Button variant="outline" size="icon" onClick={handleResetFilters} title="Reset Filters" className="shrink-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleResetFilters}
+          title="Reset Filters"
+          className="shrink-0"
+        >
           <RotateCcw className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Filters Row 2: Exam, Grade, Stream, Tags */}
       <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
-        <span className="text-sm font-medium text-muted-foreground shrink-0">Targeting:</span>
+        <span className="text-sm font-medium text-muted-foreground shrink-0">
+          Targeting:
+        </span>
 
         {/* Exam Dropdown */}
         <Popover open={examDropdownOpen} onOpenChange={setExamDropdownOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-40 justify-between shrink-0">
-              <span className="truncate">{selectedExam ? selectedExam.name : "Select Exam..."}</span>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-40 justify-between shrink-0"
+            >
+              <span className="truncate">
+                {selectedExam ? selectedExam.name : "Select Exam..."}
+              </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -854,7 +917,9 @@ export default function ReelsPage() {
                 className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
                 onClick={() => handleExamSelect(null)}
               >
-                <Check className={`mr-2 h-4 w-4 ${!selectedExam ? "opacity-100" : "opacity-0"}`} />
+                <Check
+                  className={`mr-2 h-4 w-4 ${!selectedExam ? "opacity-100" : "opacity-0"}`}
+                />
                 All Exams
               </div>
               {examsLoading && exams.length === 0 ? (
@@ -863,7 +928,9 @@ export default function ReelsPage() {
                   <span className="ml-2 text-sm">Loading...</span>
                 </div>
               ) : exams.length === 0 ? (
-                <div className="py-4 text-center text-sm text-muted-foreground">No exams found.</div>
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  No exams found.
+                </div>
               ) : (
                 <>
                   {exams.map((exam) => (
@@ -878,10 +945,19 @@ export default function ReelsPage() {
                       <span className="truncate">{exam.name}</span>
                     </div>
                   ))}
-                  {examPagination.currentPage < examPagination.totalPages - 1 && (
+                  {examPagination.currentPage <
+                    examPagination.totalPages - 1 && (
                     <div className="p-2 border-t">
-                      <Button variant="ghost" size="sm" className="w-full" onClick={handleLoadMoreExams} disabled={examsLoading}>
-                        {examsLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleLoadMoreExams}
+                        disabled={examsLoading}
+                      >
+                        {examsLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
                         Load More
                       </Button>
                     </div>
@@ -895,8 +971,14 @@ export default function ReelsPage() {
         {/* Grade Dropdown */}
         <Popover open={gradeDropdownOpen} onOpenChange={setGradeDropdownOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-40 justify-between shrink-0">
-              <span className="truncate">{selectedGrade ? selectedGrade.name : "Select Grade..."}</span>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-40 justify-between shrink-0"
+            >
+              <span className="truncate">
+                {selectedGrade ? selectedGrade.name : "Select Grade..."}
+              </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -914,7 +996,9 @@ export default function ReelsPage() {
                 className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
                 onClick={() => handleGradeSelect(null)}
               >
-                <Check className={`mr-2 h-4 w-4 ${!selectedGrade ? "opacity-100" : "opacity-0"}`} />
+                <Check
+                  className={`mr-2 h-4 w-4 ${!selectedGrade ? "opacity-100" : "opacity-0"}`}
+                />
                 All Grades
               </div>
               {gradesLoading && grades.length === 0 ? (
@@ -923,7 +1007,9 @@ export default function ReelsPage() {
                   <span className="ml-2 text-sm">Loading...</span>
                 </div>
               ) : grades.length === 0 ? (
-                <div className="py-4 text-center text-sm text-muted-foreground">No grades found.</div>
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  No grades found.
+                </div>
               ) : (
                 <>
                   {grades.map((grade) => (
@@ -938,10 +1024,19 @@ export default function ReelsPage() {
                       <span className="truncate">{grade.name}</span>
                     </div>
                   ))}
-                  {gradePagination.currentPage < gradePagination.totalPages - 1 && (
+                  {gradePagination.currentPage <
+                    gradePagination.totalPages - 1 && (
                     <div className="p-2 border-t">
-                      <Button variant="ghost" size="sm" className="w-full" onClick={handleLoadMoreGrades} disabled={gradesLoading}>
-                        {gradesLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleLoadMoreGrades}
+                        disabled={gradesLoading}
+                      >
+                        {gradesLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
                         Load More
                       </Button>
                     </div>
@@ -955,8 +1050,14 @@ export default function ReelsPage() {
         {/* Stream Dropdown */}
         <Popover open={streamDropdownOpen} onOpenChange={setStreamDropdownOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-40 justify-between shrink-0">
-              <span className="truncate">{selectedStream ? selectedStream.name : "Select Stream..."}</span>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-40 justify-between shrink-0"
+            >
+              <span className="truncate">
+                {selectedStream ? selectedStream.name : "Select Stream..."}
+              </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -974,7 +1075,9 @@ export default function ReelsPage() {
                 className="flex items-center px-3 py-2 cursor-pointer hover:bg-accent text-sm"
                 onClick={() => handleStreamSelect(null)}
               >
-                <Check className={`mr-2 h-4 w-4 ${!selectedStream ? "opacity-100" : "opacity-0"}`} />
+                <Check
+                  className={`mr-2 h-4 w-4 ${!selectedStream ? "opacity-100" : "opacity-0"}`}
+                />
                 All Streams
               </div>
               {streamsLoading && streams.length === 0 ? (
@@ -983,7 +1086,9 @@ export default function ReelsPage() {
                   <span className="ml-2 text-sm">Loading...</span>
                 </div>
               ) : streams.length === 0 ? (
-                <div className="py-4 text-center text-sm text-muted-foreground">No streams found.</div>
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  No streams found.
+                </div>
               ) : (
                 <>
                   {streams.map((stream) => (
@@ -998,10 +1103,19 @@ export default function ReelsPage() {
                       <span className="truncate">{stream.name}</span>
                     </div>
                   ))}
-                  {streamPagination.currentPage < streamPagination.totalPages - 1 && (
+                  {streamPagination.currentPage <
+                    streamPagination.totalPages - 1 && (
                     <div className="p-2 border-t">
-                      <Button variant="ghost" size="sm" className="w-full" onClick={handleLoadMoreStreams} disabled={streamsLoading}>
-                        {streamsLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleLoadMoreStreams}
+                        disabled={streamsLoading}
+                      >
+                        {streamsLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
                         Load More
                       </Button>
                     </div>
@@ -1020,16 +1134,22 @@ export default function ReelsPage() {
           <p className="text-xs text-muted-foreground">Total Reels</p>
         </div>
         <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{reels.filter((r) => r.isActive).length}</div>
+          <div className="text-2xl font-bold">
+            {reels.filter((r) => r.isActive).length}
+          </div>
           <p className="text-xs text-muted-foreground">Active Reels</p>
         </div>
         <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{reels.filter((r) => r.isGlobal).length}</div>
+          <div className="text-2xl font-bold">
+            {reels.filter((r) => r.isGlobal).length}
+          </div>
           <p className="text-xs text-muted-foreground">Global Reels</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {formatNumber(reels.reduce((sum, r) => sum + (r.stats?.totalViews || 0), 0))}
+            {formatNumber(
+              reels.reduce((sum, r) => sum + (r.stats?.totalViews || 0), 0),
+            )}
           </div>
           <p className="text-xs text-muted-foreground">Total Views</p>
         </div>
@@ -1063,16 +1183,36 @@ export default function ReelsPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-[40px]" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[200px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[60px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[80px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[60px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[60px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[60px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[50px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[50px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-[40px]" />
+                  </TableCell>
                 </TableRow>
               ))
             ) : reels.length === 0 ? (
@@ -1080,7 +1220,11 @@ export default function ReelsPage() {
                 <TableCell colSpan={10} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center">
                     <p className="text-muted-foreground">No reels found.</p>
-                    <Button variant="link" onClick={() => setShowAddDialog(true)} className="mt-2">
+                    <Button
+                      variant="link"
+                      onClick={() => setShowAddDialog(true)}
+                      className="mt-2"
+                    >
                       Create your first reel
                     </Button>
                   </div>
@@ -1092,7 +1236,9 @@ export default function ReelsPage() {
                   <TableCell>
                     <Checkbox
                       checked={isReelSelected(reel.id)}
-                      onCheckedChange={(checked) => handleSelectReel(reel, checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleSelectReel(reel, checked as boolean)
+                      }
                       aria-label={`Select reel ${reel.title}`}
                     />
                   </TableCell>
@@ -1106,14 +1252,17 @@ export default function ReelsPage() {
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <Play className="h-4 w-4 text-white" />
+                            <Film className="h-4 w-4 text-white" />
                           </div>
                         </div>
                       )}
                       <div>
-                        <div className="font-medium line-clamp-1">{reel.title}</div>
+                        <div className="font-medium line-clamp-1">
+                          {reel.title}
+                        </div>
                         <div className="text-xs text-muted-foreground line-clamp-1">
-                          {reel.tags?.map((t) => t.tagName).join(", ") || "No tags"}
+                          {reel.tags?.map((t) => t.tagName).join(", ") ||
+                            "No tags"}
                         </div>
                       </div>
                     </div>
@@ -1121,10 +1270,13 @@ export default function ReelsPage() {
                   <TableCell>{formatDuration(reel.durationSeconds)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {DIFFICULTY_LEVELS[reel.difficultyLevel] || reel.difficultyLevel}
+                      {DIFFICULTY_LEVELS[reel.difficultyLevel] ||
+                        reel.difficultyLevel}
                     </Badge>
                   </TableCell>
-                  <TableCell>{LANGUAGES[reel.language] || reel.language}</TableCell>
+                  <TableCell>
+                    {LANGUAGES[reel.language] || reel.language}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={reel.isGlobal ? "default" : "secondary"}>
                       {reel.isGlobal ? "Global" : "Targeted"}
@@ -1133,7 +1285,9 @@ export default function ReelsPage() {
                   <TableCell>
                     <Badge
                       variant={reel.isActive ? "default" : "secondary"}
-                      className={reel.isActive ? "bg-green-100 text-green-800" : ""}
+                      className={
+                        reel.isActive ? "bg-green-100 text-green-800" : ""
+                      }
                     >
                       {reel.isActive ? "Active" : "Inactive"}
                     </Badge>
@@ -1159,18 +1313,32 @@ export default function ReelsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
+                          onClick={() => handleViewDetail(reel)}
+                          className="cursor-pointer"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Detail
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => window.open(reel.videoUrl, "_blank")}
                           className="cursor-pointer"
                         >
                           <ExternalLink className="mr-2 h-4 w-4" />
                           View Video
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClick(reel)} className="cursor-pointer">
+                        <DropdownMenuItem
+                          onClick={() => handleEditClick(reel)}
+                          className="cursor-pointer"
+                        >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusToggle(reel)} className="cursor-pointer">
-                          {reel.isActive ? "Deactivate" : "Activate"}
+                        <DropdownMenuItem
+                          onClick={() => handleStatusToggle(reel)}
+                          className="cursor-pointer"
+                        >
+                          <ShieldQuestionMark className="mr-2 h-4 w-4" />
+                          {reel.isActive ? "Inactive" : "Active"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-red-600 cursor-pointer"
@@ -1179,7 +1347,10 @@ export default function ReelsPage() {
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleRowAuditClick(reel)} className="cursor-pointer">
+                        <DropdownMenuItem
+                          onClick={() => handleRowAuditClick(reel)}
+                          className="cursor-pointer"
+                        >
                           <History className="mr-2 h-4 w-4" />
                           Audit Trail
                         </DropdownMenuItem>
@@ -1203,7 +1374,12 @@ export default function ReelsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFilters((prev) => ({ ...prev, pageNo: Math.max(0, prev.pageNo! - 1) }))}
+              onClick={() =>
+                setFilters((prev) => ({
+                  ...prev,
+                  pageNo: Math.max(0, prev.pageNo! - 1),
+                }))
+              }
               disabled={filters.pageNo === 0}
             >
               Previous
@@ -1211,7 +1387,9 @@ export default function ReelsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))}
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
+              }
               disabled={reels.length < filters.pageSize!}
             >
               Next
@@ -1247,7 +1425,8 @@ export default function ReelsPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete {reelsToDelete.length} reel
-              {reelsToDelete.length > 1 ? "s" : ""}. This action cannot be undone.
+              {reelsToDelete.length > 1 ? "s" : ""}. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1278,7 +1457,13 @@ export default function ReelsPage() {
             <div className="grid gap-2">
               <Label>Scope</Label>
               <Select
-                value={filters.isGlobal === undefined ? "all" : filters.isGlobal ? "global" : "targeted"}
+                value={
+                  filters.isGlobal === undefined
+                    ? "all"
+                    : filters.isGlobal
+                      ? "global"
+                      : "targeted"
+                }
                 onValueChange={handleGlobalChange}
               >
                 <SelectTrigger>
@@ -1332,11 +1517,20 @@ export default function ReelsPage() {
             {/* Tags Multi-Select */}
             <div className="grid gap-2">
               <Label>Tags</Label>
-              <Popover open={tagsDropdownOpen} onOpenChange={setTagsDropdownOpen}>
+              <Popover
+                open={tagsDropdownOpen}
+                onOpenChange={setTagsDropdownOpen}
+              >
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                  >
                     <span className="truncate">
-                      {selectedTags.length > 0 ? `${selectedTags.length} tag(s) selected` : "Select Tags..."}
+                      {selectedTags.length > 0
+                        ? `${selectedTags.length} tag(s) selected`
+                        : "Select Tags..."}
                     </span>
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -1353,7 +1547,11 @@ export default function ReelsPage() {
                   {selectedTags.length > 0 && (
                     <div className="p-2 border-b flex flex-wrap gap-1">
                       {selectedTags.map((tag) => (
-                        <Badge key={tag.id} variant="secondary" className="text-xs">
+                        <Badge
+                          key={tag.id}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {tag.name}
                           <button
                             className="ml-1 hover:text-destructive"
@@ -1375,7 +1573,9 @@ export default function ReelsPage() {
                         <span className="ml-2 text-sm">Loading...</span>
                       </div>
                     ) : tags.length === 0 ? (
-                      <div className="py-4 text-center text-sm text-muted-foreground">No tags found.</div>
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        No tags found.
+                      </div>
                     ) : (
                       <>
                         {tags.map((tag) => (
@@ -1385,17 +1585,30 @@ export default function ReelsPage() {
                             onClick={() => handleTagToggle(tag)}
                           >
                             <Checkbox
-                              checked={selectedTags.some((t) => t.id === tag.id)}
+                              checked={selectedTags.some(
+                                (t) => t.id === tag.id,
+                              )}
                               className="mr-2"
                             />
                             <span className="truncate flex-1">{tag.name}</span>
-                            <span className="text-xs text-muted-foreground">({tag.reelCount})</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({tag.reelCount})
+                            </span>
                           </div>
                         ))}
-                        {tagPagination.currentPage < tagPagination.totalPages - 1 && (
+                        {tagPagination.currentPage <
+                          tagPagination.totalPages - 1 && (
                           <div className="p-2 border-t">
-                            <Button variant="ghost" size="sm" className="w-full" onClick={handleLoadMoreTags} disabled={tagsLoading}>
-                              {tagsLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full"
+                              onClick={handleLoadMoreTags}
+                              disabled={tagsLoading}
+                            >
+                              {tagsLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : null}
                               Load More
                             </Button>
                           </div>
@@ -1434,6 +1647,307 @@ export default function ReelsPage() {
         onPageChange={handleAuditPageChange}
         onPageSizeChange={handleAuditPageSizeChange}
       />
+
+      {/* Reel Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-primary" />
+              Reel Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : detailReel ? (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <h3 className="text-lg font-semibold">{detailReel.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {detailReel.description}
+                  </p>
+                </div>
+
+                {/* <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">ID</Label>
+                  <p className="text-sm font-medium">{detailReel.id}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">UUID</Label>
+                  <p className="text-sm font-mono text-xs">{detailReel.uuid}</p>
+                </div> */}
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Duration
+                  </Label>
+                  <p className="text-sm font-medium">
+                    {detailReel.durationSeconds}s
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Difficulty
+                  </Label>
+                  <Badge variant="outline">
+                    {DIFFICULTY_LEVELS[detailReel.difficultyLevel]}
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Language
+                  </Label>
+                  <Badge variant="secondary">
+                    {LANGUAGES[detailReel.language]}
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    Status
+                  </Label>
+                  <Badge
+                    variant={detailReel.isActive ? "default" : "secondary"}
+                  >
+                    {detailReel.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Scope</Label>
+                  <Badge variant={detailReel.isGlobal ? "default" : "outline"}>
+                    {detailReel.isGlobal ? "Global" : "Targeted"}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Media URLs */}
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="font-medium text-sm">Media</h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      Video URL
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono text-xs truncate flex-1 bg-muted p-2 rounded">
+                        {detailReel.videoUrl}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(detailReel.videoUrl, "_blank")
+                        }
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      Thumbnail URL
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono text-xs truncate flex-1 bg-muted p-2 rounded">
+                        {detailReel.thumbnailUrl}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(detailReel.thumbnailUrl, "_blank")
+                        }
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {detailReel.tags && detailReel.tags.length > 0 && (
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="font-medium text-sm">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {detailReel.tags.map((tag) => (
+                      <Badge key={tag.tagId} variant="secondary">
+                        {tag.tagName}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Targeting */}
+              {detailReel.targeting && detailReel.targeting.length > 0 && (
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="font-medium text-sm">Targeting</h4>
+                  <div className="space-y-2">
+                    {detailReel.targeting.map((target, idx) => (
+                      <div
+                        key={target.id || idx}
+                        className="flex gap-4 text-sm bg-muted p-2 rounded"
+                      >
+                        <span>
+                          <strong>Exam:</strong> {target.examId}
+                        </span>
+                        <span>
+                          <strong>Grade:</strong> {target.gradeId}
+                        </span>
+                        <span>
+                          <strong>Stream:</strong> {target.streamId}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats */}
+              {detailReel.stats && (
+                <div className="space-y-3 border-t pt-4">
+                  <h4 className="font-medium text-sm">Statistics</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.totalViews?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Total Views
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.uniqueViews?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Unique Views
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.totalLikes?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Likes</div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.totalBookmarks?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Bookmarks
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.totalComments?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Comments
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.totalShares?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Shares
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.avgWatchPercentage?.toFixed(1) || 0}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Avg Watch %
+                      </div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {detailReel.stats.avgWatchTimeSeconds || 0}s
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Avg Watch Time
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="bg-yellow-50 dark:bg-yellow-950 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-yellow-600">
+                        {detailReel.stats.totalNotInterested || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Not Interested
+                      </div>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-950 rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-red-600">
+                        {detailReel.stats.totalReports || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Reports
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="font-medium text-sm">Metadata</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Created By
+                    </Label>
+                    <p>{detailReel.createdBy || "-"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs ml-5  text-muted-foreground">
+                      Created At
+                    </Label>
+                    <p className="ml-5">
+                      {detailReel.createdAt
+                        ? new Date(detailReel.createdAt).toLocaleString()
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Updated By
+                    </Label>
+                    <p>{detailReel.updatedBy || "-"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs ml-5 text-muted-foreground">
+                      Updated At
+                    </Label>
+                    <p className="ml-5">
+                      {detailReel.updatedAt
+                        ? new Date(detailReel.updatedAt).toLocaleString()
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No data available
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

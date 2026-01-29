@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -39,15 +40,34 @@ export function DuplicateNotesDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState<BatchOption[]>([]);
-  const [selectedBatchIds, setSelectedBatchIds] = useState<number[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [displayOrders, setDisplayOrders] = useState<Record<string, number>>({});
+
+  // Get all batch IDs where selected notes are already mapped
+  const mappedBatchIds = Array.from(
+    new Set(
+      selectedNotes.flatMap((note) =>
+        note.batches?.map((b) => b.batchId) || []
+      )
+    )
+  );
+
+  // Check if a batch already has any of the selected notes mapped
+  const isBatchMapped = (batchId: number) => mappedBatchIds.includes(batchId);
 
   // Load batch options when dialog opens
   useEffect(() => {
     if (open) {
       loadBatchOptions();
-      setSelectedBatchIds([]); // Reset selections
+      setSelectedBatchId(null); // Reset selection
+      // Initialize displayOrders from selected notes
+      const initialOrders: Record<string, number> = {};
+      selectedNotes.forEach((note) => {
+        initialOrders[note.id] = note.displayOrder ?? 0;
+      });
+      setDisplayOrders(initialOrders);
     }
-  }, [open]);
+  }, [open, selectedNotes]);
 
   const loadBatchOptions = async () => {
     setLoading(true);
@@ -74,30 +94,28 @@ export function DuplicateNotesDialog({
     }
   };
 
-  const handleBatchToggle = (batchId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedBatchIds((prev) => [...prev, batchId]);
+  const handleBatchSelect = (batchId: number) => {
+    // Toggle: if already selected, deselect; otherwise select
+    if (selectedBatchId === batchId) {
+      setSelectedBatchId(null);
     } else {
-      setSelectedBatchIds((prev) => prev.filter((id) => id !== batchId));
+      setSelectedBatchId(batchId);
     }
   };
 
-  const handleSelectAllBatches = (checked: boolean) => {
-    if (checked) {
-      setSelectedBatchIds(batches.map((b) => b.id));
-    } else {
-      setSelectedBatchIds([]);
-    }
+  const handleDisplayOrderChange = (noteId: string, value: number) => {
+    setDisplayOrders((prev) => ({
+      ...prev,
+      [noteId]: value,
+    }));
   };
 
-  const isAllBatchesSelected =
-    batches.length > 0 && selectedBatchIds.length === batches.length;
-  const isIndeterminateBatches =
-    selectedBatchIds.length > 0 && selectedBatchIds.length < batches.length;
+  // Count non-mapped batches for display
+  const selectableBatches = batches.filter((b) => !isBatchMapped(b.id));
 
   const handleDuplicate = async () => {
-    if (selectedBatchIds.length === 0) {
-      toast.error("Please select at least one target batch");
+    if (!selectedBatchId) {
+      toast.error("Please select a target batch");
       return;
     }
 
@@ -106,10 +124,10 @@ export function DuplicateNotesDialog({
       // Prepare the duplicate request payload
       const duplicateRequest: DuplicateNotesRequest = {
         selectedNotes: selectedNotes.map((note) => ({
-          batchId: note.batchId,
-          notesCode: note.notesCode,
+          notesId: Number(note.id),
+          displayOrder: displayOrders[note.id] ?? note.displayOrder ?? 0,
         })),
-        targetBatchIds: selectedBatchIds,
+        targetBatchIds: [selectedBatchId],
       };
 
       console.log(
@@ -136,11 +154,6 @@ export function DuplicateNotesDialog({
     }
   };
 
-  // Get unique source batches from selected notes
-  const sourceBatches = Array.from(
-    new Set(selectedNotes.map((note) => note.batchId))
-  );
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
@@ -151,7 +164,7 @@ export function DuplicateNotesDialog({
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Copy {selectedNotes.length} selected note
-            {selectedNotes.length > 1 ? "s" : ""} to one or more target batches
+            {selectedNotes.length > 1 ? "s" : ""} to a target batch
           </p>
         </DialogHeader>
 
@@ -161,48 +174,46 @@ export function DuplicateNotesDialog({
             <Label className="text-base font-medium">
               Selected Notes ({selectedNotes.length})
             </Label>
-            <ScrollArea className="h-32 rounded-md border p-3">
-              <div className="space-y-2">
-                {selectedNotes.map((note, index) => (
+            <ScrollArea className="h-40 rounded-md border p-3">
+              <div className="space-y-3">
+                {selectedNotes.map((note) => (
                   <div
                     key={note.id}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center gap-4 text-sm border-b pb-2 last:border-b-0"
                   >
-                    <div className="flex-1">
-                      <span className="font-medium">{note.title}</span>
-                      <span className="text-muted-foreground ml-2">
-                        ({note.notesCode})
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{note.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Note ID: {note.id}
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      Batch {note.batchId}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs whitespace-nowrap">Display Order:</Label>
+                      <Input
+                        type="number"
+                        value={displayOrders[note.id] ?? note.displayOrder ?? 0}
+                        onChange={(e) =>
+                          handleDisplayOrderChange(note.id, parseInt(e.target.value) || 0)
+                        }
+                        className="w-20 h-8 text-sm"
+                        min={0}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-            <div className="text-xs text-muted-foreground">
-              Source batches: {sourceBatches.join(", ")}
-            </div>
           </div>
 
           {/* Target Batch Selection */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-base font-medium">
-                Select Target Batches
+                Select Target Batch
               </Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={isAllBatchesSelected}
-                  indeterminate={isIndeterminateBatches}
-                  onCheckedChange={handleSelectAllBatches}
-                  disabled={loading}
-                />
-                <span className="text-sm text-muted-foreground">
-                  Select All
-                </span>
-              </div>
+              <span className="text-sm text-muted-foreground">
+                {selectableBatches.length} available
+              </span>
             </div>
 
             {loading ? (
@@ -223,32 +234,31 @@ export function DuplicateNotesDialog({
                     batches.map((batch) => (
                       <div
                         key={batch.id}
-                        className="flex items-center space-x-3"
+                        className={`flex items-center space-x-3 p-2 rounded cursor-pointer hover:bg-accent ${
+                          selectedBatchId === batch.id ? "bg-accent" : ""
+                        } ${isBatchMapped(batch.id) || (selectedBatchId && selectedBatchId !== batch.id) ? "opacity-50" : ""}`}
+                        onClick={() => !isBatchMapped(batch.id) && handleBatchSelect(batch.id)}
                       >
                         <Checkbox
-                          checked={selectedBatchIds.includes(batch.id)}
-                          onCheckedChange={(checked) =>
-                            handleBatchToggle(batch.id, checked as boolean)
-                          }
-                          disabled={sourceBatches.includes(batch.id)} // Disable if it's a source batch
+                          checked={selectedBatchId === batch.id}
+                          onCheckedChange={() => handleBatchSelect(batch.id)}
+                          disabled={isBatchMapped(batch.id) || (selectedBatchId !== null && selectedBatchId !== batch.id)}
                         />
-                        <div className="flex-1">
-                          <div className="font-medium">{batch.name}</div>
-                          {batch.examName && batch.gradeName && (
-                            <div className="text-xs text-muted-foreground">
-                              {batch.examName} • {batch.gradeName} •{" "}
-                              {batch.language}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{batch.name}</span>
+                            {isBatchMapped(batch.id) && (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                Mapped
+                              </Badge>
+                            )}
+                          </div>
+                          {batch.code && (
+                            <div className="text-xs text-muted-foreground break-words">
+                              {batch.code}
                             </div>
                           )}
-                          {sourceBatches.includes(batch.id) && (
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              Source Batch
-                            </Badge>
-                          )}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          ID: {batch.id}
-                        </Badge>
                       </div>
                     ))
                   )}
@@ -256,10 +266,9 @@ export function DuplicateNotesDialog({
               </ScrollArea>
             )}
 
-            {selectedBatchIds.length > 0 && (
+            {selectedBatchId && (
               <div className="text-sm text-cyan-600">
-                {selectedBatchIds.length} batch
-                {selectedBatchIds.length > 1 ? "es" : ""} selected
+                1 batch selected
               </div>
             )}
           </div>
@@ -275,13 +284,12 @@ export function DuplicateNotesDialog({
           </Button>
           <Button
             onClick={handleDuplicate}
-            disabled={isSubmitting || selectedBatchIds.length === 0}
+            disabled={isSubmitting || !selectedBatchId}
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
             {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
             <Copy className="mr-2 h-4 w-4" />
-            Duplicate to {selectedBatchIds.length} Batch
-            {selectedBatchIds.length > 1 ? "es" : ""}
+            Duplicate to Batch
           </Button>
         </DialogFooter>
       </DialogContent>

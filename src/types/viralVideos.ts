@@ -42,13 +42,14 @@ export interface UploadVideoPayload {
 }
 
 export interface MapVideoRequest {
-  selectedVideos: SelectedVideoForMap[]
   targetBatchIds: number[]
+  videos: SelectedVideoForMap[]
 }
 
 export interface SelectedVideoForMap {
   videoId: number
   displayOrder: number
+  sourceBatchId: number
 }
 
 export interface MapVideoResponse {
@@ -94,10 +95,7 @@ export interface BatchOption {
 // Video types for display
 export const VIDEO_TYPES: Record<string, string> = {
   CHAMPIONS_OF_ARIVIHAN: 'Champions of Arivihan',
-  TESTIMONIAL: 'Testimonial',
-  PROMOTIONAL: 'Promotional',
-  TUTORIAL: 'Tutorial',
-  OTHER: 'Other',
+  VIRAL_VIDEOS: 'Viral Videos',
 }
 
 // Video orientations

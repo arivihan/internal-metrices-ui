@@ -14,6 +14,8 @@ import {
   Loader2,
   RotateCcw,
   Check,
+  Trash,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,8 +52,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { AddNotesDialog } from "./AddNotesDialog";
+import { CreateNoteDialog } from "./CreateNoteDialog";
 import { DuplicateNotesDialog } from "./DuplicateNotesDialog";
 import { EditNotesDialog } from "./EditNotesDialog";
+import { ViewNoteDetailsDialog } from "./ViewNoteDetailsDialog";
 import { fetchNotes, deleteNote, fetchNoteAuditTrail, fetchNotesTableAuditTrail, fetchBatchesPaginated } from "@/services/notes";
 import type { NotesResponseDto, NotesFilters } from "@/types/notes";
 import { AuditTrailPopup } from "@/components/AuditTrailPopup";
@@ -77,8 +81,11 @@ export default function NotesUploadPage() {
   const [notes, setNotes] = useState<NotesResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
+  const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
   const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([]);
   const [editingNote, setEditingNote] = useState<NotesResponseDto | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -101,7 +108,7 @@ export default function NotesUploadPage() {
   const [filters, setFilters] = useState<NotesFilters>({
     pageNo: 0,
     pageSize: 20,
-    sortBy: "position",
+    sortBy: "displayOrder",
     sortDir: "ASC",
     active: true,
   });
@@ -249,7 +256,7 @@ export default function NotesUploadPage() {
     setFilters({
       pageNo: 0,
       pageSize: 20,
-      sortBy: "position",
+      sortBy: "displayOrder",
       sortDir: "ASC",
       active: true,
     });
@@ -331,6 +338,11 @@ export default function NotesUploadPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleViewDetailsClick = (note: NotesResponseDto) => {
+    setViewingNoteId(note.id);
+    setShowViewDetailsDialog(true);
   };
 
   // Audit Trail handlers
@@ -432,10 +444,25 @@ export default function NotesUploadPage() {
             <History className="mr-2 h-4 w-4" />
             Table Audit
           </Button>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Upload Notes
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Notes
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowCreateDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Single Note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowAddDialog(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Bulk Upload
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -461,11 +488,18 @@ export default function NotesUploadPage() {
               aria-expanded={batchDropdownOpen}
               className="w-56 justify-between shrink-0"
             >
-              <span className="truncate">{selectedBatch ? selectedBatch.name : "Select Batch..."}</span>
+              <span className="truncate">
+                {selectedBatch ? selectedBatch.name : "Select Batch..."}
+              </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="start" side="bottom" sideOffset={4}>
+          <PopoverContent
+            className="w-80 p-0"
+            align="start"
+            side="bottom"
+            sideOffset={4}
+          >
             <div className="p-2 border-b">
               <Input
                 placeholder="Search batches..."
@@ -512,7 +546,9 @@ export default function NotesUploadPage() {
                         }`}
                       />
                       <div className="flex flex-col flex-1 min-w-0">
-                        <span className="font-medium truncate">{batch.displayName || batch.name}</span>
+                        <span className="font-medium truncate">
+                          {batch.displayName || batch.name}
+                        </span>
                         {batch.code && (
                           <span className="text-xs text-muted-foreground truncate">
                             {batch.code}
@@ -537,13 +573,18 @@ export default function NotesUploadPage() {
                   Prev
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  Page {batchPagination.currentPage + 1} of {batchPagination.totalPages}
+                  Page {batchPagination.currentPage + 1} of{" "}
+                  {batchPagination.totalPages}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleNextBatchPage}
-                  disabled={batchesLoading || batchPagination.currentPage >= batchPagination.totalPages - 1}
+                  disabled={
+                    batchesLoading ||
+                    batchPagination.currentPage >=
+                      batchPagination.totalPages - 1
+                  }
                 >
                   Next
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -555,14 +596,14 @@ export default function NotesUploadPage() {
 
         {/* Sort By Dropdown */}
         <Select
-          value={filters.sortBy || "position"}
+          value={filters.sortBy || "displayOrder"}
           onValueChange={handleSortChange}
         >
-          <SelectTrigger className="w-32 shrink-0">
+          <SelectTrigger className="w-36 shrink-0">
             <SelectValue placeholder="Sort By" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="position">Position</SelectItem>
+            <SelectItem value="displayOrder">Display Order</SelectItem>
             <SelectItem value="title">Title</SelectItem>
             <SelectItem value="subjectName">Subject</SelectItem>
             <SelectItem value="notesBy">Notes By</SelectItem>
@@ -573,7 +614,9 @@ export default function NotesUploadPage() {
         {/* Sort Direction Dropdown */}
         <Select
           value={filters.sortDir || "ASC"}
-          onValueChange={(value) => handleSortDirChange(value as "ASC" | "DESC")}
+          onValueChange={(value) =>
+            handleSortDirChange(value as "ASC" | "DESC")
+          }
         >
           <SelectTrigger className="w-28 shrink-0">
             <SelectValue placeholder="Sort Dir" />
@@ -586,7 +629,13 @@ export default function NotesUploadPage() {
 
         {/* Status Filter */}
         <Select
-          value={filters.active === undefined ? "all" : filters.active ? "active" : "inactive"}
+          value={
+            filters.active === undefined
+              ? "all"
+              : filters.active
+                ? "active"
+                : "inactive"
+          }
           onValueChange={handleStatusChange}
         >
           <SelectTrigger className="w-28 shrink-0">
@@ -600,7 +649,13 @@ export default function NotesUploadPage() {
         </Select>
 
         {/* Reset Filters Button */}
-        <Button variant="outline" size="icon" onClick={handleResetFilters} title="Reset Filters" className="shrink-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleResetFilters}
+          title="Reset Filters"
+          className="shrink-0"
+        >
           <RotateCcw className="h-4 w-4" />
         </Button>
 
@@ -608,7 +663,6 @@ export default function NotesUploadPage() {
         <div className="flex-1 min-w-0" />
 
         {/* Export Button */}
-        
       </div>
 
       {/* Stats */}
@@ -631,7 +685,11 @@ export default function NotesUploadPage() {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {new Set(notes.map((n) => n.batchId)).size}
+            {
+              new Set(
+                notes.flatMap((n) => n.batches?.map((b) => b.batchId) || []),
+              ).size
+            }
           </div>
           <p className="text-xs text-muted-foreground">Unique Batches</p>
         </div>
@@ -654,9 +712,9 @@ export default function NotesUploadPage() {
               <TableHead>Subject</TableHead>
               <TableHead>Notes By</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Batch ID</TableHead>
+              <TableHead>Batch Code</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Position</TableHead>
+              <TableHead>Display Order</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -725,18 +783,28 @@ export default function NotesUploadPage() {
                     <div>
                       <div className="font-medium">{note.title}</div>
                       <div className="text-xs text-muted-foreground">
-                        Code: {note.notesCode}
+                        Code: {note.code || note.notesCode}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{note.subjectName}</TableCell>
+                  <TableCell>{note.subject || note.subjectName}</TableCell>
                   <TableCell>{note.notesBy}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {getNotesTypeDisplay(note.notesType)}
+                      {getNotesTypeDisplay(note.type || note.notesType || "")}
                     </Badge>
                   </TableCell>
-                  <TableCell>{note.batchId}</TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px]">
+                      {note.batches && note.batches.length > 0 ? (
+                        <span className="text-xs break-words block">
+                          {note.batches[0].batchCode}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Badge
@@ -752,7 +820,7 @@ export default function NotesUploadPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{note.position}</TableCell>
+                  <TableCell>{note.displayOrder}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -762,7 +830,16 @@ export default function NotesUploadPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => window.open(note.notesUrl, "_blank")}
+                          onClick={() => handleViewDetailsClick(note)}
+                          className="cursor-pointer"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            window.open(note.url || note.notesUrl, "_blank")
+                          }
                           className="cursor-pointer"
                         >
                           <ExternalLink className="mr-2 h-4 w-4" />
@@ -779,6 +856,7 @@ export default function NotesUploadPage() {
                           className="text-red-600 cursor-pointer"
                           onClick={() => handleDeleteClick(note)}
                         >
+                          <Trash className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -832,10 +910,17 @@ export default function NotesUploadPage() {
         </div>
       )}
 
-      {/* Add Notes Dialog */}
+      {/* Add Notes Dialog (Bulk Upload) */}
       <AddNotesDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* Create Single Note Dialog */}
+      <CreateNoteDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
         onSuccess={handleUploadSuccess}
       />
 
@@ -855,14 +940,21 @@ export default function NotesUploadPage() {
         onSuccess={handleEditSuccess}
       />
 
+      {/* View Note Details Dialog */}
+      <ViewNoteDetailsDialog
+        open={showViewDetailsDialog}
+        onOpenChange={setShowViewDetailsDialog}
+        noteId={viewingNoteId}
+      />
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the note "{noteToDelete?.title}". This
-              action cannot be undone.
+              This will permanently delete the note "{noteToDelete?.title}".
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -872,6 +964,7 @@ export default function NotesUploadPage() {
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
+              <Trash/>
               {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -332,12 +332,12 @@ export function CreateCardDialog({
       <SheetContent side="right" className="flex h-full w-full flex-col p-0 sm:max-w-2xl">
         <SheetHeader className="shrink-0 border-b px-6 py-4">
           <SheetTitle className="flex items-center gap-2">
-            <LayoutGrid className="h-5 w-5 text-indigo-500" />
+            <LayoutGrid className="h-5 w-5 text-cyan-500" />
             Create New Card
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="space-y-6 p-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -485,7 +485,7 @@ export function CreateCardDialog({
                   variant="outline"
                   size="sm"
                   onClick={addBatch}
-                  className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   Add Batch
@@ -739,7 +739,7 @@ export function CreateCardDialog({
                           {tag}
                         </span>
                       )}
-                      <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">
+                      <span className="text-xs px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">
                         {ICON_MEDIA_TYPES[iconMediaType]}
                       </span>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded">
@@ -760,7 +760,7 @@ export function CreateCardDialog({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || !title.trim() || !icon.trim()}
-            className="bg-indigo-500 hover:bg-indigo-600"
+            className="bg-cyan-500 hover:bg-cyan-600"
           >
             {isSubmitting ? (
               <>

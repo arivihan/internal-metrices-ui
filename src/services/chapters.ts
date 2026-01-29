@@ -710,3 +710,89 @@ export const fetchAllBatchAddOns = async (): Promise<FilterOption[]> => {
     return []
   }
 }
+
+// ============================================================================
+// AUDIT TRAIL APIs
+// ============================================================================
+
+export interface AuditTrailEntry {
+  id: string
+  entityName: string
+  entityId: string
+  actionType: string
+  performedBy: string
+  timestamp: string
+  oldValue: Record<string, any> | null
+  newValue: Record<string, any> | null
+}
+
+export interface AuditTrailPaginatedResponse {
+  content: AuditTrailEntry[]
+  pageNumber: number
+  pageSize: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}
+
+/**
+ * Fetch audit trail for a specific chapter (row-wise)
+ * GET /secure/api/v1/audit-logs/row?entityName=Chapter&entityId={chapterId}
+ */
+export const fetchChapterAuditTrail = async (
+  chapterId: number,
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<AuditTrailPaginatedResponse> => {
+  const params: Record<string, string> = {
+    entityName: 'Chapter',
+    entityId: String(chapterId),
+    pageNo: String(pageNo),
+    pageSize: String(pageSize),
+  }
+
+  console.log('[fetchChapterAuditTrail] Request params:', params)
+
+  try {
+    const response = await apiClient<AuditTrailPaginatedResponse>(
+      '/secure/api/v1/audit-logs/row',
+      { params }
+    )
+
+    console.log('[fetchChapterAuditTrail] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[fetchChapterAuditTrail] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch audit trail for all chapters (table-wise)
+ * GET /secure/api/v1/audit-logs/table?entityName=Chapter
+ */
+export const fetchChaptersTableAuditTrail = async (
+  pageNo: number = 0,
+  pageSize: number = 10
+): Promise<AuditTrailPaginatedResponse> => {
+  const params: Record<string, string> = {
+    entityName: 'Chapter',
+    pageNo: String(pageNo),
+    pageSize: String(pageSize),
+  }
+
+  console.log('[fetchChaptersTableAuditTrail] Request params:', params)
+
+  try {
+    const response = await apiClient<AuditTrailPaginatedResponse>(
+      '/secure/api/v1/audit-logs/table',
+      { params }
+    )
+
+    console.log('[fetchChaptersTableAuditTrail] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[fetchChaptersTableAuditTrail] Error:', error)
+    throw error
+  }
+}

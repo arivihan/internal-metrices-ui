@@ -37,6 +37,7 @@ import {
   fetchGradesPaginated,
   fetchStreamsPaginated,
   fetchTags,
+  fetchSupportedLanguages,
 } from "@/services/reels";
 import type {
   ReelCreateRequest,
@@ -44,6 +45,7 @@ import type {
   GradeOption,
   StreamOption,
   TagResponseDto,
+  SupportedLanguage,
 } from "@/types/reels";
 
 interface AddReelDialogProps {
@@ -62,8 +64,12 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [durationSeconds, setDurationSeconds] = useState<number>(0);
   const [difficultyLevel, setDifficultyLevel] = useState<"BEGINNER" | "INTERMEDIATE" | "ADVANCED">("BEGINNER");
-  const [language, setLanguage] = useState<"ENGLISH" | "HINDI">("ENGLISH");
+  const [language, setLanguage] = useState<string>("");
   const [isGlobal, setIsGlobal] = useState(false);
+
+  // Languages state
+  const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
+  const [languagesLoading, setLanguagesLoading] = useState(false);
 
   // Targeting state
   const [targeting, setTargeting] = useState<{ examId: number; gradeId: number; streamId: number }[]>([]);
@@ -139,6 +145,22 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
     } finally {
       setTagsLoading(false);
     }
+
+    // Load languages
+    setLanguagesLoading(true);
+    try {
+      const languagesList = await fetchSupportedLanguages();
+      setLanguages(languagesList);
+      // Set default language if available
+      if (languagesList.length > 0 && !language) {
+        const englishLang = languagesList.find((l) => l.code.toUpperCase() === "EN");
+        setLanguage(englishLang?.code || languagesList[0].code);
+      }
+    } catch (error) {
+      console.error("Failed to load languages:", error);
+    } finally {
+      setLanguagesLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -148,7 +170,9 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
     setThumbnailUrl("");
     setDurationSeconds(0);
     setDifficultyLevel("BEGINNER");
-    setLanguage("ENGLISH");
+    // Reset to first language or empty
+    const englishLang = languages.find((l) => l.code.toUpperCase() === "EN");
+    setLanguage(englishLang?.code || (languages.length > 0 ? languages[0].code : ""));
     setIsGlobal(false);
     setTargeting([]);
     setCurrentExam(null);
@@ -199,6 +223,10 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
     }
     if (!videoUrl.trim()) {
       toast.error("Video URL is required");
+      return;
+    }
+    if (!language) {
+      toast.error("Language is required");
       return;
     }
     if (!isGlobal && targeting.length === 0) {
@@ -360,13 +388,20 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
 
                 <div className="grid gap-2">
                   <Label>Language</Label>
-                  <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+                  <Select
+                    value={language}
+                    onValueChange={(v) => setLanguage(v)}
+                    disabled={languagesLoading}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder={languagesLoading ? "Loading..." : "Select Language"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ENGLISH">English</SelectItem>
-                      <SelectItem value="HINDI">Hindi</SelectItem>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang.id} value={lang.code}>
+                          {lang.code} - {lang.nativeName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -391,7 +426,7 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
               </div>
 
               {/* Targeting Section */}
-              {!isGlobal && (
+              
                 <div className="grid gap-4 p-4 bg-muted/30 rounded-lg border">
                   <Label>Targeting *</Label>
                   <div className="grid grid-cols-3 gap-3">
@@ -472,7 +507,7 @@ export function AddReelDialog({ open, onOpenChange, onSuccess }: AddReelDialogPr
                     </div>
                   )}
                 </div>
-              )}
+              
             </div>
 
             <Separator />

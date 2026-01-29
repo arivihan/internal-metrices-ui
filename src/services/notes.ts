@@ -28,18 +28,30 @@ interface PaginatedResponse<T> {
 // NOTES Types
 // ============================================================================
 
+export interface NotesBatchInfo {
+  batchId: number
+  batchName: string
+  batchCode: string
+}
+
 export interface NotesResponseDto {
   id: string
-  subjectName: string
+  subject: string
+  subjectName?: string
   title: string
   notesBy: string
-  notesUrl: string
-  position: number
+  url: string
+  notesUrl?: string
+  displayOrder: number
   locked: boolean
-  notesType: string
-  batchId: number
+  type: string
+  notesType?: string
+  batchId?: number
+  batches: NotesBatchInfo[]
   isActive: boolean
-  notesCode: string
+  code: string
+  notesCode?: string
+  accessType?: string
 }
 
 export interface NotesFilters {
@@ -67,8 +79,8 @@ export interface DuplicateNotesRequest {
 }
 
 export interface SelectedNote {
-  batchId: number
-  notesCode: string
+  notesId: number
+  displayOrder: number
 }
 
 export interface UploadResponse {
@@ -144,6 +156,53 @@ export const fetchNotes = async (
     }
   } catch (error) {
     console.error('[fetchNotes] Error:', error)
+    throw error
+  }
+}
+
+// Create notes request type
+export interface NotesCreateRequest {
+  code: string
+  subject: string
+  title: string
+  notesBy: string
+  url: string
+  accessType: 'BASIC' | 'PREMIUM' | 'FREE'
+  type: string
+  displayOrder: number
+}
+
+// Create notes response type
+export interface NotesCreateResponse {
+  message: string
+  code: number
+  data: NotesResponseDto
+  success: boolean
+}
+
+/**
+ * Create a single note
+ * POST /secure/api/v1/notes?batchId={batchId}
+ */
+export const createNote = async (
+  batchId: number,
+  payload: NotesCreateRequest
+): Promise<NotesCreateResponse> => {
+  console.log('[createNote] Creating note with payload:', payload, 'batchId:', batchId)
+
+  try {
+    const response = await apiClient<NotesCreateResponse>(
+      `/secure/api/v1/notes?batchId=${batchId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    )
+
+    console.log('[createNote] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[createNote] Error:', error)
     throw error
   }
 }
@@ -250,7 +309,7 @@ export const updateNote = async (
     url: string
     accessType: string
     type: string
-    position: number
+    displayOrder: number
     isActive: boolean
     subject: string
     notesBy: string
@@ -425,6 +484,36 @@ export const deleteNote = async (id: string): Promise<any> => {
 }
 
 /**
+ * Fetch note by ID
+ * GET /secure/api/v1/notes/{id}
+ */
+export interface NoteDetailResponse {
+  message: string
+  code: number
+  data: NotesResponseDto
+  success: boolean
+}
+
+export const fetchNoteById = async (id: string): Promise<NoteDetailResponse> => {
+  console.log('[fetchNoteById] Fetching note:', id)
+
+  try {
+    const response = await apiClient<NoteDetailResponse>(
+      `/secure/api/v1/notes/${id}`,
+      {
+        method: 'GET',
+      }
+    )
+
+    console.log('[fetchNoteById] Response:', response)
+    return response
+  } catch (error) {
+    console.error('[fetchNoteById] Error:', error)
+    throw error
+  }
+}
+
+/**
  * Duplicate notes to multiple batches
  * POST /secure/notes/api/v1/duplicate
  */
@@ -433,7 +522,7 @@ export const duplicateNotes = async (payload: DuplicateNotesRequest): Promise<Up
 
   try {
     const response = await apiClient<UploadResponse>(
-      '/secure/api/v1/notes/duplicate',
+      '/secure/api/v1/notes/map',
       {
         method: 'POST',
         body: JSON.stringify(payload),

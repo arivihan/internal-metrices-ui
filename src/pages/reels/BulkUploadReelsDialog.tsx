@@ -52,14 +52,16 @@ import {
   bulkUploadReels,
   bulkSaveReels,
   fetchExamsPaginated,
-  fetchGradesPaginated,
-  fetchStreamsPaginated,
+  fetchGradesByExam,
+  fetchStreamsByExamGrade,
+  fetchSupportedLanguages,
 } from "@/services/reels";
 import type {
   ReelBulkUploadResponse,
   ExamOption,
   GradeOption,
   StreamOption,
+  SupportedLanguage,
 } from "@/types/reels";
 
 interface BulkUploadReelsDialogProps {
@@ -83,7 +85,12 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
   const [selectedExam, setSelectedExam] = useState<ExamOption | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<GradeOption | null>(null);
   const [selectedStream, setSelectedStream] = useState<StreamOption | null>(null);
-  const [language, setLanguage] = useState<"ENGLISH" | "HINDI">("ENGLISH");
+  const [language, setLanguage] = useState<string>("");
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage | null>(null);
+
+  // Languages
+  const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
+  const [languagesLoading, setLanguagesLoading] = useState(false);
 
   // Preview data
   const [uploadResponse, setUploadResponse] = useState<ReelBulkUploadResponse | null>(null);
@@ -136,11 +143,53 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
   useEffect(() => {
     if (open) {
       loadExams(0, "");
-      loadGrades(0, "");
-      loadStreams(0, "");
+      loadLanguages();
       resetDialog();
     }
   }, [open]);
+
+  // Load supported languages
+  const loadLanguages = async () => {
+    setLanguagesLoading(true);
+    try {
+      const response = await fetchSupportedLanguages();
+      // Sort by displayOrder and filter active languages
+      const activeLanguages = response
+        .filter((lang) => lang.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+      setLanguages(activeLanguages);
+      // Set default language to first one if available
+      if (activeLanguages.length > 0 && !language) {
+        setLanguage(activeLanguages[0].code);
+        setSelectedLanguage(activeLanguages[0]);
+      }
+    } catch (error) {
+      console.error("Failed to load languages:", error);
+      setLanguages([]);
+    } finally {
+      setLanguagesLoading(false);
+    }
+  };
+
+  // Load grades when exam changes
+  useEffect(() => {
+    if (selectedExam) {
+      loadGrades(0, "");
+    } else {
+      setGrades([]);
+      setGradePagination({ currentPage: 0, totalPages: 0, totalElements: 0, pageSize: 10 });
+    }
+  }, [selectedExam]);
+
+  // Load streams when exam or grade changes
+  useEffect(() => {
+    if (selectedExam && selectedGrade) {
+      loadStreams(0, "");
+    } else {
+      setStreams([]);
+      setStreamPagination({ currentPage: 0, totalPages: 0, totalElements: 0, pageSize: 10 });
+    }
+  }, [selectedExam, selectedGrade]);
 
   // Exam pagination handlers
   const loadExams = async (pageNo: number = 0, search: string = "") => {
@@ -191,18 +240,26 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
   const handleExamSelect = (exam: ExamOption | null) => {
     setSelectedExam(exam);
+    // Clear grade and stream when exam changes
+    setSelectedGrade(null);
+    setSelectedStream(null);
+    setGradeSearchQuery("");
+    setStreamSearchQuery("");
     setExamDropdownOpen(false);
   };
 
-  // Grade pagination handlers
+  // Grade pagination handlers - now uses exam-grades API with examId
   const loadGrades = async (pageNo: number = 0, search: string = "") => {
+    if (!selectedExam) {
+      setGrades([]);
+      return;
+    }
     setGradesLoading(true);
     try {
-      const response = await fetchGradesPaginated({
+      const response = await fetchGradesByExam(selectedExam.id, {
         pageNo,
         pageSize: 10,
         search: search || undefined,
-        active: true,
       });
       setGrades(response.content || []);
       setGradePagination({
@@ -243,18 +300,24 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
   const handleGradeSelect = (grade: GradeOption | null) => {
     setSelectedGrade(grade);
+    // Clear stream when grade changes
+    setSelectedStream(null);
+    setStreamSearchQuery("");
     setGradeDropdownOpen(false);
   };
 
-  // Stream pagination handlers
+  // Stream pagination handlers - now uses exam-grade-streams API with examId and gradeId
   const loadStreams = async (pageNo: number = 0, search: string = "") => {
+    if (!selectedExam || !selectedGrade) {
+      setStreams([]);
+      return;
+    }
     setStreamsLoading(true);
     try {
-      const response = await fetchStreamsPaginated({
+      const response = await fetchStreamsByExamGrade(selectedExam.id, selectedGrade.id, {
         pageNo,
         pageSize: 10,
         search: search || undefined,
-        active: true,
       });
       setStreams(response.content || []);
       setStreamPagination({
@@ -304,7 +367,14 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
     setSelectedExam(null);
     setSelectedGrade(null);
     setSelectedStream(null);
-    setLanguage("ENGLISH");
+    // Reset language to first available or empty
+    if (languages.length > 0) {
+      setLanguage(languages[0].code);
+      setSelectedLanguage(languages[0]);
+    } else {
+      setLanguage("");
+      setSelectedLanguage(null);
+    }
     setUploadResponse(null);
     setExamSearchQuery("");
     setGradeSearchQuery("");
@@ -337,6 +407,22 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
       return;
     }
 
+    // Validate targeting: either all (exam, grade, stream) or none
+    const hasExam = !!selectedExam;
+    const hasGrade = !!selectedGrade;
+    const hasStream = !!selectedStream;
+    const hasAnyTargeting = hasExam || hasGrade || hasStream;
+    const hasCompleteTargeting = hasExam && hasGrade && hasStream;
+
+    if (hasAnyTargeting && !hasCompleteTargeting) {
+      const missing = [];
+      if (!hasExam) missing.push("Exam");
+      if (!hasGrade) missing.push("Grade");
+      if (!hasStream) missing.push("Stream");
+      toast.error(`Incomplete targeting: Please select ${missing.join(", ")} or clear all targeting fields`);
+      return;
+    }
+
     setIsUploading(true);
     try {
       const response = await bulkUploadReels(selectedFile, {
@@ -354,9 +440,11 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
       } else {
         toast.success("File uploaded successfully!");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to upload file:", error);
-      toast.error("Failed to upload file: " + (error instanceof Error ? error.message : "Unknown error"));
+      // Extract message from error response, fallback to error.message
+      const errorMessage = error?.response?.data?.message || error?.message || "Unknown error";
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -377,9 +465,11 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
       setStep("result");
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save reels:", error);
-      toast.error("Failed to save reels: " + (error instanceof Error ? error.message : "Unknown error"));
+      // Extract message from error response, fallback to error.message
+      const errorMessage = error?.response?.data?.message || error?.message || "Unknown error";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -580,16 +670,22 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
                   {/* Grade Dropdown with Pagination */}
                   <div className="grid gap-2">
-                    <Label>Grade</Label>
-                    <Popover open={gradeDropdownOpen} onOpenChange={setGradeDropdownOpen}>
+                    <Label className="flex items-center gap-2">
+                      Grade
+                      {!selectedExam && (
+                        <span className="text-xs text-muted-foreground font-normal">(Select exam first)</span>
+                      )}
+                    </Label>
+                    <Popover open={gradeDropdownOpen} onOpenChange={(open) => selectedExam && setGradeDropdownOpen(open)}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
+                          disabled={!selectedExam}
                           className="w-full justify-between font-normal"
                         >
                           <span className="truncate">
-                            {selectedGrade?.name || "Select Grade (optional)"}
+                            {selectedGrade?.name || (selectedExam ? "Select Grade (optional)" : "Select exam first")}
                           </span>
                           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -680,16 +776,24 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
                   {/* Stream Dropdown with Pagination */}
                   <div className="grid gap-2">
-                    <Label>Stream</Label>
-                    <Popover open={streamDropdownOpen} onOpenChange={setStreamDropdownOpen}>
+                    <Label className="flex items-center gap-2">
+                      Stream
+                      {(!selectedExam || !selectedGrade) && (
+                        <span className="text-xs text-muted-foreground font-normal">
+                          {!selectedExam ? "(Select exam first)" : "(Select grade first)"}
+                        </span>
+                      )}
+                    </Label>
+                    <Popover open={streamDropdownOpen} onOpenChange={(open) => selectedExam && selectedGrade && setStreamDropdownOpen(open)}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
+                          disabled={!selectedExam || !selectedGrade}
                           className="w-full justify-between font-normal"
                         >
                           <span className="truncate">
-                            {selectedStream?.name || "Select Stream (optional)"}
+                            {selectedStream?.name || (selectedExam && selectedGrade ? "Select Stream (optional)" : !selectedExam ? "Select exam first" : "Select grade first")}
                           </span>
                           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -780,13 +884,24 @@ export function BulkUploadReelsDialog({ open, onOpenChange, onSuccess }: BulkUpl
 
                   <div className="grid gap-2">
                     <Label>Language</Label>
-                    <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+                    <Select
+                      value={language}
+                      onValueChange={(v) => {
+                        setLanguage(v);
+                        const lang = languages.find((l) => l.code === v);
+                        setSelectedLanguage(lang || null);
+                      }}
+                      disabled={languagesLoading}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder={languagesLoading ? "Loading..." : "Select Language"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ENGLISH">English</SelectItem>
-                        <SelectItem value="HINDI">Hindi</SelectItem>
+                        {languages.map((lang) => (
+                          <SelectItem key={lang.id} value={lang.code}>
+                            {lang.code} - {lang.nativeName}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

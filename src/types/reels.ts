@@ -81,7 +81,7 @@ export interface ReelCreateRequest {
   thumbnailUrl: string
   durationSeconds: number
   difficultyLevel: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
-  language: 'ENGLISH' | 'HINDI'
+  language: string
   isGlobal: boolean
   targeting: {
     examId: number
@@ -202,4 +202,14 @@ export interface PaginatedDropdownResponse<T> {
   totalElements: number
   totalPages: number
   last: boolean
+}
+
+// Supported Language type
+export interface SupportedLanguage {
+  id: number
+  code: string
+  displayNameEn: string
+  nativeName: string
+  displayOrder: number
+  isActive: boolean
 }

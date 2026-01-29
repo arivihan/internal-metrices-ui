@@ -1,15 +1,26 @@
+export interface NotesBatchInfo {
+  batchId: number
+  batchName: string
+  batchCode: string
+}
+
 export interface NotesResponseDto {
   id: string
-  subjectName: string
+  subject: string
+  subjectName?: string
   title: string
   notesBy: string
-  notesUrl: string
-  position: number
+  url: string
+  notesUrl?: string
+  displayOrder: number
   locked: boolean
-  notesType: string
-  batchId: number
+  type: string
+  notesType?: string
+  batchId?: number
+  batches: NotesBatchInfo[]
   isActive: boolean
-  notesCode: string
+  code: string
+  notesCode?: string
   accessType?: string
 }
 
@@ -45,8 +56,8 @@ export interface DuplicateNotesRequest {
 }
 
 export interface SelectedNote {
-  batchId: number
-  notesCode: string
+  notesId: number
+  displayOrder: number
 }
 
 export interface UploadResponse {
@@ -78,8 +89,28 @@ export interface NotesUpdateRequest {
   title?: string
   notesBy?: string
   notesUrl?: string
-  position?: number
+  displayOrder?: number
   locked?: boolean
   notesType?: string
   isActive?: boolean
+}
+
+// Create notes request (POST)
+export interface NotesCreateRequest {
+  code: string
+  subject: string
+  title: string
+  notesBy: string
+  url: string
+  accessType: 'BASIC' | 'PREMIUM' | 'FREE'
+  type: string
+  displayOrder: number
+}
+
+// Create notes response
+export interface NotesCreateResponse {
+  message: string
+  code: number
+  data: NotesResponseDto
+  success: boolean
 }

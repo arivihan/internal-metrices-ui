@@ -12,6 +12,7 @@ import {
   Link2,
   X,
   Save,
+  History,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -50,8 +51,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet'
+import { Label } from '@/components/ui/label'
 
 import { AddChapterDialog } from './AddChapterDialog'
+import { AuditTrailPopup } from '@/components/AuditTrailPopup'
 import {
   // Chapter APIs
   fetchChapters,
@@ -67,6 +77,9 @@ import {
   fetchBatchAddOns,
   // Subject API
   fetchSubjects,
+  // Audit Trail APIs
+  fetchChapterAuditTrail,
+  fetchChaptersTableAuditTrail,
 } from '@/services/chapters'
 import type { ChapterDto, FilterOption } from '@/types/chapters'
 
@@ -137,6 +150,23 @@ export default function Chapters() {
   const [loadingMappingStreams, setLoadingMappingStreams] = useState(false)
   const [loadingMappingBatches, setLoadingMappingBatches] = useState(false)
   const [loadingMappingBatchAddOns, setLoadingMappingBatchAddOns] = useState(false)
+
+  // Audit Trail state
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false)
+  const [auditTrailData, setAuditTrailData] = useState<any[]>([])
+  const [auditTrailLoading, setAuditTrailLoading] = useState(false)
+  const [auditTrailTitle, setAuditTrailTitle] = useState("Audit Trail")
+  const [auditTrailPagination, setAuditTrailPagination] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+  })
+  const [currentAuditChapterId, setCurrentAuditChapterId] = useState<number | null>(null)
+  const [isTableAudit, setIsTableAudit] = useState(false)
+
+  // Filter dialog state
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false)
 
   // Helper to get code from id
   const getCode = (items: FilterOption[], id: string): string | undefined => {
@@ -647,6 +677,67 @@ export default function Chapters() {
     }
   }
 
+  // ============================================================================
+  // Audit Trail handlers
+  // ============================================================================
+  const fetchAuditTrailPage = async (
+    chapterId: number | null,
+    pageNo: number,
+    tableAudit: boolean,
+    pageSizeParam?: number
+  ) => {
+    const size = pageSizeParam ?? auditTrailPagination.pageSize
+    setAuditTrailLoading(true)
+    try {
+      let response
+      if (tableAudit) {
+        response = await fetchChaptersTableAuditTrail(pageNo, size)
+      } else if (chapterId) {
+        response = await fetchChapterAuditTrail(chapterId, pageNo, size)
+      } else {
+        return
+      }
+
+      setAuditTrailData(response.content || [])
+      setAuditTrailPagination({
+        currentPage: response.pageNumber ?? pageNo,
+        totalPages: response.totalPages ?? 0,
+        totalElements: response.totalElements ?? 0,
+        pageSize: response.pageSize ?? size,
+      })
+    } catch (error) {
+      console.error('Failed to fetch audit trail:', error)
+      toast.error('Failed to fetch audit trail')
+      setAuditTrailData([])
+    } finally {
+      setAuditTrailLoading(false)
+    }
+  }
+
+  const handleRowAuditClick = async (chapter: ChapterDto) => {
+    setCurrentAuditChapterId(chapter.chapterId)
+    setIsTableAudit(false)
+    setAuditTrailTitle(`Audit Trail - ${chapter.title || chapter.chapterName || chapter.chapterCode}`)
+    setAuditTrailOpen(true)
+    await fetchAuditTrailPage(chapter.chapterId, 0, false)
+  }
+
+  const handleTableAuditClick = async () => {
+    setCurrentAuditChapterId(null)
+    setIsTableAudit(true)
+    setAuditTrailTitle("Chapters Table Audit Trail")
+    setAuditTrailOpen(true)
+    await fetchAuditTrailPage(null, 0, true)
+  }
+
+  const handleAuditPageChange = (newPage: number) => {
+    fetchAuditTrailPage(currentAuditChapterId, newPage, isTableAudit)
+  }
+
+  const handleAuditPageSizeChange = (newPageSize: number) => {
+    fetchAuditTrailPage(currentAuditChapterId, 0, isTableAudit, newPageSize)
+  }
+
   const hasActiveFilters =
     examFilter ||
     gradeFilter ||
@@ -892,6 +983,14 @@ export default function Chapters() {
           )}
           <Button
             variant="outline"
+            onClick={handleTableAuditClick}
+            className="gap-2"
+          >
+            <History className="size-4" />
+            Table Audit
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleAddChapter}
             className="gap-2 border-brand/50 text-brand hover:bg-brand/10"
           >
@@ -1001,49 +1100,6 @@ export default function Chapters() {
           </SelectContent>
         </Select>
 
-        {/* Batch Add-On Filter (depends on Batch) */}
-        <Select
-          value={batchAddOnFilter || "all"}
-          onValueChange={(v) =>
-            handleFilterChange(setBatchAddOnFilter, v === "all" ? "" : v)
-          }
-          disabled={!batchFilter || loadingBatchAddOns}
-        >
-          <SelectTrigger className="w-35">
-            <SelectValue
-              placeholder={loadingBatchAddOns ? "Loading..." : "Batch Add-On"}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Add-Ons</SelectItem>
-            {batchAddOns.map((addon) => (
-              <SelectItem key={addon.id} value={String(addon.id)}>
-                {addon.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Subject Filter (independent) */}
-        <Select
-          value={subjectFilter || "all"}
-          onValueChange={(v) =>
-            handleFilterChange(setSubjectFilter, v === "all" ? "" : v)
-          }
-        >
-          <SelectTrigger className="w-35">
-            <SelectValue placeholder="Subject" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Subjects</SelectItem>
-            {subjects.map((subject) => (
-              <SelectItem key={String(subject.id)} value={String(subject.id)}>
-                {subject.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -1055,7 +1111,12 @@ export default function Chapters() {
           </Button>
         )}
 
-        <Button variant="outline" size="icon" className="ml-auto size-9">
+        <Button
+          variant="outline"
+          size="icon"
+          className="ml-auto size-9"
+          onClick={() => setFilterDialogOpen(true)}
+        >
           <Filter className="size-4" />
         </Button>
       </div>
@@ -1236,6 +1297,13 @@ export default function Chapters() {
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              onClick={() => handleRowAuditClick(chapter)}
+                              className="gap-2"
+                            >
+                              <History className="size-4" />
+                              Audit Trail
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => handleDeleteClick(chapter)}
                               className="gap-2 text-red-600 focus:text-red-600"
                             >
@@ -1328,6 +1396,196 @@ export default function Chapters() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Audit Trail Popup */}
+      <AuditTrailPopup
+        open={auditTrailOpen}
+        onClose={() => {
+          setAuditTrailOpen(false)
+          setAuditTrailData([])
+          setCurrentAuditChapterId(null)
+        }}
+        data={auditTrailData}
+        title={auditTrailTitle}
+        currentPage={auditTrailPagination.currentPage}
+        totalPages={auditTrailPagination.totalPages}
+        totalElements={auditTrailPagination.totalElements}
+        pageSize={auditTrailPagination.pageSize}
+        isLoading={auditTrailLoading}
+        onPageChange={handleAuditPageChange}
+        onPageSizeChange={handleAuditPageSizeChange}
+      />
+
+      {/* Filter Sheet */}
+      <Sheet open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+        <SheetContent className="w-[50%] p-2  sm:w-[450px]">
+          <SheetHeader className=' p-0'>
+            <SheetTitle className="flex  items-center gap-2">
+              <Filter className="size-5" />
+              Filter Chapters
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="py-6  space-y-5">
+            {/* Chapter Code */}
+            <div className="space-y-2">
+              <Label>Chapter Code</Label>
+              <Input
+              className='w-[90%]'
+                placeholder="Search by chapter code..."
+                value={chapterCodeFilter}
+                onChange={(e) => handleFilterChange(setChapterCodeFilter, e.target.value)}
+              />
+            </div>
+
+            {/* Exam Filter */}
+            <div className="space-y-2">
+              <Label>Exam</Label>
+              <Select
+                value={examFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setExamFilter, v === "all" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Exam" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Exams</SelectItem>
+                  {exams.map((exam) => (
+                    <SelectItem key={exam.id} value={String(exam.id)}>
+                      {exam.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Grade Filter */}
+            <div className="space-y-2">
+              <Label>Grade</Label>
+              <Select
+                value={gradeFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setGradeFilter, v === "all" ? "" : v)}
+                disabled={!examFilter || loadingGrades}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingGrades ? "Loading..." : "Select Grade"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {grades.map((grade) => (
+                    <SelectItem key={grade.id} value={String(grade.id)}>
+                      {grade.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Stream Filter */}
+            <div className="space-y-2">
+              <Label>Stream</Label>
+              <Select
+                value={streamFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setStreamFilter, v === "all" ? "" : v)}
+                disabled={!examFilter || !gradeFilter || loadingStreams}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingStreams ? "Loading..." : "Select Stream"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Streams</SelectItem>
+                  {streams.map((stream) => (
+                    <SelectItem key={stream.id} value={String(stream.id)}>
+                      {stream.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Batch Filter */}
+            <div className="space-y-2">
+              <Label>Batch</Label>
+              <Select
+                value={batchFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setBatchFilter, v === "all" ? "" : v)}
+                disabled={!examFilter || !gradeFilter || !streamFilter || loadingBatches}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingBatches ? "Loading..." : "Select Batch"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Batches</SelectItem>
+                  {batches.map((batch) => (
+                    <SelectItem key={batch.id} value={String(batch.id)}>
+                      {batch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Batch Add-On Filter */}
+            <div className="space-y-2">
+              <Label>Batch Add-On</Label>
+              <Select
+                value={batchAddOnFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setBatchAddOnFilter, v === "all" ? "" : v)}
+                disabled={!batchFilter || loadingBatchAddOns}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingBatchAddOns ? "Loading..." : "Select Add-On"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Add-Ons</SelectItem>
+                  {batchAddOns.map((addon) => (
+                    <SelectItem key={addon.id} value={String(addon.id)}>
+                      {addon.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subject Filter */}
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Select
+                value={subjectFilter || "all"}
+                onValueChange={(v) => handleFilterChange(setSubjectFilter, v === "all" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subjects</SelectItem>
+                  {subjects.map((subject) => (
+                    <SelectItem key={String(subject.id)} value={String(subject.id)}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <SheetFooter className="flex  py-0 gap-2">
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="flex-1"
+            >
+              Clear All
+            </Button>
+            <Button
+              onClick={() => setFilterDialogOpen(false)}
+              className="flex-1"
+            >
+              Apply Filters
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

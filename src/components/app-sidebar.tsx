@@ -93,14 +93,7 @@ const uploadsNavItems: DrawerItem[] = [
     getDataUrl: "",
     icon: "UploadCloud",
     accessibleToRoles: ["ADMIN"],
-  },
-  {
-    title: "Notes Upload",
-    type: "getData",
-    getDataUrl: "/notes-upload",
-    icon: "FileText",
-    accessibleToRoles: ["ADMIN"],
-  },
+  }
 ];
 
 // Static items organized by section (for sidebar organization)

@@ -54,7 +54,7 @@ interface FormData {
   url: string;
   accessType: string;
   type: string;
-  position: number;
+  displayOrder: number;
   isActive: boolean;
   subject: string;
   notesBy: string;
@@ -85,7 +85,7 @@ export function EditNotesDialog({
     url: "",
     accessType: "BASIC",
     type: "NOTES",
-    position: 0,
+    displayOrder: 0,
     isActive: true,
     subject: "",
     notesBy: "",
@@ -160,7 +160,7 @@ export function EditNotesDialog({
         url: note.notesUrl || "",
         accessType: note.accessType || "BASIC",
         type: note.notesType || "NOTES",
-        position: note.position || 0,
+        displayOrder: note.displayOrder || 0,
         isActive: note.isActive ?? true,
         subject: note.subjectName || "",
         notesBy: note.notesBy || "",
@@ -199,7 +199,7 @@ export function EditNotesDialog({
         url: formData.url,
         accessType: formData.accessType,
         type: formData.type,
-        position: formData.position,
+        displayOrder: formData.displayOrder,
         isActive: formData.isActive,
         subject: formData.subject,
         notesBy: formData.notesBy,
@@ -422,20 +422,20 @@ export function EditNotesDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Position (Display Order) */}
+            {/* Display Order */}
             <div className="grid gap-2">
-              <Label htmlFor="position">Position (Display Order)</Label>
+              <Label htmlFor="displayOrder">Display Order</Label>
               <Input
-                id="position"
+                id="displayOrder"
                 type="number"
-                value={formData.position}
+                value={formData.displayOrder}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    position: Number(e.target.value),
+                    displayOrder: Number(e.target.value),
                   }))
                 }
-                placeholder="Enter position"
+                placeholder="Enter display order"
               />
             </div>
 

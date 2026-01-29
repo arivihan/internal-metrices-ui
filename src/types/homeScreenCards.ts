@@ -106,10 +106,17 @@ export interface HomeScreenCardFilters {
   batchId?: number
 }
 
+// Copy card item for mapping
+export interface CopyCardItem {
+  cardId: number
+  displayOrder: number
+  sourceBatchId: number
+}
+
 // Copy card request
 export interface CopyCardRequest {
-  sourceBatchId: number
   targetBatchIds: number[]
+  cards: CopyCardItem[]
 }
 
 // API Response wrapper
