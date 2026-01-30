@@ -25,6 +25,7 @@ import FileManagement from "./pages/files/FileManagement";
 import ServiceStatusPage from "@/pages/service-status";
 import HomePageDynamic from "./pages/homepage-dynamic";
 import HomeScreenCardsPage from "./pages/home-screen-cards";
+import AppCarouselsPage from "./pages/app-carousels";
 
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
@@ -100,7 +101,7 @@ function App() {
             <Route path="/dashboard/rbac" element={<RBAC />} />
             <Route
               path="/dashboard/app-carousels"
-              element={<HomePageDynamic />}
+              element={<AppCarouselsPage/>}
             />
             <Route
               path="/dashboard/homepage"
