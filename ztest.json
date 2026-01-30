@@ -1,0 +1,548 @@
+{
+  "tableHeaders": [
+    {
+      "Header": "Code",
+      "accessor": "code",
+      "type": "text",
+      "order": 2
+    },
+    {
+      "Header": "Display Name",
+      "accessor": "displayName",
+      "type": "text",
+      "order": 3
+    },
+    {
+      "Header": "Exam",
+      "accessor": "examName",
+      "type": "text",
+      "order": 4
+    },
+    {
+      "Header": "Grade",
+      "accessor": "gradeName",
+      "type": "text",
+      "order": 5
+    },
+    {
+      "Header": "Academic Year",
+      "accessor": "academicYear",
+      "type": "text",
+      "order": 6
+    },
+    {
+      "Header": "Batch Type",
+      "accessor": "batchType",
+      "type": "text",
+      "order": 7
+    },
+    {
+      "Header": "Duration",
+      "accessor": "durationMonths",
+      "type": "text",
+      "order": 8
+    },
+    {
+      "Header": "Start Date",
+      "accessor": "startDate",
+      "type": "text",
+      "order": 9
+    },
+    {
+      "Header": "End Date",
+      "accessor": "endDate",
+      "type": "text",
+      "order": 10
+    },
+    {
+      "Header": "Enrollment Count",
+      "accessor": "enrollmentCount",
+      "type": "text",
+      "order": 11
+    },
+    {
+      "Header": "Status",
+      "accessor": "isActive",
+      "type": "boolean",
+      "order": 12
+    },
+    {
+      "Header": "Actions",
+      "accessor": "actions",
+      "type": "actions",
+      "actions": [
+        {
+          "method": "GET",
+          "popupTitle": "View Batch",
+          "viewFetchDetails": "/secure/api/v1/batch/{id}",
+          "title": "View",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "popupFields": [
+            {
+              "label": "Code",
+              "placeholder": "Enter Batch Code",
+              "type": "text",
+              "value": "code"
+            },
+            {
+              "label": "Display Name",
+              "placeholder": "Enter Display Name",
+              "type": "text",
+              "value": "displayName"
+            },
+            {
+              "selectOptions": [],
+              "label": "Academic Year",
+              "placeholder": "Select Academic Year",
+              "type": "select",
+              "value": "academicYearId",
+              "fetchOptionsUrl": "/secure/api/v1/academic-year?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
+            },
+            {
+              "selectOptions": [],
+              "label": "Exam",
+              "placeholder": "Select Exam",
+              "type": "select",
+              "value": "examId",
+              "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
+            },
+            {
+              "selectOptions": [],
+              "label": "Grade",
+              "placeholder": "Select Grade",
+              "type": "select",
+              "value": "gradeId",
+              "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
+            },
+            {
+              "selectOptions": [],
+              "label": "Stream",
+              "placeholder": "Select Stream",
+              "type": "select",
+              "value": "streamId",
+              "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+              "optionLabelKey": "displayName",
+              "optionValueKey": "id"
+            },
+            {
+              "selectOptions": [
+                {
+                  "label": "REGULAR",
+                  "value": "REGULAR"
+                },
+                {
+                  "label": "FULL_TIME",
+                  "value": "FULL_TIME"
+                },
+                {
+                  "label": "PART_TIME",
+                  "value": "PART_TIME"
+                },
+                {
+                  "label": "CRASH_COURSE",
+                  "value": "CRASH_COURSE"
+                }
+              ],
+              "label": "Batch Type",
+              "placeholder": "Select Batch Type",
+              "type": "select",
+              "value": "batchType"
+            },
+            {
+              "label": "Duration (Months)",
+              "placeholder": "Enter Duration in Months",
+              "type": "number",
+              "value": "durationMonths"
+            },
+            {
+              "label": "Start Date",
+              "placeholder": "Select Start Date",
+              "type": "date",
+              "value": "startDate"
+            },
+            {
+              "label": "End Date",
+              "placeholder": "Select End Date",
+              "type": "date",
+              "value": "endDate"
+            },
+            {
+              "label": "Enrollment Start Date",
+              "placeholder": "Select Enrollment Start Date",
+              "type": "date",
+              "value": "enrollmentStartDate"
+            },
+            {
+              "label": "Enrollment End Date",
+              "placeholder": "Select Enrollment End Date",
+              "type": "date",
+              "value": "enrollmentEndDate"
+            },
+            {
+              "label": "Display Order",
+              "placeholder": "Enter Display Order",
+              "type": "number",
+              "value": "displayOrder"
+            },
+            {
+              "selectOptions": [
+                {
+                  "label": "Active",
+                  "value": "true"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "false"
+                }
+              ],
+              "label": "Status",
+              "placeholder": "Select Status",
+              "type": "select",
+              "value": "isActive"
+            }
+          ],
+          "popupSubmitText": "Save Changes",
+          "method": "PATCH",
+          "popupTitle": "Edit Batch",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}",
+          "title": "Edit",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "popupFields": [
+            {
+              "label": "Code",
+              "placeholder": "Enter Batch Code",
+              "type": "text",
+              "value": "code"
+            },
+            {
+              "label": "Display Name",
+              "placeholder": "Enter Display Name",
+              "type": "text",
+              "value": "displayName"
+            }
+          ],
+          "popupSubmitText": "Delete",
+          "method": "DELETE",
+          "popupTitle": "Are You Sure!",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}",
+          "title": "Delete",
+          "type": "SHOW_POPUP"
+        },
+        {
+          "method": "PATCH",
+          "statusField": "isActive",
+          "popupSubmitUrl": "/secure/api/v1/batch/{id}/status",
+          "title": "{statusToggle}",
+          "type": "STATUS_TOGGLE",
+          "inactiveLabel": "Inactive",
+          "activeLabel": "Active"
+        },
+        {
+          "method": "GET",
+          "popupTitle": "View Row Wise Audit",
+          "viewFetchDetails": "/secure/api/v1/audit-logs/row?entityName={entityName}&entityId={entityId}",
+          "title": "Audit Trail",
+          "type": "SHOW_POPUP"
+        }
+      ],
+      "order": 13
+    }
+  ],
+  "search": {
+    "searchBtnText": "Search",
+    "method": "GET",
+    "fields": [
+      {
+        "label": "Search",
+        "placeholder": "Enter Code or Name",
+        "type": "text",
+        "value": "search"
+      },
+      {
+        "selectOptions": [],
+        "label": "Exam",
+        "placeholder": "Select Exam",
+        "type": "select",
+        "value": "examId",
+        "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "English",
+            "type": "select",
+            "value": "ENGLISH"
+          },
+          {
+            "label": "Hindi",
+            "type": "select",
+            "value": "HINDI"
+          }
+        ],
+        "label": "Languages",
+        "placeholder": "Select Language",
+        "type": "select",
+        "value": "language"
+      },
+      {
+        "selectOptions": [],
+        "label": "Grade",
+        "placeholder": "Select Grade",
+        "type": "select",
+        "value": "gradeId",
+        "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
+      },
+      {
+        "selectOptions": [],
+        "label": "Stream",
+        "placeholder": "Select Stream",
+        "type": "select",
+        "value": "streamId",
+        "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+        "optionLabelKey": "displayName",
+        "optionValueKey": "id"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "Active",
+            "value": "true"
+          },
+          {
+            "label": "Inactive",
+            "value": "false"
+          }
+        ],
+        "label": "Status",
+        "placeholder": "Select Status",
+        "type": "select",
+        "value": "activeFlag"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "Id",
+            "value": "id"
+          },
+          {
+            "label": "Code",
+            "value": "code"
+          },
+          {
+            "label": "Display Name",
+            "value": "displayName"
+          },
+          {
+            "label": "Display Order",
+            "value": "displayOrder"
+          },
+          {
+            "label": "Start Date",
+            "value": "startDate"
+          },
+          {
+            "label": "CreatedAt",
+            "value": "createdAt"
+          },
+          {
+            "label": "UpdatedAt",
+            "value": "updatedAt"
+          }
+        ],
+        "label": "Sort By",
+        "placeholder": "Sort By",
+        "type": "select",
+        "value": "sortBy"
+      },
+      {
+        "selectOptions": [
+          {
+            "label": "Ascending",
+            "value": "ASC"
+          },
+          {
+            "label": "Descending",
+            "value": "DESC"
+          }
+        ],
+        "label": "Sort Order",
+        "placeholder": "Sort By Order",
+        "type": "select",
+        "value": "sortDir"
+      }
+    ],
+    "searchActionUrl": "/secure/api/v1/batch"
+  },
+  "buttons": [
+    {
+      "popupFields": [
+        {
+          "label": "Code",
+          "placeholder": "Enter Batch Code",
+          "type": "text",
+          "value": "code"
+        },
+        {
+          "label": "Display Name",
+          "placeholder": "Enter Display Name",
+          "type": "text",
+          "value": "displayName"
+        },
+        {
+          "selectOptions": [],
+          "label": "Academic Year",
+          "placeholder": "Select Academic Year",
+          "type": "select",
+          "value": "academicYearId",
+          "fetchOptionsUrl": "/secure/api/v1/academic-year?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
+        },
+        {
+          "selectOptions": [],
+          "label": "Exam",
+          "placeholder": "Select Exam",
+          "type": "select",
+          "value": "examId",
+          "fetchOptionsUrl": "/secure/api/v1/exam?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
+        },
+        {
+          "selectOptions": [],
+          "label": "Grade",
+          "placeholder": "Select Grade",
+          "type": "select",
+          "value": "gradeId",
+          "fetchOptionsUrl": "/secure/api/v1/grade?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
+        },
+        {
+          "selectOptions": [],
+          "label": "Stream",
+          "placeholder": "Select Stream",
+          "type": "select",
+          "value": "streamId",
+          "fetchOptionsUrl": "/secure/api/v1/stream?pageSize=100&sortBy=displayOrder&sortDir=ASC&active=true",
+          "optionLabelKey": "displayName",
+          "optionValueKey": "id"
+        },
+        {
+          "selectOptions": [
+            {
+              "label": "REGULAR",
+              "value": "REGULAR"
+            },
+            {
+              "label": "FULL_TIME",
+              "value": "FULL_TIME"
+            },
+            {
+              "label": "PART_TIME",
+              "value": "PART_TIME"
+            },
+            {
+              "label": "CRASH_COURSE",
+              "value": "CRASH_COURSE"
+            }
+          ],
+          "label": "Batch Type",
+          "placeholder": "Select Batch Type",
+          "type": "select",
+          "value": "batchType"
+        },
+        {
+          "label": "Duration (Months)",
+          "placeholder": "Enter Duration in Months",
+          "type": "number",
+          "value": "durationMonths"
+        },
+        {
+          "label": "Start Date",
+          "placeholder": "Select Start Date",
+          "type": "date",
+          "value": "startDate"
+        },
+        {
+          "label": "End Date",
+          "placeholder": "Select End Date",
+          "type": "date",
+          "value": "endDate"
+        },
+        {
+          "label": "Enrollment Start Date",
+          "placeholder": "Select Enrollment Start Date",
+          "type": "date",
+          "value": "enrollmentStartDate"
+        },
+        {
+          "label": "Enrollment End Date",
+          "placeholder": "Select Enrollment End Date",
+          "type": "date",
+          "value": "enrollmentEndDate"
+        },
+        {
+          "label": "Display Order",
+          "placeholder": "Enter Display Order",
+          "type": "number",
+          "value": "displayOrder"
+        },
+        {
+          "selectOptions": [
+            {
+              "label": "English",
+              "value": "ENGLISH"
+            },
+            {
+              "label": "Hindi",
+              "value": "HINDI"
+            }
+          ],
+          "label": "Language ",
+          "placeholder": "Select Language",
+          "type": "select",
+          "value": "language"
+        },
+        {
+          "selectOptions": [
+            {
+              "label": "Active",
+              "value": "true"
+            },
+            {
+              "label": "InActive",
+              "value": "false"
+            }
+          ],
+          "label": "Status ",
+          "placeholder": "Select Status",
+          "type": "select",
+          "value": "IsActive"
+        }
+      ],
+      "popupSubmitText": "Create",
+      "method": "POST",
+      "popupTitle": "Create Batch",
+      "popupSubmitUrl": "/secure/api/v1/batch",
+      "title": "Add New Batch",
+      "type": "SHOW_POPUP"
+    }
+  ],
+  "getDataUrl": "/secure/api/v1/batch",
+  "searchable": true
+}

@@ -120,7 +120,7 @@ export const fieldTransformers = {
   },
 
   // "active"/"inactive" → boolean
-  statusToBoolean: (status: string): boolean => {
+  statusToBoolean: (status: string | boolean): boolean => {
     return status === "active" || status === true;
   },
 

@@ -70,18 +70,11 @@ const staticNavItems: DrawerItem[] = [
     icon: "Settings",
     accessibleToRoles: ["ADMIN"],
   },
-    {
+  {
     title: "Dashboard UI Configs",
     type: "getData",
     getDataUrl: "/dashboard-ui-configs",
     icon: "Settings2",
-    accessibleToRoles: ["ADMIN"],
-  },
-  {
-    title: "Chapters",
-    type: "getData",
-    getDataUrl: "/chapters",
-    icon: "BookOpen",
     accessibleToRoles: ["ADMIN"],
   },
   {
@@ -93,9 +86,20 @@ const staticNavItems: DrawerItem[] = [
   },
 ];
 
+const uploadsNavItems: DrawerItem[] = [
+  {
+    title: "File Upload",
+    type: "getData",
+    getDataUrl: "",
+    icon: "UploadCloud",
+    accessibleToRoles: ["ADMIN"],
+  }
+];
+
 // Static items organized by section (for sidebar organization)
 const staticItemsBySection: Record<string, DrawerItem[]> = {
   MANAGEMENT: staticNavItems,
+  UPLOADS: uploadsNavItems,
 };
 
 function NavUserSkeleton() {
@@ -186,14 +190,22 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
   /**
    * Combine static and dynamic items for a section
-   * Static items come first, then dynamic items
+   * Static items come first, then dynamic items (excluding duplicates)
    */
   const getCombinedSectionItems = React.useCallback(
     (section: string): DrawerItem[] => {
-      // const staticItems = getStaticItems(section);
+      const staticItems = getStaticItems(section);
       const dynamicItems = getDynamicSectionItems(section);
-      // ...staticItems,
-      return [ ...dynamicItems];
+
+      // Create a set of static item titles to filter out duplicates
+      const staticTitles = new Set(staticItems.map((item) => item.title));
+
+      // Filter dynamic items to exclude any that match static item titles
+      const uniqueDynamicItems = dynamicItems.filter(
+        (item) => !staticTitles.has(item.title)
+      );
+
+      return [...staticItems, ...uniqueDynamicItems];
     },
     [getStaticItems, getDynamicSectionItems]
   );
