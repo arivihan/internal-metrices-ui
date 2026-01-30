@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Video, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -12,16 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import {
   mapViralVideos,
@@ -44,7 +38,6 @@ interface DuplicateVideoDialogProps {
 interface VideoFormData {
   videoId: string;
   displayOrder: number;
-  sourceBatchId: number | null;
 }
 
 export function DuplicateVideoDialog({
@@ -56,45 +49,38 @@ export function DuplicateVideoDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState<BatchOption[]>([]);
-  const [selectedBatchIds, setSelectedBatchIds] = useState<number[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [videoFormData, setVideoFormData] = useState<VideoFormData[]>([]);
+  const [expandedBatchId, setExpandedBatchId] = useState<number | null>(null);
 
-  // Get all batch IDs where ALL selected videos are already mapped
-  const getCommonMappedBatchIds = () => {
-    if (selectedVideos.length === 0) return [];
-
-    // Get batch IDs that are mapped for ALL selected videos
-    const allBatchSets = selectedVideos.map(
-      (video) => new Set(video.batches?.map((b) => b.batchId) || [])
-    );
-
-    if (allBatchSets.length === 0) return [];
-
-    // Find intersection of all sets
-    const firstSet = allBatchSets[0];
-    const commonBatchIds = [...firstSet].filter((batchId) =>
-      allBatchSets.every((set) => set.has(batchId))
-    );
-
-    return commonBatchIds;
+  // Get video IDs that are mapped to a specific batch
+  const getVideoIdsMappedToBatch = (batchId: number): string[] => {
+    return selectedVideos
+      .filter((video) => video.batches?.some((b) => b.batchId === batchId))
+      .map((video) => video.id);
   };
 
-  const commonMappedBatchIds = getCommonMappedBatchIds();
+  // Check if ANY selected video is mapped to a batch
+  const isAnyVideoMappedToBatch = (batchId: number): boolean => {
+    return getVideoIdsMappedToBatch(batchId).length > 0;
+  };
 
-  // Check if a batch is mapped for ALL selected videos
-  const isBatchMappedForAll = (batchId: number) => commonMappedBatchIds.includes(batchId);
+  // Check if ALL selected videos are mapped to a batch
+  const isAllVideosMappedToBatch = (batchId: number): boolean => {
+    const mappedVideoIds = getVideoIdsMappedToBatch(batchId);
+    return mappedVideoIds.length === selectedVideos.length;
+  };
 
   // Load batch options when dialog opens
   useEffect(() => {
     if (open) {
       loadBatchOptions();
-      setSelectedBatchIds([]);
-      // Initialize video form data
+      setSelectedBatchId(null);
+      setExpandedBatchId(null);
+      // Initialize video form data with display orders
       const initialFormData: VideoFormData[] = selectedVideos.map((video) => ({
         videoId: video.id,
         displayOrder: video.displayOrder ?? 0,
-        // Auto-select first batch as source if available
-        sourceBatchId: video.batches?.[0]?.batchId ?? null,
       }));
       setVideoFormData(initialFormData);
     }
@@ -120,14 +106,6 @@ export function DuplicateVideoDialog({
     }
   };
 
-  const handleBatchToggle = (batchId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedBatchIds((prev) => [...prev, batchId]);
-    } else {
-      setSelectedBatchIds((prev) => prev.filter((id) => id !== batchId));
-    }
-  };
-
   const handleDisplayOrderChange = (videoId: string, value: number) => {
     setVideoFormData((prev) =>
       prev.map((item) =>
@@ -136,52 +114,34 @@ export function DuplicateVideoDialog({
     );
   };
 
-  const handleSourceBatchChange = (videoId: string, batchId: number) => {
-    setVideoFormData((prev) =>
-      prev.map((item) =>
-        item.videoId === videoId ? { ...item, sourceBatchId: batchId } : item
-      )
-    );
-  };
-
-  // Get available batches for target selection (exclude common mapped batches)
-  const availableTargetBatches = batches.filter((b) => !isBatchMappedForAll(b.id));
-
-  const handleSelectAllBatches = (checked: boolean) => {
-    if (checked) {
-      setSelectedBatchIds(availableTargetBatches.map((b) => b.id));
-    } else {
-      setSelectedBatchIds([]);
-    }
-  };
-
-  const isAllBatchesSelected =
-    availableTargetBatches.length > 0 &&
-    selectedBatchIds.length === availableTargetBatches.length;
-
   const handleDuplicate = async () => {
-    if (selectedBatchIds.length === 0) {
-      toast.error("Please select at least one target batch");
-      return;
-    }
-
-    // Validate all videos have source batch selected
-    const missingSourceBatch = videoFormData.find((v) => !v.sourceBatchId);
-    if (missingSourceBatch) {
-      const video = selectedVideos.find((v) => v.id === missingSourceBatch.videoId);
-      toast.error(`Please select source batch for video: ${video?.code || missingSourceBatch.videoId}`);
+    if (!selectedBatchId) {
+      toast.error("Please select a target batch");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Build the request - for each video, find its source batch (first available batch)
+      const videosPayload = selectedVideos.map((video) => {
+        const formData = videoFormData.find((v) => v.videoId === video.id);
+        // Use the first batch as source batch
+        const sourceBatchId = video.batches?.[0]?.batchId;
+
+        if (!sourceBatchId) {
+          throw new Error(`Video ${video.code} has no source batch`);
+        }
+
+        return {
+          videoId: Number(video.id),
+          displayOrder: formData?.displayOrder ?? video.displayOrder ?? 0,
+          sourceBatchId: sourceBatchId,
+        };
+      });
+
       const mapRequest: MapVideoRequest = {
-        targetBatchIds: selectedBatchIds,
-        videos: videoFormData.map((item) => ({
-          videoId: Number(item.videoId),
-          displayOrder: item.displayOrder,
-          sourceBatchId: item.sourceBatchId!,
-        })),
+        targetBatchIds: [selectedBatchId],
+        selectedVideos: videosPayload,
       };
 
       console.log("[DuplicateVideoDialog] Map request:", mapRequest);
@@ -209,73 +169,69 @@ export function DuplicateVideoDialog({
     return VIDEO_TYPES[type] || type;
   };
 
-  const getVideoFormData = (videoId: string) => {
+  const getVideoFormDataItem = (videoId: string) => {
     return videoFormData.find((v) => v.videoId === videoId);
+  };
+
+  // Count available batches (not mapped with any video)
+  const availableBatchesCount = batches.filter(
+    (b) => !isAnyVideoMappedToBatch(b.id)
+  ).length;
+
+  const toggleExpandBatch = (batchId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedBatchId((prev) => (prev === batchId ? null : batchId));
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0">
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5 text-rose-500" />
-            Duplicate Videos to Other Batches
+            Duplicate Videos to Batch
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Copy {selectedVideos.length} selected video
-            {selectedVideos.length > 1 ? "s" : ""} to target batches
+            {selectedVideos.length > 1 ? "s" : ""} to a target batch
           </p>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="space-y-6 pb-4">
-            {/* Selected Videos with Source Batch Selection */}
+            {/* Selected Videos Section */}
             <div className="space-y-3">
-              <Label className="text-base font-medium">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Video className="h-4 w-4 text-rose-500" />
                 Selected Videos ({selectedVideos.length})
               </Label>
-              <ScrollArea className="h-52 rounded-md border p-3">
-                <div className="space-y-3">
+              <ScrollArea className="h-44 rounded-md border">
+                <div className="p-3 space-y-2">
                   {selectedVideos.map((video) => {
-                    const formData = getVideoFormData(video.id);
-                    const videoBatches = video.batches || [];
+                    const formData = getVideoFormDataItem(video.id);
+                    const mappedBatches = video.batches || [];
 
                     return (
                       <div
                         key={video.id}
-                        className="flex items-center gap-4 text-sm border-b pb-3 last:border-b-0"
+                        className="flex items-center gap-3 p-3 rounded-lg border"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{video.code}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {getVideoTypeDisplay(video.type)}
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{video.code}</span>
+                            <Badge variant="outline" className="text-xs">
+                              ID: {video.id}
+                            </Badge>
                           </div>
-                        </div>
-
-                        {/* Source Batch Selection */}
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs whitespace-nowrap">Source:</Label>
-                          <Select
-                            value={formData?.sourceBatchId?.toString() || ""}
-                            onValueChange={(val) => handleSourceBatchChange(video.id, Number(val))}
-                          >
-                            <SelectTrigger className="w-36 h-8 text-xs">
-                              <SelectValue placeholder="Select batch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {videoBatches.length === 0 ? (
-                                <SelectItem value="" disabled>
-                                  No batches
-                                </SelectItem>
-                              ) : (
-                                videoBatches.map((batch) => (
-                                  <SelectItem key={batch.batchId} value={String(batch.batchId)}>
-                                    {batch.batchName}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {getVideoTypeDisplay(video.type)}
+                            {mappedBatches.length > 0 && (
+                              <span className="ml-2">
+                                • Mapped to {mappedBatches.length} batch
+                                {mappedBatches.length > 1 ? "es" : ""}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Display Order */}
@@ -283,11 +239,11 @@ export function DuplicateVideoDialog({
                           <Label className="text-xs whitespace-nowrap">Order:</Label>
                           <Input
                             type="number"
-                            value={formData?.displayOrder ?? video.displayOrder ?? 0}
+                            value={formData?.displayOrder ?? 0}
                             onChange={(e) =>
                               handleDisplayOrderChange(video.id, parseInt(e.target.value) || 0)
                             }
-                            className="w-16 h-8 text-sm"
+                            className="w-20 h-8 text-center"
                             min={0}
                           />
                         </div>
@@ -298,27 +254,21 @@ export function DuplicateVideoDialog({
               </ScrollArea>
             </div>
 
-            {/* Target Batch Selection - Multi-select */}
+            <Separator />
+
+            {/* Target Batch Selection - Single Select */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">
-                  Select Target Batches
+                  Select Target Batch <span className="text-destructive">*</span>
                 </Label>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {availableTargetBatches.length} available
-                  </span>
-                  {availableTargetBatches.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={isAllBatchesSelected}
-                        onCheckedChange={handleSelectAllBatches}
-                      />
-                      <span className="text-xs text-muted-foreground">Select All</span>
-                    </div>
-                  )}
-                </div>
+                <span className="text-sm text-muted-foreground">
+                  {availableBatchesCount} available
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Select one batch to copy videos to. Batches with any mapped videos are disabled.
+              </p>
 
               {loading ? (
                 <div className="flex items-center justify-center py-8">
@@ -328,56 +278,117 @@ export function DuplicateVideoDialog({
                   </span>
                 </div>
               ) : (
-                <ScrollArea className="h-48 rounded-md border p-3">
-                  <div className="space-y-2">
+                <ScrollArea className="h-56 rounded-md border">
+                  <RadioGroup
+                    value={selectedBatchId?.toString() || ""}
+                    onValueChange={(val) => setSelectedBatchId(Number(val))}
+                    className="p-3 space-y-2"
+                  >
                     {batches.length === 0 ? (
                       <div className="text-center py-4 text-muted-foreground">
                         No batches available
                       </div>
                     ) : (
                       batches.map((batch) => {
-                        const isMapped = isBatchMappedForAll(batch.id);
-                        const isSelected = selectedBatchIds.includes(batch.id);
+                        const mappedVideoIds = getVideoIdsMappedToBatch(batch.id);
+                        const hasMappedVideos = mappedVideoIds.length > 0;
+                        const isAllMapped = isAllVideosMappedToBatch(batch.id);
+                        const isSelected = selectedBatchId === batch.id;
+                        const isExpanded = expandedBatchId === batch.id;
 
                         return (
                           <div
                             key={batch.id}
-                            className={`flex items-center space-x-3 p-2 rounded cursor-pointer hover:bg-accent ${
-                              isSelected ? "bg-accent" : ""
-                            } ${isMapped ? "opacity-50" : ""}`}
-                            onClick={() => !isMapped && handleBatchToggle(batch.id, !isSelected)}
+                            className={`p-3 rounded-lg border transition-colors ${
+                              isSelected
+                                ? ""
+                                : hasMappedVideos
+                                ? "cursor-not-allowed"
+                                : "cursor-pointer"
+                            }`}
+                            onClick={() => !hasMappedVideos && setSelectedBatchId(batch.id)}
                           >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => handleBatchToggle(batch.id, checked as boolean)}
-                              disabled={isMapped}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{batch.name}</span>
-                                {isMapped && (
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                    Already Mapped
-                                  </Badge>
+                            <div className="flex items-center space-x-3">
+                              <RadioGroupItem
+                                value={String(batch.id)}
+                                disabled={hasMappedVideos}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{batch.name}</span>
+                                    {batch.code && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {batch.code}
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Mapped indicator - positioned on right */}
+                                  {hasMappedVideos && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className={`h-7 text-xs ${
+                                        isAllMapped
+                                          ? "text-green-700 hover:text-green-800 hover:bg-green-50"
+                                          : "text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                                      }`}
+                                      onClick={(e) => toggleExpandBatch(batch.id, e)}
+                                    >
+                                      {isAllMapped ? (
+                                        <>
+                                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                                          All Mapped
+                                        </>
+                                      ) : (
+                                        <>Mapped ({mappedVideoIds.length}/{selectedVideos.length})</>
+                                      )}
+                                      {isExpanded ? (
+                                        <ChevronUp className="h-3 w-3 ml-1" />
+                                      ) : (
+                                        <ChevronDown className="h-3 w-3 ml-1" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {/* Expandable mapped video IDs */}
+                                {hasMappedVideos && isExpanded && (
+                                  <div className="mt-2 p-2 rounded border text-xs">
+                                    <div className="text-muted-foreground mb-1">
+                                      Mapped Video IDs:
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {mappedVideoIds.map((videoId) => {
+                                        const video = selectedVideos.find((v) => v.id === videoId);
+                                        return (
+                                          <Badge
+                                            key={videoId}
+                                            variant="outline"
+                                            className="text-[10px]"
+                                          >
+                                            {videoId} {video?.code && `(${video.code})`}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              {batch.code && (
-                                <div className="text-xs text-muted-foreground break-words">
-                                  {batch.code}
-                                </div>
-                              )}
                             </div>
                           </div>
                         );
                       })
                     )}
-                  </div>
+                  </RadioGroup>
                 </ScrollArea>
               )}
 
-              {selectedBatchIds.length > 0 && (
-                <div className="text-sm text-rose-600">
-                  {selectedBatchIds.length} batch{selectedBatchIds.length > 1 ? "es" : ""} selected
+              {selectedBatchId && (
+                <div className="flex items-center gap-2 text-sm text-rose-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Target: {batches.find((b) => b.id === selectedBatchId)?.name}
                 </div>
               )}
             </div>
@@ -394,12 +405,12 @@ export function DuplicateVideoDialog({
           </Button>
           <Button
             onClick={handleDuplicate}
-            disabled={isSubmitting || selectedBatchIds.length === 0}
+            disabled={isSubmitting || !selectedBatchId}
             className="bg-rose-500 hover:bg-rose-600 text-white"
           >
             {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
             <Copy className="mr-2 h-4 w-4" />
-            Duplicate to {selectedBatchIds.length || 0} Batch{selectedBatchIds.length !== 1 ? "es" : ""}
+            Duplicate Videos
           </Button>
         </DialogFooter>
       </DialogContent>

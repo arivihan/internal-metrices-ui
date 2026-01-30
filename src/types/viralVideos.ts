@@ -43,7 +43,7 @@ export interface UploadVideoPayload {
 
 export interface MapVideoRequest {
   targetBatchIds: number[]
-  videos: SelectedVideoForMap[]
+  selectedVideos: SelectedVideoForMap[]
 }
 
 export interface SelectedVideoForMap {
