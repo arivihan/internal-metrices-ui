@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import {
-  Copy,
+  GitBranch,
   Loader2,
   LayoutGrid,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,24 +19,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import {
   copyHomeScreenCard,
   fetchHomeScreenCardById,
 } from "@/services/homeScreenCards";
-import type { HomeScreenCardListResponse, CopyCardItem } from "@/types/homeScreenCards";
+import type { HomeScreenCardListResponse, CopyCardItem, HomeScreenCardDetailResponse } from "@/types/homeScreenCards";
 import { ICON_MEDIA_TYPES, VISIBILITY_TYPES } from "@/types/homeScreenCards";
 
 interface BatchOption {
@@ -46,62 +41,71 @@ interface BatchOption {
 interface CopyCardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  card: HomeScreenCardListResponse | null;
+  cards: HomeScreenCardListResponse[];
   batches: BatchOption[];
   onSuccess: () => void;
 }
 
-interface SourceBatchItem {
-  batchId: number;
-  batchCode?: string;
+interface CardWithOrder {
+  card: HomeScreenCardListResponse;
   displayOrder: number;
-  selected: boolean;
+  linkedBatchIds: number[];
+}
+
+interface BatchMappingInfo {
+  batchId: number;
+  mappedCardIds: number[];
 }
 
 export function CopyCardDialog({
   open,
   onOpenChange,
-  card,
+  cards,
   batches,
   onSuccess,
 }: CopyCardDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [sourceBatches, setSourceBatches] = useState<SourceBatchItem[]>([]);
-  const [targetBatchId, setTargetBatchId] = useState<number | null>(null);
+  const [cardsWithOrder, setCardsWithOrder] = useState<CardWithOrder[]>([]);
+  const [targetBatchId, setTargetBatchId] = useState<string>("");
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [batchMappingInfo, setBatchMappingInfo] = useState<BatchMappingInfo[]>([]);
+  const [expandedBatches, setExpandedBatches] = useState<Set<number>>(new Set());
 
-  // Load card details to get source batches
+  // Load card details for all selected cards
   useEffect(() => {
-    if (open && card) {
-      loadCardDetails();
-      setTargetBatchId(null);
+    if (open && cards.length > 0) {
+      loadAllCardDetails();
+      setTargetBatchId("");
       setShowResult(false);
       setResult(null);
+      setExpandedBatches(new Set());
     }
-  }, [open, card]);
+  }, [open, cards]);
 
-  const loadCardDetails = async () => {
-    if (!card) return;
+  const loadAllCardDetails = async () => {
+    if (cards.length === 0) return;
 
     setIsLoading(true);
     try {
-      const details = await fetchHomeScreenCardById(card.id);
-      console.log("[CopyCardDialog] Card details:", details);
+      // Load details for all selected cards in parallel
+      const detailsPromises = cards.map((card) => fetchHomeScreenCardById(card.id));
+      const allDetails = await Promise.all(detailsPromises);
 
-      if (details.batches && details.batches.length > 0) {
-        setSourceBatches(
-          details.batches.map((b) => ({
-            batchId: b.batchId,
-            batchCode: b.batchCode,
-            displayOrder: b.displayOrder || 0,
-            selected: false,
-          }))
-        );
-      } else {
-        setSourceBatches([]);
-      }
+      console.log("[CopyCardDialog] All card details:", allDetails);
+
+      // Build cards with order and linked batch IDs
+      const cardsData: CardWithOrder[] = allDetails.map((details, index) => ({
+        card: cards[index],
+        displayOrder: 0,
+        linkedBatchIds: details.batches?.map((b) => b.batchId) || [],
+      }));
+
+      setCardsWithOrder(cardsData);
+
+      // Build batch mapping info
+      buildBatchMappingInfo(allDetails);
     } catch (error) {
       console.error("[CopyCardDialog] Failed to load card details:", error);
       toast.error("Failed to load card details");
@@ -110,55 +114,82 @@ export function CopyCardDialog({
     }
   };
 
+  const buildBatchMappingInfo = (allDetails: HomeScreenCardDetailResponse[]) => {
+    const mappingInfo: BatchMappingInfo[] = batches.map((batch) => {
+      const mappedCardIds: number[] = [];
+
+      allDetails.forEach((details) => {
+        if (details.batches?.some((b) => b.batchId === batch.id)) {
+          mappedCardIds.push(details.id);
+        }
+      });
+
+      return {
+        batchId: batch.id,
+        mappedCardIds,
+      };
+    });
+
+    setBatchMappingInfo(mappingInfo);
+  };
+
   const handleClose = () => {
     if (!isSubmitting) {
       onOpenChange(false);
     }
   };
 
-  const handleSourceBatchToggle = (batchId: number, checked: boolean) => {
-    setSourceBatches((prev) =>
-      prev.map((b) =>
-        b.batchId === batchId ? { ...b, selected: checked } : b
-      )
-    );
-  };
-
-  const handleDisplayOrderChange = (batchId: number, value: string) => {
+  const handleDisplayOrderChange = (cardId: number, value: string) => {
     const order = parseInt(value) || 0;
-    setSourceBatches((prev) =>
-      prev.map((b) =>
-        b.batchId === batchId ? { ...b, displayOrder: order } : b
+    setCardsWithOrder((prev) =>
+      prev.map((c) =>
+        c.card.id === cardId ? { ...c, displayOrder: order } : c
       )
     );
   };
 
-  const handleSelectAllSourceBatches = (checked: boolean) => {
-    setSourceBatches((prev) =>
-      prev.map((b) => ({ ...b, selected: checked }))
-    );
+  const toggleBatchExpanded = (batchId: number) => {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+      }
+      return next;
+    });
   };
 
-  const selectedSourceBatches = sourceBatches.filter((b) => b.selected);
-  const isAllSourceSelected =
-    sourceBatches.length > 0 && selectedSourceBatches.length === sourceBatches.length;
-  const isIndeterminateSource =
-    selectedSourceBatches.length > 0 &&
-    selectedSourceBatches.length < sourceBatches.length;
+  const getBatchName = (batchId: number) => {
+    const batch = batches.find((b) => b.id === batchId);
+    return batch?.name || `Batch ${batchId}`;
+  };
 
-  // Filter out batches that are already associated with this card for target selection
-  const availableTargetBatches = batches.filter(
-    (b) => !sourceBatches.some((sb) => sb.batchId === b.id)
-  );
+  const getBatchCode = (batchId: number) => {
+    const batch = batches.find((b) => b.id === batchId);
+    return batch?.code;
+  };
 
-  const handleCopy = async () => {
-    if (!card) {
-      toast.error("No card selected");
-      return;
+  // Check if batch has any of the selected cards mapped
+  const isBatchLinked = (batchId: number) => {
+    const info = batchMappingInfo.find((b) => b.batchId === batchId);
+    return info && info.mappedCardIds.length > 0;
+  };
+
+  const getMappingStatus = (batchId: number) => {
+    const info = batchMappingInfo.find((b) => b.batchId === batchId);
+    if (!info || info.mappedCardIds.length === 0) {
+      return null;
     }
+    if (info.mappedCardIds.length === cards.length) {
+      return "all";
+    }
+    return `${info.mappedCardIds.length}/${cards.length}`;
+  };
 
-    if (selectedSourceBatches.length === 0) {
-      toast.error("Please select at least one source batch");
+  const handleMap = async () => {
+    if (cards.length === 0) {
+      toast.error("No cards selected");
       return;
     }
 
@@ -169,19 +200,19 @@ export function CopyCardDialog({
 
     setIsSubmitting(true);
     try {
-      // Build the cards array from selected source batches
-      const cards: CopyCardItem[] = selectedSourceBatches.map((sb) => ({
-        cardId: card.id,
-        displayOrder: sb.displayOrder,
-        sourceBatchId: sb.batchId,
+      // Build the cards array for all selected cards
+      const cardItems: CopyCardItem[] = cardsWithOrder.map((co) => ({
+        cardId: co.card.id,
+        displayOrder: co.displayOrder,
+        sourceBatchId: co.linkedBatchIds[0] || 0, // Use first linked batch as source
       }));
 
       const payload = {
-        targetBatchIds: [targetBatchId],
-        cards,
+        targetBatchIds: [Number(targetBatchId)],
+        cards: cardItems,
       };
 
-      console.log("[CopyCardDialog] Copying card with payload:", payload);
+      console.log("[CopyCardDialog] Mapping cards with payload:", payload);
 
       const response = await copyHomeScreenCard(payload);
 
@@ -189,18 +220,18 @@ export function CopyCardDialog({
       setShowResult(true);
 
       if (response.message) {
-        toast.success(response.message || "Card copied successfully!");
+        toast.success(response.message || "Cards mapped successfully!");
       }
     } catch (error) {
-      console.error("[CopyCardDialog] Copy error:", error);
+      console.error("[CopyCardDialog] Map error:", error);
       setResult({
         success: false,
         message:
-          error instanceof Error ? error.message : "Failed to copy card",
+          error instanceof Error ? error.message : "Failed to map cards",
       });
       setShowResult(true);
       toast.error(
-        error instanceof Error ? error.message : "Failed to copy card"
+        error instanceof Error ? error.message : "Failed to map cards"
       );
     } finally {
       setIsSubmitting(false);
@@ -214,29 +245,24 @@ export function CopyCardDialog({
     handleClose();
   };
 
-  const getBatchName = (batchId: number) => {
-    const batch = batches.find((b) => b.id === batchId);
-    return batch?.name || `Batch ${batchId}`;
-  };
-
-  if (!card) return null;
+  if (cards.length === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
-            <Copy className="h-5 w-5 text-indigo-500" />
-            Copy Card to Other Batches
+            <GitBranch className="h-5 w-5 text-cyan-500" />
+            Map Cards to Batch
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Copy "{card.title}" to a target batch
+            Map {cards.length} card{cards.length > 1 ? "s" : ""} to a target batch
           </p>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12 px-6">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-cyan-500" />
             <span className="ml-2 text-sm text-muted-foreground">
               Loading card details...
             </span>
@@ -244,163 +270,62 @@ export function CopyCardDialog({
         ) : !showResult ? (
           <div className="flex-1 overflow-y-auto px-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="space-y-6 pb-4">
-              {/* Card Details */}
+              {/* Selected Cards Section */}
               <div className="space-y-3">
                 <Label className="text-base font-medium flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4 text-indigo-500" />
-                  Card Details
+                  <LayoutGrid className="h-4 w-4 text-cyan-500" />
+                  Selected Cards ({cards.length})
                 </Label>
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="h-14 w-14 rounded-lg flex items-center justify-center border"
-                      style={{
-                        backgroundColor: card.iconBackgroundColor || "#f3f4f6",
-                      }}
-                    >
-                      {card.icon ? (
-                        <img
-                          src={card.icon}
-                          alt={card.title}
-                          className="h-8 w-8 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <LayoutGrid className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">{card.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Card ID: {card.id}
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {ICON_MEDIA_TYPES[card.iconMediaType] ||
-                            card.iconMediaType}
-                        </Badge>
-                        <Badge
-                          variant="secondary"
-                          className={
-                            card.visibilityType === "ALL"
-                              ? "bg-green-100 text-green-700 text-xs"
-                              : card.visibilityType === "SUBSCRIBED"
-                              ? "bg-blue-100 text-blue-700 text-xs"
-                              : "bg-yellow-100 text-yellow-700 text-xs"
-                          }
-                        >
-                          {VISIBILITY_TYPES[card.visibilityType] ||
-                            card.visibilityType}
-                        </Badge>
-                        {card.tag && (
-                          <Badge
-                            style={{
-                              backgroundColor:
-                                card.tagBackgroundColor || "#e5e7eb",
-                              color: "#374151",
-                            }}
-                            className="text-xs"
-                          >
-                            {card.tag}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Source Batches Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">
-                    Source Batches <span className="text-destructive">*</span>
-                  </Label>
-                  {sourceBatches.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={isAllSourceSelected}
-                        // @ts-ignore
-                        indeterminate={isIndeterminateSource}
-                        onCheckedChange={handleSelectAllSourceBatches}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        Select All
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Select source batches to copy from. You can edit the display order for each.
-                </p>
-
-                {sourceBatches.length === 0 ? (
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                    <AlertCircle className="h-4 w-4 inline mr-2" />
-                    This card has no batch configurations to copy from.
-                  </div>
-                ) : (
-                  <ScrollArea className="h-44 rounded-md border">
-                    <div className="p-3 space-y-2">
-                      {sourceBatches.map((sb) => (
+                <ScrollArea className="h-48 rounded-md border">
+                  <div className="p-3 space-y-2">
+                    {cardsWithOrder.map((co) => (
+                      <div
+                        key={co.card.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
+                      >
                         <div
-                          key={sb.batchId}
-                          className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                            sb.selected
-                              ? "bg-indigo-50 border-indigo-200"
-                              : ""
-                          }`}
+                          className="h-10 w-10 rounded-lg flex items-center justify-center border shrink-0"
+                          style={{
+                            backgroundColor: co.card.iconBackgroundColor || "#f3f4f6",
+                          }}
                         >
-                          <Checkbox
-                            checked={sb.selected}
-                            onCheckedChange={(checked) =>
-                              handleSourceBatchToggle(sb.batchId, checked as boolean)
-                            }
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium">
-                              {getBatchName(sb.batchId)}
-                            </div>
-                            {sb.batchCode && (
-                              <div className="text-xs text-muted-foreground">
-                                Code: {sb.batchCode}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                              Display Order:
-                            </Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={sb.displayOrder}
-                              onChange={(e) =>
-                                handleDisplayOrderChange(sb.batchId, e.target.value)
-                              }
-                              className="w-20 h-8 text-center"
+                          {co.card.icon ? (
+                            <img
+                              src={co.card.icon}
+                              alt={co.card.title}
+                              className="h-6 w-6 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                              }}
                             />
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            ID: {sb.batchId}
-                          </Badge>
+                          ) : (
+                            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-
-                {selectedSourceBatches.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-indigo-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {selectedSourceBatches.length} source batch
-                    {selectedSourceBatches.length > 1 ? "es" : ""} selected
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{co.card.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {co.card.id} • {co.linkedBatchIds.length} batch{co.linkedBatchIds.length !== 1 ? "es" : ""} linked
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                            Order:
+                          </Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={co.displayOrder}
+                            onChange={(e) =>
+                              handleDisplayOrderChange(co.card.id, e.target.value)
+                            }
+                            className="w-16 h-8 text-center"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </ScrollArea>
               </div>
 
               <Separator />
@@ -411,37 +336,103 @@ export function CopyCardDialog({
                   Target Batch <span className="text-destructive">*</span>
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Select a single batch to copy the card configuration to.
+                  Select a batch to map the cards to. Batches already linked with any selected card are disabled.
                 </p>
 
-                {availableTargetBatches.length === 0 ? (
+                {batches.length === 0 ? (
                   <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
                     <AlertCircle className="h-4 w-4 inline mr-2" />
-                    No additional batches available to copy to.
+                    No batches available.
                   </div>
                 ) : (
-                  <Select
-                    value={targetBatchId?.toString() || ""}
-                    onValueChange={(val) => setTargetBatchId(Number(val))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select target batch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTargetBatches.map((batch) => (
-                        <SelectItem key={batch.id} value={String(batch.id)}>
-                          {batch.name}
-                          {batch.code && ` (${batch.code})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ScrollArea className="h-56 rounded-md border">
+                    <RadioGroup
+                      value={targetBatchId}
+                      onValueChange={setTargetBatchId}
+                      className="p-3 space-y-2"
+                    >
+                      {batches.map((batch) => {
+                        const isLinked = isBatchLinked(batch.id);
+                        const mappingStatus = getMappingStatus(batch.id);
+                        const isExpanded = expandedBatches.has(batch.id);
+                        const info = batchMappingInfo.find((b) => b.batchId === batch.id);
+
+                        return (
+                          <div key={batch.id} className="space-y-1">
+                            <div
+                              className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                                isLinked
+                                  ? "bg-muted/50 opacity-60 cursor-not-allowed"
+                                  : targetBatchId === String(batch.id)
+                                  ? " border-cyan-400"
+                                  : "hover:bg-muted/30"
+                              }`}
+                            >
+                              <RadioGroupItem
+                                value={String(batch.id)}
+                                id={`batch-${batch.id}`}
+                                disabled={isLinked}
+                              />
+                              <label
+                                htmlFor={`batch-${batch.id}`}
+                                className={`flex-1 cursor-pointer ${
+                                  isLinked ? "cursor-not-allowed" : ""
+                                }`}
+                              >
+                                <div className="font-medium text-sm">
+                                  {batch.name}
+                                  {batch.code && (
+                                    <span className="text-muted-foreground ml-1">
+                                      ({batch.code})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Batch ID: {batch.id}
+                                </div>
+                              </label>
+                              {mappingStatus && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleBatchExpanded(batch.id);
+                                  }}
+                                >
+                                  {mappingStatus === "all" ? "All Mapped" : `Mapped (${mappingStatus})`}
+                                  {isExpanded ? (
+                                    <ChevronUp className="ml-1 h-3 w-3" />
+                                  ) : (
+                                    <ChevronDown className="ml-1 h-3 w-3" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                            {isExpanded && info && info.mappedCardIds.length > 0 && (
+                              <div className="ml-8 p-2 rounded bg-amber-50 border border-amber-100 text-xs text-amber-700">
+                                <span className="font-medium">Mapped Card IDs:</span>{" "}
+                                {info.mappedCardIds.join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
+                  </ScrollArea>
                 )}
 
                 {targetBatchId && (
                   <div className="flex items-center gap-2 text-sm text-green-600">
                     <CheckCircle2 className="h-4 w-4" />
-                    Target: {getBatchName(targetBatchId)}
+                    Target: {getBatchName(Number(targetBatchId))}
+                    {getBatchCode(Number(targetBatchId)) && (
+                      <span className="text-muted-foreground">
+                        ({getBatchCode(Number(targetBatchId))})
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -464,11 +455,11 @@ export function CopyCardDialog({
               ) : (
                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
               )}
-              <h3 className="text-lg font-semibold mb-2">
+              <h3 className="text-lg text-zinc-900 font-semibold mb-2">
                 {result?.success ||
                 result?.message?.toLowerCase().includes("success")
-                  ? "Copy Successful!"
-                  : "Copy Failed"}
+                  ? "Mapping Successful!"
+                  : "Mapping Failed"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {result?.message || "Operation completed"}
@@ -478,13 +469,11 @@ export function CopyCardDialog({
             <div className="rounded-lg border p-4">
               <h4 className="font-medium text-sm mb-2">Summary</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>Card Copied:</div>
-                <div className="font-medium">{card.title}</div>
-                <div>Source Batches:</div>
-                <div className="font-medium">{selectedSourceBatches.length}</div>
+                <div>Cards Mapped:</div>
+                <div className="font-medium">{cards.length}</div>
                 <div>Target Batch:</div>
                 <div className="font-medium">
-                  {targetBatchId ? getBatchName(targetBatchId) : "-"}
+                  {targetBatchId ? getBatchName(Number(targetBatchId)) : "-"}
                 </div>
               </div>
             </div>
@@ -502,28 +491,26 @@ export function CopyCardDialog({
                 Cancel
               </Button>
               <Button
-                onClick={handleCopy}
+                onClick={handleMap}
                 disabled={
                   isSubmitting ||
                   isLoading ||
-                  selectedSourceBatches.length === 0 ||
                   !targetBatchId ||
-                  sourceBatches.length === 0
+                  cards.length === 0
                 }
-                className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                className="bg-cyan-500 hover:bg-cyan-600 text-white"
               >
                 {isSubmitting && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                <Copy className="mr-2 h-4 w-4" />
-                Copy {selectedSourceBatches.length} Config
-                {selectedSourceBatches.length > 1 ? "s" : ""}
+                <GitBranch className="mr-2 h-4 w-4" />
+                Map {cards.length} Card{cards.length > 1 ? "s" : ""}
               </Button>
             </>
           ) : (
             <Button
               onClick={handleDone}
-              className="bg-indigo-500 hover:bg-indigo-600"
+              className="bg-cyan-500 hover:bg-cyan-600"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Done

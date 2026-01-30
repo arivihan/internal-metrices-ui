@@ -3,7 +3,7 @@ import {
   Plus,
   Search,
   MoreHorizontal,
-  Copy,
+  GitBranch,
   LayoutGrid,
   Eye,
   EyeOff,
@@ -197,9 +197,9 @@ export default function HomeScreenCardsPage() {
     setShowEditDialog(true);
   };
 
-  // Handle Copy Card
+  // Handle Copy/Map Card
   const handleCopyClick = (card: HomeScreenCardListResponse) => {
-    setSelectedCard(card);
+    setSelectedCards([card]);
     setShowCopyDialog(true);
   };
 
@@ -311,13 +311,12 @@ export default function HomeScreenCardsPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setSelectedCard(selectedCards[0]);
                 setShowCopyDialog(true);
               }}
               className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
             >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy ({selectedCards.length})
+              <GitBranch className="mr-2 h-4 w-4" />
+              Map ({selectedCards.length})
             </Button>
           )}
           <Button
@@ -675,8 +674,8 @@ export default function HomeScreenCardsPage() {
                           onClick={() => handleCopyClick(card)}
                           className="cursor-pointer"
                         >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy to Batch
+                          <GitBranch className="mr-2 h-4 w-4" />
+                          Map to Batch
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -754,9 +753,17 @@ export default function HomeScreenCardsPage() {
       {/* Copy Card Dialog */}
       <CopyCardDialog
         open={showCopyDialog}
-        onOpenChange={setShowCopyDialog}
-        onSuccess={handleSuccess}
-        card={selectedCard}
+        onOpenChange={(open) => {
+          setShowCopyDialog(open);
+          if (!open) {
+            setSelectedCards([]);
+          }
+        }}
+        onSuccess={() => {
+          handleSuccess();
+          setSelectedCards([]);
+        }}
+        cards={selectedCards}
         batches={batches}
       />
 
