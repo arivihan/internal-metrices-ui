@@ -26,6 +26,7 @@ import ServiceStatusPage from "@/pages/service-status";
 import HomePageDynamic from "./pages/homepage-dynamic";
 import HomeScreenCardsPage from "./pages/home-screen-cards";
 import AppCarouselsPage from "./pages/app-carousels";
+import TagsPage from "./pages/Tags";
 
 function App() {
   // Initialize auth state on app load (fetch user if token exists)
@@ -99,9 +100,10 @@ function App() {
             />
             <Route path="/dashboard/file-upload" element={<FileManagement />} />
             <Route path="/dashboard/rbac" element={<RBAC />} />
+            <Route path="/dashboard/tags-genrate" element={<TagsPage />} />
             <Route
               path="/dashboard/app-carousels"
-              element={<AppCarouselsPage/>}
+              element={<AppCarouselsPage />}
             />
             <Route
               path="/dashboard/homepage"
