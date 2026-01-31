@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import {
   Plus,
   Search,
@@ -56,8 +57,8 @@ import { CreateNoteDialog } from "./CreateNoteDialog";
 import { DuplicateNotesDialog } from "./DuplicateNotesDialog";
 import { EditNotesDialog } from "./EditNotesDialog";
 import { ViewNoteDetailsDialog } from "./ViewNoteDetailsDialog";
-import { fetchNotes, deleteNote, fetchNoteAuditTrail, fetchNotesTableAuditTrail, fetchBatchesPaginated } from "@/services/notes";
-import type { NotesResponseDto, NotesFilters } from "@/types/notes";
+import { fetchNoteAuditTrail, fetchNotesTableAuditTrail, fetchBatchesPaginated } from "@/services/notes";
+import type { NotesResponseDto } from "@/types/notes";
 import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 import {
   AlertDialog,
@@ -70,6 +71,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Import signals
+import {
+  notes,
+  notesLoading,
+  totalElements,
+  notesFilters,
+  searchQuery,
+  selectedNote,
+  selectedNotes,
+  editingNote,
+  isSubmitting,
+  loadNotes,
+  deleteSelectedNote,
+  selectAllNotes,
+  clearAllSelections,
+  updateFilters,
+  resetNotesState,
+} from "@/signals/notesState";
+
 const NOTES_TYPES = {
   PREVIOUS_YEAR_PAPER: "Previous Year Paper",
   NOTES: "Notes",
@@ -78,21 +98,18 @@ const NOTES_TYPES = {
 };
 
 export default function NotesUploadPage() {
-  const [notes, setNotes] = useState<NotesResponseDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  useSignals();
+
+  // Local UI state (dialog open/close states)
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
   const [viewingNoteId, setViewingNoteId] = useState<string | null>(null);
-  const [selectedNotes, setSelectedNotes] = useState<NotesResponseDto[]>([]);
-  const [editingNote, setEditingNote] = useState<NotesResponseDto | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [noteToDelete, setNoteToDelete] = useState<NotesResponseDto | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Audit Trail state
+  // Audit Trail state (local)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false);
   const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
   const [auditTrailLoading, setAuditTrailLoading] = useState(false);
@@ -105,17 +122,8 @@ export default function NotesUploadPage() {
   });
   const [currentAuditNoteId, setCurrentAuditNoteId] = useState<string | null>(null);
   const [isTableAudit, setIsTableAudit] = useState(false);
-  const [filters, setFilters] = useState<NotesFilters>({
-    pageNo: 0,
-    pageSize: 20,
-    sortBy: "displayOrder",
-    sortDir: "ASC",
-    active: true,
-  });
-  const [totalElements, setTotalElements] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // Batch dropdown state
+  // Batch dropdown state (local - specific to this page's pagination)
   const [batches, setBatches] = useState<any[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [batchSearchQuery, setBatchSearchQuery] = useState("");
@@ -128,48 +136,30 @@ export default function NotesUploadPage() {
   const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
   const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
 
+  // Get signal values
+  const notesList = notes.value;
+  const loading = notesLoading.value;
+  const total = totalElements.value;
+  const filters = notesFilters.value;
+  const search = searchQuery.value;
+  const noteToDelete = selectedNote.value;
+  const selectedList = selectedNotes.value;
+  const editing = editingNote.value;
+  const submitting = isSubmitting.value;
+
   useEffect(() => {
     loadNotes();
   }, [filters]);
 
-  const loadNotes = async () => {
-    setLoading(true);
-    try {
-      console.log("[NotesUploadPage] Loading notes with filters:", filters);
-      const response = await fetchNotes(filters);
-      console.log("[NotesUploadPage] Notes response:", response);
-
-      setNotes(response.content || []);
-      setTotalElements(response.totalElements || 0);
-
-      console.log(
-        "[NotesUploadPage] Set notes:",
-        response.content?.length || 0,
-        "items"
-      );
-    } catch (error) {
-      console.error("[NotesUploadPage] Failed to load notes:", error);
-      toast.error(
-        "Failed to load notes: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-      setNotes([]);
-      setTotalElements(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setFilters((prev) => ({
-      ...prev,
+    searchQuery.value = query;
+    updateFilters({
       search: query || undefined,
-      pageNo: 0, // Reset to first page on search
-    }));
+      pageNo: 0,
+    });
   };
 
-  // Batch loading functions
+  // Batch loading functions (local)
   const loadBatches = async (pageNo: number = 0, search?: string) => {
     setBatchesLoading(true);
     try {
@@ -182,7 +172,6 @@ export default function NotesUploadPage() {
         sortDir: "ASC",
       });
 
-      // Replace batches for page-based navigation
       setBatches(response.content || []);
 
       setBatchPagination({
@@ -206,11 +195,10 @@ export default function NotesUploadPage() {
 
   const handleBatchSelect = (batch: any | null) => {
     setSelectedBatch(batch);
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       batchId: batch?.id || undefined,
       pageNo: 0,
-    }));
+    });
     setBatchDropdownOpen(false);
   };
 
@@ -227,39 +215,24 @@ export default function NotesUploadPage() {
   };
 
   const handleSortChange = (sortBy: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      sortBy,
-      pageNo: 0,
-    }));
+    updateFilters({ sortBy, pageNo: 0 });
   };
 
   const handleSortDirChange = (sortDir: "ASC" | "DESC") => {
-    setFilters((prev) => ({
-      ...prev,
-      sortDir,
-      pageNo: 0,
-    }));
+    updateFilters({ sortDir, pageNo: 0 });
   };
 
   const handleStatusChange = (status: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       active: status === "all" ? undefined : status === "active",
       pageNo: 0,
-    }));
+    });
   };
 
   const handleResetFilters = () => {
-    setSearchQuery("");
     setSelectedBatch(null);
-    setFilters({
-      pageNo: 0,
-      pageSize: 20,
-      sortBy: "displayOrder",
-      sortDir: "ASC",
-      active: true,
-    });
+    resetNotesState();
+    loadNotes();
   };
 
   // Load batches when dropdown opens
@@ -271,72 +244,58 @@ export default function NotesUploadPage() {
 
   const handleUploadSuccess = () => {
     toast.success("Notes uploaded successfully!");
-    loadNotes(); // Refresh the list
+    loadNotes();
   };
 
   const handleSelectNote = (note: NotesResponseDto, checked: boolean) => {
     if (checked) {
-      setSelectedNotes((prev) => [...prev, note]);
+      selectedNotes.value = [...selectedList, note];
     } else {
-      setSelectedNotes((prev) => prev.filter((n) => n.id !== note.id));
+      selectedNotes.value = selectedList.filter((n) => n.code !== note.code);
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedNotes([...notes]);
+      selectAllNotes();
     } else {
-      setSelectedNotes([]);
+      clearAllSelections();
     }
   };
 
   const isNoteSelected = (noteId: string) => {
-    return selectedNotes.some((n) => n.id === noteId);
+    return selectedList.some((n) => n.id === noteId);
   };
 
   const isAllSelected =
-    notes.length > 0 && selectedNotes.length === notes.length;
+    notesList.length > 0 && selectedList.length === notesList.length;
   const isIndeterminate =
-    selectedNotes.length > 0 && selectedNotes.length < notes.length;
+    selectedList.length > 0 && selectedList.length < notesList.length;
 
   const handleDuplicateSuccess = () => {
     toast.success("Notes duplicated successfully!");
-    setSelectedNotes([]); // Clear selections
-    loadNotes(); // Refresh the list
+    clearAllSelections();
+    loadNotes();
   };
 
   const handleEditClick = (note: NotesResponseDto) => {
-    setEditingNote(note);
+    editingNote.value = note;
     setShowEditDialog(true);
   };
 
   const handleEditSuccess = () => {
-    loadNotes(); // Refresh the list
+    loadNotes();
   };
 
   const handleDeleteClick = (note: NotesResponseDto) => {
-    setNoteToDelete(note);
+    selectedNote.value = note;
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!noteToDelete) return;
-
-    setIsDeleting(true);
-    try {
-      await deleteNote(noteToDelete.id);
-      toast.success("Note deleted successfully!");
+    const success = await deleteSelectedNote();
+    if (success) {
       setDeleteDialogOpen(false);
-      setNoteToDelete(null);
-      loadNotes(); // Refresh the list
-    } catch (error) {
-      console.error("[NotesUploadPage] Failed to delete note:", error);
-      toast.error(
-        "Failed to delete note: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -401,17 +360,11 @@ export default function NotesUploadPage() {
   };
 
   const handleAuditPageSizeChange = (newPageSize: number) => {
-    // Reset to first page when changing page size
     fetchAuditTrailPage(currentAuditNoteId, 0, isTableAudit, newPageSize);
   };
 
   const getNotesTypeDisplay = (type: string) => {
     return NOTES_TYPES[type as keyof typeof NOTES_TYPES] || type;
-  };
-
-  const formatFileSize = (url: string) => {
-    // Since we don't have file size info, just show a placeholder
-    return "Unknown";
   };
 
   return (
@@ -421,23 +374,23 @@ export default function NotesUploadPage() {
           <h1 className="text-3xl font-bold tracking-tight">Notes Upload</h1>
           <p className="text-muted-foreground">
             Manage and upload notes for different batches
-            {selectedNotes.length > 0 && (
+            {selectedList.length > 0 && (
               <span className="ml-2 text-cyan-600">
-                • {selectedNotes.length} note
-                {selectedNotes.length > 1 ? "s" : ""} selected
+                • {selectedList.length} note
+                {selectedList.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {selectedNotes.length > 0 && (
+          {selectedList.length > 0 && (
             <Button
               variant="outline"
               onClick={() => setShowDuplicateDialog(true)}
               className="text-cyan-600 border-cyan-200 hover:bg-cyan-50"
             >
               <Copy className="mr-2 h-4 w-4" />
-              Duplicate ({selectedNotes.length})
+              Duplicate ({selectedList.length})
             </Button>
           )}
           <Button variant="outline" onClick={handleTableAuditClick}>
@@ -473,7 +426,7 @@ export default function NotesUploadPage() {
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search title, subject, notesBy..."
-            value={searchQuery}
+            value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-8"
           />
@@ -661,25 +614,23 @@ export default function NotesUploadPage() {
 
         {/* Spacer */}
         <div className="flex-1 min-w-0" />
-
-        {/* Export Button */}
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{totalElements}</div>
+          <div className="text-2xl font-bold">{total}</div>
           <p className="text-xs text-muted-foreground">Total Notes</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {notes.filter((n) => n.isActive).length}
+            {notesList.filter((n) => n.isActive).length}
           </div>
           <p className="text-xs text-muted-foreground">Active Notes</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {notes.filter((n) => n.locked).length}
+            {notesList.filter((n) => n.locked).length}
           </div>
           <p className="text-xs text-muted-foreground">Locked Notes</p>
         </div>
@@ -687,7 +638,7 @@ export default function NotesUploadPage() {
           <div className="text-2xl font-bold">
             {
               new Set(
-                notes.flatMap((n) => n.batches?.map((b) => b.batchId) || []),
+                notesList.flatMap((n) => n.batches?.map((b) => b.batchId) || []),
               ).size
             }
           </div>
@@ -752,7 +703,7 @@ export default function NotesUploadPage() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : notes.length === 0 ? (
+            ) : notesList.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center">
@@ -768,7 +719,7 @@ export default function NotesUploadPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              notes.map((note) => (
+              notesList.map((note) => (
                 <TableRow key={note.id}>
                   <TableCell>
                     <Checkbox
@@ -877,20 +828,17 @@ export default function NotesUploadPage() {
       </div>
 
       {/* Pagination */}
-      {totalElements > filters.pageSize! && (
+      {total > filters.pageSize! && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {notes.length} of {totalElements} notes
+            Showing {notesList.length} of {total} notes
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  pageNo: Math.max(0, prev.pageNo! - 1),
-                }))
+                updateFilters({ pageNo: Math.max(0, filters.pageNo! - 1) })
               }
               disabled={filters.pageNo === 0}
             >
@@ -900,9 +848,9 @@ export default function NotesUploadPage() {
               variant="outline"
               size="sm"
               onClick={() =>
-                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
+                updateFilters({ pageNo: filters.pageNo! + 1 })
               }
-              disabled={notes.length < filters.pageSize!}
+              disabled={notesList.length < filters.pageSize!}
             >
               Next
             </Button>
@@ -928,7 +876,7 @@ export default function NotesUploadPage() {
       <DuplicateNotesDialog
         open={showDuplicateDialog}
         onOpenChange={setShowDuplicateDialog}
-        selectedNotes={selectedNotes}
+        selectedNotes={selectedList}
         onSuccess={handleDuplicateSuccess}
       />
 
@@ -936,7 +884,7 @@ export default function NotesUploadPage() {
       <EditNotesDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        note={editingNote}
+        note={editing}
         onSuccess={handleEditSuccess}
       />
 
@@ -958,14 +906,14 @@ export default function NotesUploadPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isDeleting}
+              disabled={submitting}
               className="bg-red-600 hover:bg-red-700"
             >
               <Trash/>
-              {isDeleting ? "Deleting..." : "Delete"}
+              {submitting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

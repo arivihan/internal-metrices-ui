@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import { Loader2, Images, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import {
+  selectedCarouselDetails,
+  loadCarouselDetails as loadDetails,
+} from "@/signals/carouselState";
 
 import {
   Dialog,
@@ -12,8 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-import { fetchCarouselById } from "@/services/carousels";
 import type { CarouselDetailResponse } from "@/types/carousels";
 import { VISIBILITY_TYPES, NAVIGATION_TYPES } from "@/types/carousels";
 
@@ -28,6 +31,7 @@ export function ViewCarouselDetailsDialog({
   onOpenChange,
   carouselId,
 }: ViewCarouselDetailsDialogProps) {
+  useSignals();
   const [loading, setLoading] = useState(false);
   const [carouselDetails, setCarouselDetails] = useState<CarouselDetailResponse | null>(null);
 
@@ -42,9 +46,17 @@ export function ViewCarouselDetailsDialog({
   const loadCarouselDetails = async () => {
     if (!carouselId) return;
 
+    // Check if already loaded in signal
+    if (selectedCarouselDetails.value?.id === carouselId) {
+      console.log("[ViewCarouselDetailsDialog] Using signal data for:", carouselId);
+      setCarouselDetails(selectedCarouselDetails.value);
+      return;
+    }
+
     setLoading(true);
     try {
-      const details = await fetchCarouselById(carouselId);
+      console.log("[ViewCarouselDetailsDialog] Fetching from API for:", carouselId);
+      const details = await loadDetails(carouselId);
       console.log("[ViewCarouselDetailsDialog] Carousel details:", details);
       setCarouselDetails(details);
     } catch (error) {

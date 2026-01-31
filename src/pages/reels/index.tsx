@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import {
   Plus,
   Search,
@@ -73,10 +74,7 @@ import { Label } from "@/components/ui/label";
 import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 
 import {
-  fetchReels,
   fetchReelById,
-  deleteReels,
-  updateReelStatus,
   fetchReelAuditTrail,
   fetchReelsTableAuditTrail,
   fetchExamsPaginated,
@@ -97,6 +95,26 @@ import { AddReelDialog } from "./AddReelDialog";
 import { EditReelDialog } from "./EditReelDialog";
 import { BulkUploadReelsDialog } from "./BulkUploadReelsDialog";
 
+// Import signals
+import {
+  reels,
+  reelsLoading,
+  totalElements,
+  reelFilters,
+  searchQuery,
+  selectedReels,
+  editingReel,
+  detailReel,
+  isDeleting,
+  loadReels,
+  deleteSelectedReels,
+  updateReelStatus,
+  selectAllReels,
+  clearAllSelections,
+  updateFilters,
+  resetReelsState,
+} from "@/signals/reelsState";
+
 const DIFFICULTY_LEVELS = {
   BEGINNER: "Beginner",
   INTERMEDIATE: "Intermediate",
@@ -109,19 +127,17 @@ const LANGUAGES = {
 };
 
 export default function ReelsPage() {
-  const [reels, setReels] = useState<ReelResponseDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  useSignals();
+
+  // Local UI state
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
-  const [selectedReels, setSelectedReels] = useState<ReelResponseDto[]>([]);
-  const [editingReel, setEditingReel] = useState<ReelResponseDto | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reelsToDelete, setReelsToDelete] = useState<ReelResponseDto[]>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
-  // Audit Trail state
+  // Audit Trail state (local)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false);
   const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
   const [auditTrailLoading, setAuditTrailLoading] = useState(false);
@@ -135,22 +151,11 @@ export default function ReelsPage() {
   const [currentAuditReelId, setCurrentAuditReelId] = useState<number | null>(null);
   const [isTableAudit, setIsTableAudit] = useState(false);
 
-  // View Detail state
+  // View Detail state (local)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [detailReel, setDetailReel] = useState<ReelResponseDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Filters state
-  const [filters, setFilters] = useState<ReelFilters>({
-    pageNo: 0,
-    pageSize: 20,
-    sortBy: "createdAt",
-    sortDir: "DESC",
-  });
-  const [totalElements, setTotalElements] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Exam dropdown state
+  // Dropdown states (local - page-specific pagination)
   const [exams, setExams] = useState<ExamOption[]>([]);
   const [examsLoading, setExamsLoading] = useState(false);
   const [examSearchQuery, setExamSearchQuery] = useState("");
@@ -163,7 +168,6 @@ export default function ReelsPage() {
   const [selectedExam, setSelectedExam] = useState<ExamOption | null>(null);
   const [examDropdownOpen, setExamDropdownOpen] = useState(false);
 
-  // Grade dropdown state
   const [grades, setGrades] = useState<GradeOption[]>([]);
   const [gradesLoading, setGradesLoading] = useState(false);
   const [gradeSearchQuery, setGradeSearchQuery] = useState("");
@@ -176,7 +180,6 @@ export default function ReelsPage() {
   const [selectedGrade, setSelectedGrade] = useState<GradeOption | null>(null);
   const [gradeDropdownOpen, setGradeDropdownOpen] = useState(false);
 
-  // Stream dropdown state
   const [streams, setStreams] = useState<StreamOption[]>([]);
   const [streamsLoading, setStreamsLoading] = useState(false);
   const [streamSearchQuery, setStreamSearchQuery] = useState("");
@@ -189,7 +192,6 @@ export default function ReelsPage() {
   const [selectedStream, setSelectedStream] = useState<StreamOption | null>(null);
   const [streamDropdownOpen, setStreamDropdownOpen] = useState(false);
 
-  // Tags dropdown state
   const [tags, setTags] = useState<TagResponseDto[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState("");
@@ -202,31 +204,20 @@ export default function ReelsPage() {
   const [selectedTags, setSelectedTags] = useState<TagResponseDto[]>([]);
   const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false);
 
+  // Get signal values
+  const reelsList = reels.value;
+  const loading = reelsLoading.value;
+  const total = totalElements.value;
+  const filters = reelFilters.value;
+  const search = searchQuery.value;
+  const selectedList = selectedReels.value;
+  const editing = editingReel.value;
+  const detail = detailReel.value;
+  const deleting = isDeleting.value;
+
   useEffect(() => {
     loadReels();
   }, [filters]);
-
-  const loadReels = async () => {
-    setLoading(true);
-    try {
-      console.log("[ReelsPage] Loading reels with filters:", filters);
-      const response = await fetchReels(filters);
-      console.log("[ReelsPage] Reels response:", response);
-
-      setReels(response.content || []);
-      setTotalElements(response.totalElements || 0);
-    } catch (error) {
-      console.error("[ReelsPage] Failed to load reels:", error);
-      toast.error(
-        "Failed to load reels: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-      setReels([]);
-      setTotalElements(0);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Exam loading functions
   const loadExams = async (pageNo: number = 0, search?: string) => {
@@ -385,12 +376,8 @@ export default function ReelsPage() {
   }, [tagsDropdownOpen]);
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setFilters((prev) => ({
-      ...prev,
-      search: query || undefined,
-      pageNo: 0,
-    }));
+    searchQuery.value = query;
+    updateFilters({ search: query || undefined, pageNo: 0 });
   };
 
   const handleExamSearch = (query: string) => {
@@ -400,11 +387,7 @@ export default function ReelsPage() {
 
   const handleExamSelect = (exam: ExamOption | null) => {
     setSelectedExam(exam);
-    setFilters((prev) => ({
-      ...prev,
-      examId: exam?.id || undefined,
-      pageNo: 0,
-    }));
+    updateFilters({ examId: exam?.id || undefined, pageNo: 0 });
     setExamDropdownOpen(false);
   };
 
@@ -421,11 +404,7 @@ export default function ReelsPage() {
 
   const handleGradeSelect = (grade: GradeOption | null) => {
     setSelectedGrade(grade);
-    setFilters((prev) => ({
-      ...prev,
-      gradeId: grade?.id || undefined,
-      pageNo: 0,
-    }));
+    updateFilters({ gradeId: grade?.id || undefined, pageNo: 0 });
     setGradeDropdownOpen(false);
   };
 
@@ -442,11 +421,7 @@ export default function ReelsPage() {
 
   const handleStreamSelect = (stream: StreamOption | null) => {
     setSelectedStream(stream);
-    setFilters((prev) => ({
-      ...prev,
-      streamId: stream?.id || undefined,
-      pageNo: 0,
-    }));
+    updateFilters({ streamId: stream?.id || undefined, pageNo: 0 });
     setStreamDropdownOpen(false);
   };
 
@@ -471,12 +446,10 @@ export default function ReelsPage() {
         newTags = [...prev, tag];
       }
 
-      // Update filters
-      setFilters((f) => ({
-        ...f,
+      updateFilters({
         tagIds: newTags.length > 0 ? newTags.map((t) => t.id) : undefined,
         pageNo: 0,
-      }));
+      });
 
       return newTags;
     });
@@ -489,95 +462,78 @@ export default function ReelsPage() {
   };
 
   const handleSortChange = (sortBy: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      sortBy: sortBy as ReelFilters["sortBy"],
-      pageNo: 0,
-    }));
+    updateFilters({ sortBy: sortBy as ReelFilters["sortBy"], pageNo: 0 });
   };
 
   const handleSortDirChange = (sortDir: "ASC" | "DESC") => {
-    setFilters((prev) => ({
-      ...prev,
-      sortDir,
-      pageNo: 0,
-    }));
+    updateFilters({ sortDir, pageNo: 0 });
   };
 
   const handleStatusChange = (status: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       isActive: status === "all" ? undefined : status === "active",
       pageNo: 0,
-    }));
+    });
   };
 
   const handleGlobalChange = (global: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       isGlobal: global === "all" ? undefined : global === "global",
       pageNo: 0,
-    }));
+    });
   };
 
   const handleLanguageChange = (language: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       language: language === "all" ? undefined : (language as "ENGLISH" | "HINDI"),
       pageNo: 0,
-    }));
+    });
   };
 
   const handleDifficultyChange = (difficulty: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    updateFilters({
       difficultyLevel:
         difficulty === "all"
           ? undefined
           : (difficulty as "BEGINNER" | "INTERMEDIATE" | "ADVANCED"),
       pageNo: 0,
-    }));
+    });
   };
 
   const handleResetFilters = () => {
-    setSearchQuery("");
     setSelectedExam(null);
     setSelectedGrade(null);
     setSelectedStream(null);
     setSelectedTags([]);
-    setFilters({
-      pageNo: 0,
-      pageSize: 20,
-      sortBy: "createdAt",
-      sortDir: "DESC",
-    });
+    resetReelsState();
+    loadReels();
   };
 
   const handleSelectReel = (reel: ReelResponseDto, checked: boolean) => {
     if (checked) {
-      setSelectedReels((prev) => [...prev, reel]);
+      selectedReels.value = [...selectedList, reel];
     } else {
-      setSelectedReels((prev) => prev.filter((r) => r.id !== reel.id));
+      selectedReels.value = selectedList.filter((r) => r.id !== reel.id);
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedReels([...reels]);
+      selectAllReels();
     } else {
-      setSelectedReels([]);
+      clearAllSelections();
     }
   };
 
   const isReelSelected = (reelId: number) => {
-    return selectedReels.some((r) => r.id === reelId);
+    return selectedList.some((r) => r.id === reelId);
   };
 
-  const isAllSelected = reels.length > 0 && selectedReels.length === reels.length;
-  const isIndeterminate = selectedReels.length > 0 && selectedReels.length < reels.length;
+  const isAllSelected = reelsList.length > 0 && selectedList.length === reelsList.length;
+  const isIndeterminate = selectedList.length > 0 && selectedList.length < reelsList.length;
 
   const handleEditClick = (reel: ReelResponseDto) => {
-    setEditingReel(reel);
+    editingReel.value = reel;
     setShowEditDialog(true);
   };
 
@@ -586,7 +542,7 @@ export default function ReelsPage() {
     setDetailDialogOpen(true);
     try {
       const detail = await fetchReelById(reel.id);
-      setDetailReel(detail);
+      detailReel.value = detail;
     } catch (error) {
       console.error("Failed to fetch reel details:", error);
       toast.error("Failed to load reel details");
@@ -602,8 +558,8 @@ export default function ReelsPage() {
   };
 
   const handleBulkDeleteClick = () => {
-    if (selectedReels.length > 0) {
-      setReelsToDelete(selectedReels);
+    if (selectedList.length > 0) {
+      setReelsToDelete(selectedList);
       setDeleteDialogOpen(true);
     }
   };
@@ -611,36 +567,15 @@ export default function ReelsPage() {
   const handleDeleteConfirm = async () => {
     if (reelsToDelete.length === 0) return;
 
-    setIsDeleting(true);
-    try {
-      await deleteReels(reelsToDelete.map((r) => r.id));
-      toast.success(
-        `${reelsToDelete.length} reel${reelsToDelete.length > 1 ? "s" : ""} deleted successfully!`
-      );
+    const success = await deleteSelectedReels(reelsToDelete);
+    if (success) {
       setDeleteDialogOpen(false);
       setReelsToDelete([]);
-      setSelectedReels([]);
-      loadReels();
-    } catch (error) {
-      console.error("[ReelsPage] Failed to delete reels:", error);
-      toast.error(
-        "Failed to delete reels: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-    } finally {
-      setIsDeleting(false);
     }
   };
 
   const handleStatusToggle = async (reel: ReelResponseDto) => {
-    try {
-      await updateReelStatus(reel.id, !reel.isActive);
-      toast.success(`Reel ${reel.isActive ? "deactivated" : "activated"} successfully!`);
-      loadReels();
-    } catch (error) {
-      console.error("[ReelsPage] Failed to update status:", error);
-      toast.error("Failed to update reel status");
-    }
+    await updateReelStatus(reel.id, !reel.isActive);
   };
 
   // Audit Trail handlers
@@ -737,23 +672,23 @@ export default function ReelsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Reels</h1>
           <p className="text-muted-foreground">
             Manage and upload reels for the app
-            {selectedReels.length > 0 && (
+            {selectedList.length > 0 && (
               <span className="ml-2 text-cyan-600">
-                • {selectedReels.length} reel
-                {selectedReels.length > 1 ? "s" : ""} selected
+                • {selectedList.length} reel
+                {selectedList.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {selectedReels.length > 0 && (
+          {selectedList.length > 0 && (
             <Button
               variant="outline"
               onClick={handleBulkDeleteClick}
               className="text-red-600 border-red-200 hover:bg-red-50"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete ({selectedReels.length})
+              Delete ({selectedList.length})
             </Button>
           )}
           <Button variant="outline" onClick={handleTableAuditClick}>
@@ -782,20 +717,18 @@ export default function ReelsPage() {
         </div>
       </div>
 
-      {/* Filters Row 1: Search, Status, Sort By, Sort Direction, More Filters, Reset */}
+      {/* Filters Row 1 */}
       <div className="flex items-center gap-3">
-        {/* Search Field */}
         <div className="relative w-64 shrink-0">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search title, description..."
-            value={searchQuery}
+            value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-8"
           />
         </div>
 
-        {/* Status Filter */}
         <Select
           value={
             filters.isActive === undefined
@@ -816,7 +749,6 @@ export default function ReelsPage() {
           </SelectContent>
         </Select>
 
-        {/* Sort By */}
         <Select
           value={filters.sortBy || "createdAt"}
           onValueChange={handleSortChange}
@@ -832,12 +764,9 @@ export default function ReelsPage() {
           </SelectContent>
         </Select>
 
-        {/* Sort Direction */}
         <Select
           value={filters.sortDir || "DESC"}
-          onValueChange={(value) =>
-            handleSortDirChange(value as "ASC" | "DESC")
-          }
+          onValueChange={(value) => handleSortDirChange(value as "ASC" | "DESC")}
         >
           <SelectTrigger className="w-28 shrink-0">
             <SelectValue placeholder="Sort Dir" />
@@ -848,7 +777,6 @@ export default function ReelsPage() {
           </SelectContent>
         </Select>
 
-        {/* More Filters Button */}
         <Button
           variant="outline"
           onClick={() => setMoreFiltersOpen(true)}
@@ -871,7 +799,6 @@ export default function ReelsPage() {
           )}
         </Button>
 
-        {/* Reset Filters */}
         <Button
           variant="outline"
           size="icon"
@@ -883,7 +810,7 @@ export default function ReelsPage() {
         </Button>
       </div>
 
-      {/* Filters Row 2: Exam, Grade, Stream, Tags */}
+      {/* Filters Row 2: Targeting */}
       <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
         <span className="text-sm font-medium text-muted-foreground shrink-0">
           Targeting:
@@ -945,8 +872,7 @@ export default function ReelsPage() {
                       <span className="truncate">{exam.name}</span>
                     </div>
                   ))}
-                  {examPagination.currentPage <
-                    examPagination.totalPages - 1 && (
+                  {examPagination.currentPage < examPagination.totalPages - 1 && (
                     <div className="p-2 border-t">
                       <Button
                         variant="ghost"
@@ -1024,8 +950,7 @@ export default function ReelsPage() {
                       <span className="truncate">{grade.name}</span>
                     </div>
                   ))}
-                  {gradePagination.currentPage <
-                    gradePagination.totalPages - 1 && (
+                  {gradePagination.currentPage < gradePagination.totalPages - 1 && (
                     <div className="p-2 border-t">
                       <Button
                         variant="ghost"
@@ -1103,8 +1028,7 @@ export default function ReelsPage() {
                       <span className="truncate">{stream.name}</span>
                     </div>
                   ))}
-                  {streamPagination.currentPage <
-                    streamPagination.totalPages - 1 && (
+                  {streamPagination.currentPage < streamPagination.totalPages - 1 && (
                     <div className="p-2 border-t">
                       <Button
                         variant="ghost"
@@ -1130,25 +1054,25 @@ export default function ReelsPage() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border p-4">
-          <div className="text-2xl font-bold">{totalElements}</div>
+          <div className="text-2xl font-bold">{total}</div>
           <p className="text-xs text-muted-foreground">Total Reels</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {reels.filter((r) => r.isActive).length}
+            {reelsList.filter((r) => r.isActive).length}
           </div>
           <p className="text-xs text-muted-foreground">Active Reels</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
-            {reels.filter((r) => r.isGlobal).length}
+            {reelsList.filter((r) => r.isGlobal).length}
           </div>
           <p className="text-xs text-muted-foreground">Global Reels</p>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-2xl font-bold">
             {formatNumber(
-              reels.reduce((sum, r) => sum + (r.stats?.totalViews || 0), 0),
+              reelsList.reduce((sum, r) => sum + (r.stats?.totalViews || 0), 0),
             )}
           </div>
           <p className="text-xs text-muted-foreground">Total Views</p>
@@ -1183,39 +1107,19 @@ export default function ReelsPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-4" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[200px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[60px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[80px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[60px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[60px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[60px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[50px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[50px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-[40px]" />
-                  </TableCell>
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-[40px]" /></TableCell>
                 </TableRow>
               ))
-            ) : reels.length === 0 ? (
+            ) : reelsList.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center">
@@ -1231,7 +1135,7 @@ export default function ReelsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              reels.map((reel) => (
+              reelsList.map((reel) => (
                 <TableRow key={reel.id}>
                   <TableCell>
                     <Checkbox
@@ -1257,12 +1161,9 @@ export default function ReelsPage() {
                         </div>
                       )}
                       <div>
-                        <div className="font-medium line-clamp-1">
-                          {reel.title}
-                        </div>
+                        <div className="font-medium line-clamp-1">{reel.title}</div>
                         <div className="text-xs text-muted-foreground line-clamp-1">
-                          {reel.tags?.map((t) => t.tagName).join(", ") ||
-                            "No tags"}
+                          {reel.tags?.map((t) => t.tagName).join(", ") || "No tags"}
                         </div>
                       </div>
                     </div>
@@ -1270,13 +1171,10 @@ export default function ReelsPage() {
                   <TableCell>{formatDuration(reel.durationSeconds)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {DIFFICULTY_LEVELS[reel.difficultyLevel] ||
-                        reel.difficultyLevel}
+                      {DIFFICULTY_LEVELS[reel.difficultyLevel] || reel.difficultyLevel}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {LANGUAGES[reel.language] || reel.language}
-                  </TableCell>
+                  <TableCell>{LANGUAGES[reel.language] || reel.language}</TableCell>
                   <TableCell>
                     <Badge variant={reel.isGlobal ? "default" : "secondary"}>
                       {reel.isGlobal ? "Global" : "Targeted"}
@@ -1285,9 +1183,7 @@ export default function ReelsPage() {
                   <TableCell>
                     <Badge
                       variant={reel.isActive ? "default" : "secondary"}
-                      className={
-                        reel.isActive ? "bg-green-100 text-green-800" : ""
-                      }
+                      className={reel.isActive ? "bg-green-100 text-green-800" : ""}
                     >
                       {reel.isActive ? "Active" : "Inactive"}
                     </Badge>
@@ -1365,21 +1261,16 @@ export default function ReelsPage() {
       </div>
 
       {/* Pagination */}
-      {totalElements > filters.pageSize! && (
+      {total > filters.pageSize! && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {reels.length} of {totalElements} reels
+            Showing {reelsList.length} of {total} reels
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  pageNo: Math.max(0, prev.pageNo! - 1),
-                }))
-              }
+              onClick={() => updateFilters({ pageNo: Math.max(0, filters.pageNo! - 1) })}
               disabled={filters.pageNo === 0}
             >
               Previous
@@ -1387,10 +1278,8 @@ export default function ReelsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
-              }
-              disabled={reels.length < filters.pageSize!}
+              onClick={() => updateFilters({ pageNo: filters.pageNo! + 1 })}
+              disabled={reelsList.length < filters.pageSize!}
             >
               Next
             </Button>
@@ -1408,7 +1297,7 @@ export default function ReelsPage() {
       <EditReelDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        reel={editingReel}
+        reel={editing}
         onSuccess={handleEditSuccess}
       />
 
@@ -1425,18 +1314,17 @@ export default function ReelsPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete {reelsToDelete.length} reel
-              {reelsToDelete.length > 1 ? "s" : ""}. This action cannot be
-              undone.
+              {reelsToDelete.length > 1 ? "s" : ""}. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isDeleting}
+              disabled={deleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1453,7 +1341,6 @@ export default function ReelsPage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Global Filter */}
             <div className="grid gap-2">
               <Label>Scope</Label>
               <Select
@@ -1477,7 +1364,6 @@ export default function ReelsPage() {
               </Select>
             </div>
 
-            {/* Language Filter */}
             <div className="grid gap-2">
               <Label>Language</Label>
               <Select
@@ -1495,7 +1381,6 @@ export default function ReelsPage() {
               </Select>
             </div>
 
-            {/* Difficulty Filter */}
             <div className="grid gap-2">
               <Label>Difficulty Level</Label>
               <Select
@@ -1514,13 +1399,9 @@ export default function ReelsPage() {
               </Select>
             </div>
 
-            {/* Tags Multi-Select */}
             <div className="grid gap-2">
               <Label>Tags</Label>
-              <Popover
-                open={tagsDropdownOpen}
-                onOpenChange={setTagsDropdownOpen}
-              >
+              <Popover open={tagsDropdownOpen} onOpenChange={setTagsDropdownOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -1547,11 +1428,7 @@ export default function ReelsPage() {
                   {selectedTags.length > 0 && (
                     <div className="p-2 border-b flex flex-wrap gap-1">
                       {selectedTags.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="secondary"
-                          className="text-xs"
-                        >
+                        <Badge key={tag.id} variant="secondary" className="text-xs">
                           {tag.name}
                           <button
                             className="ml-1 hover:text-destructive"
@@ -1585,9 +1462,7 @@ export default function ReelsPage() {
                             onClick={() => handleTagToggle(tag)}
                           >
                             <Checkbox
-                              checked={selectedTags.some(
-                                (t) => t.id === tag.id,
-                              )}
+                              checked={selectedTags.some((t) => t.id === tag.id)}
                               className="mr-2"
                             />
                             <span className="truncate flex-1">{tag.name}</span>
@@ -1596,8 +1471,7 @@ export default function ReelsPage() {
                             </span>
                           </div>
                         ))}
-                        {tagPagination.currentPage <
-                          tagPagination.totalPages - 1 && (
+                        {tagPagination.currentPage < tagPagination.totalPages - 1 && (
                           <div className="p-2 border-t">
                             <Button
                               variant="ghost"
@@ -1662,110 +1536,76 @@ export default function ReelsPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : detailReel ? (
+          ) : detail ? (
             <div className="space-y-6">
-              {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <h3 className="text-lg font-semibold">{detailReel.title}</h3>
+                  <h3 className="text-lg font-semibold">{detail.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {detailReel.description}
-                  </p>
-                </div>
-
-                {/* <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">ID</Label>
-                  <p className="text-sm font-medium">{detailReel.id}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">UUID</Label>
-                  <p className="text-sm font-mono text-xs">{detailReel.uuid}</p>
-                </div> */}
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Duration
-                  </Label>
-                  <p className="text-sm font-medium">
-                    {detailReel.durationSeconds}s
+                    {detail.description}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Difficulty
-                  </Label>
+                  <Label className="text-xs text-muted-foreground">Duration</Label>
+                  <p className="text-sm font-medium">{detail.durationSeconds}s</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Difficulty</Label>
                   <Badge variant="outline">
-                    {DIFFICULTY_LEVELS[detailReel.difficultyLevel]}
+                    {DIFFICULTY_LEVELS[detail.difficultyLevel]}
                   </Badge>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Language
-                  </Label>
-                  <Badge variant="secondary">
-                    {LANGUAGES[detailReel.language]}
-                  </Badge>
+                  <Label className="text-xs text-muted-foreground">Language</Label>
+                  <Badge variant="secondary">{LANGUAGES[detail.language]}</Badge>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Status
-                  </Label>
-                  <Badge
-                    variant={detailReel.isActive ? "default" : "secondary"}
-                  >
-                    {detailReel.isActive ? "Active" : "Inactive"}
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Badge variant={detail.isActive ? "default" : "secondary"}>
+                    {detail.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
 
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Scope</Label>
-                  <Badge variant={detailReel.isGlobal ? "default" : "outline"}>
-                    {detailReel.isGlobal ? "Global" : "Targeted"}
+                  <Badge variant={detail.isGlobal ? "default" : "outline"}>
+                    {detail.isGlobal ? "Global" : "Targeted"}
                   </Badge>
                 </div>
               </div>
 
-              {/* Media URLs */}
               <div className="space-y-3 border-t pt-4">
                 <h4 className="font-medium text-sm">Media</h4>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">
-                      Video URL
-                    </Label>
+                    <Label className="text-xs text-muted-foreground">Video URL</Label>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-mono text-xs truncate flex-1 bg-muted p-2 rounded">
-                        {detailReel.videoUrl}
+                        {detail.videoUrl}
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          window.open(detailReel.videoUrl, "_blank")
-                        }
+                        onClick={() => window.open(detail.videoUrl, "_blank")}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">
-                      Thumbnail URL
-                    </Label>
+                    <Label className="text-xs text-muted-foreground">Thumbnail URL</Label>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-mono text-xs truncate flex-1 bg-muted p-2 rounded">
-                        {detailReel.thumbnailUrl}
+                        {detail.thumbnailUrl}
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          window.open(detailReel.thumbnailUrl, "_blank")
-                        }
+                        onClick={() => window.open(detail.thumbnailUrl, "_blank")}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -1774,12 +1614,11 @@ export default function ReelsPage() {
                 </div>
               </div>
 
-              {/* Tags */}
-              {detailReel.tags && detailReel.tags.length > 0 && (
+              {detail.tags && detail.tags.length > 0 && (
                 <div className="space-y-3 border-t pt-4">
                   <h4 className="font-medium text-sm">Tags</h4>
                   <div className="flex flex-wrap gap-2">
-                    {detailReel.tags.map((tag) => (
+                    {detail.tags.map((tag) => (
                       <Badge key={tag.tagId} variant="secondary">
                         {tag.tagName}
                       </Badge>
@@ -1788,153 +1627,118 @@ export default function ReelsPage() {
                 </div>
               )}
 
-              {/* Targeting */}
-              {detailReel.targeting && detailReel.targeting.length > 0 && (
+              {detail.targeting && detail.targeting.length > 0 && (
                 <div className="space-y-3 border-t pt-4">
                   <h4 className="font-medium text-sm">Targeting</h4>
                   <div className="space-y-2">
-                    {detailReel.targeting.map((target, idx) => (
+                    {detail.targeting.map((target, idx) => (
                       <div
                         key={target.id || idx}
                         className="flex gap-4 text-sm bg-muted p-2 rounded"
                       >
-                        <span>
-                          <strong>Exam:</strong> {target.examId}
-                        </span>
-                        <span>
-                          <strong>Grade:</strong> {target.gradeId}
-                        </span>
-                        <span>
-                          <strong>Stream:</strong> {target.streamId}
-                        </span>
+                        <span><strong>Exam:</strong> {target.examId}</span>
+                        <span><strong>Grade:</strong> {target.gradeId}</span>
+                        <span><strong>Stream:</strong> {target.streamId}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Stats */}
-              {detailReel.stats && (
+              {detail.stats && (
                 <div className="space-y-3 border-t pt-4">
                   <h4 className="font-medium text-sm">Statistics</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.totalViews?.toLocaleString() || 0}
+                        {detail.stats.totalViews?.toLocaleString() || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Total Views
-                      </div>
+                      <div className="text-xs text-muted-foreground">Total Views</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.uniqueViews?.toLocaleString() || 0}
+                        {detail.stats.uniqueViews?.toLocaleString() || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Unique Views
-                      </div>
+                      <div className="text-xs text-muted-foreground">Unique Views</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.totalLikes?.toLocaleString() || 0}
+                        {detail.stats.totalLikes?.toLocaleString() || 0}
                       </div>
                       <div className="text-xs text-muted-foreground">Likes</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.totalBookmarks?.toLocaleString() || 0}
+                        {detail.stats.totalBookmarks?.toLocaleString() || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Bookmarks
-                      </div>
+                      <div className="text-xs text-muted-foreground">Bookmarks</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.totalComments?.toLocaleString() || 0}
+                        {detail.stats.totalComments?.toLocaleString() || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Comments
-                      </div>
+                      <div className="text-xs text-muted-foreground">Comments</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.totalShares?.toLocaleString() || 0}
+                        {detail.stats.totalShares?.toLocaleString() || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Shares
-                      </div>
+                      <div className="text-xs text-muted-foreground">Shares</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.avgWatchPercentage?.toFixed(1) || 0}%
+                        {detail.stats.avgWatchPercentage?.toFixed(1) || 0}%
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Avg Watch %
-                      </div>
+                      <div className="text-xs text-muted-foreground">Avg Watch %</div>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
                       <div className="text-2xl font-bold text-primary">
-                        {detailReel.stats.avgWatchTimeSeconds || 0}s
+                        {detail.stats.avgWatchTimeSeconds || 0}s
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Avg Watch Time
-                      </div>
+                      <div className="text-xs text-muted-foreground">Avg Watch Time</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     <div className="bg-yellow-50 dark:bg-yellow-950 rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-yellow-600">
-                        {detailReel.stats.totalNotInterested || 0}
+                        {detail.stats.totalNotInterested || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Not Interested
-                      </div>
+                      <div className="text-xs text-muted-foreground">Not Interested</div>
                     </div>
                     <div className="bg-red-50 dark:bg-red-950 rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-red-600">
-                        {detailReel.stats.totalReports || 0}
+                        {detail.stats.totalReports || 0}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Reports
-                      </div>
+                      <div className="text-xs text-muted-foreground">Reports</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Metadata */}
               <div className="space-y-3 border-t pt-4">
                 <h4 className="font-medium text-sm">Metadata</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Created By
-                    </Label>
-                    <p>{detailReel.createdBy || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">Created By</Label>
+                    <p>{detail.createdBy || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-xs ml-5  text-muted-foreground">
-                      Created At
-                    </Label>
+                    <Label className="text-xs ml-5 text-muted-foreground">Created At</Label>
                     <p className="ml-5">
-                      {detailReel.createdAt
-                        ? new Date(detailReel.createdAt).toLocaleString()
+                      {detail.createdAt
+                        ? new Date(detail.createdAt).toLocaleString()
                         : "-"}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Updated By
-                    </Label>
-                    <p>{detailReel.updatedBy || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">Updated By</Label>
+                    <p>{detail.updatedBy || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-xs ml-5 text-muted-foreground">
-                      Updated At
-                    </Label>
+                    <Label className="text-xs ml-5 text-muted-foreground">Updated At</Label>
                     <p className="ml-5">
-                      {detailReel.updatedAt
-                        ? new Date(detailReel.updatedAt).toLocaleString()
+                      {detail.updatedAt
+                        ? new Date(detail.updatedAt).toLocaleString()
                         : "-"}
                     </p>
                   </div>

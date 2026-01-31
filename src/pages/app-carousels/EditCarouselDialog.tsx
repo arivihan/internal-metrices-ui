@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import { Loader2, Trash2, Images, Plus, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  selectedCarouselDetails,
+  loadCarouselDetails as loadDetails,
+  clearCarouselDetails,
+} from "@/signals/carouselState";
 
 import {
   Dialog,
@@ -23,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { fetchCarouselById, updateCarousel } from "@/services/carousels";
+import { updateCarousel } from "@/services/carousels";
 import type {
   CarouselUpdateRequest,
   CarouselBatchRequest,
@@ -57,6 +63,7 @@ export function EditCarouselDialog({
   carouselId,
   batches,
 }: EditCarouselDialogProps) {
+  useSignals();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<CarouselUpdateRequest>({
@@ -77,9 +84,33 @@ export function EditCarouselDialog({
   const loadCarouselDetails = async () => {
     if (!carouselId) return;
 
+    // Check if already loaded in signal
+    if (selectedCarouselDetails.value?.id === carouselId) {
+      console.log("[EditCarouselDialog] Using signal data for:", carouselId);
+      const cached = selectedCarouselDetails.value;
+      setFormData({
+        carouselCode: cached.carouselCode,
+        url: cached.url,
+        screenType: cached.screenType,
+        visibilityType: cached.visibilityType,
+        isActive: cached.isActive,
+        batches: cached.batches?.map((b) => ({
+          batchId: b.batchId,
+          displayOrder: b.displayOrder,
+          className: b.className || "",
+          activityParams: b.activityParams || {},
+          navigationType: b.navigationType,
+          parameter: b.parameter || {},
+        })) || [{ ...defaultBatch }],
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const carousel = await fetchCarouselById(carouselId);
+      console.log("[EditCarouselDialog] Fetching from API for:", carouselId);
+      const carousel = await loadDetails(carouselId);
+
       setFormData({
         carouselCode: carousel.carouselCode,
         url: carousel.url,
@@ -172,6 +203,8 @@ export function EditCarouselDialog({
     setIsSubmitting(true);
     try {
       await updateCarousel(carouselId, formData);
+      // Clear signal so next fetch gets fresh data
+      clearCarouselDetails();
       toast.success("Carousel updated successfully!");
       onSuccess();
       handleClose();

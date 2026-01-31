@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import {
   Plus,
   Search,
@@ -73,19 +74,13 @@ import { BulkUploadVideoDialog } from "./BulkUploadVideoDialog";
 import { DuplicateVideoDialog } from "./DuplicateVideoDialog";
 import { ViewVideoDetailsDialog } from "./ViewVideoDetailsDialog";
 import {
-  fetchViralVideos,
-  fetchAllBatchesForVideos,
   updateVideo,
-  deleteVideo,
-  toggleVideoStatus,
   fetchVideoAuditTrail,
   fetchVideosTableAuditTrail,
 } from "@/services/viralVideos";
 import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 import type {
   VideoResponseDto,
-  VideoFilters,
-  BatchOption,
   VideoRequest,
 } from "@/types/viralVideos";
 import {
@@ -94,33 +89,40 @@ import {
   DISPLAY_CONTEXTS,
 } from "@/types/viralVideos";
 
+// Import signals
+import {
+  videos,
+  videosLoading,
+  totalElements,
+  videoFilters,
+  searchQuery,
+  selectedVideo,
+  selectedVideos,
+  batches,
+  isSubmitting,
+  loadVideos,
+  loadBatches,
+  deleteSelectedVideo,
+  toggleSelectedVideoStatus,
+  selectAllVideos,
+  clearAllSelections,
+  updateFilters,
+  resetVideoState,
+} from "@/signals/viralVideosState";
+
 export default function ViralVideosPage() {
-  const [videos, setVideos] = useState<VideoResponseDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  useSignals();
+
+  // Local UI state (dialog open/close states)
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
-  const [selectedVideos, setSelectedVideos] = useState<VideoResponseDto[]>([]);
-  const [batches, setBatches] = useState<BatchOption[]>([]);
-  const [filters, setFilters] = useState<VideoFilters>({
-    pageNo: 0,
-    pageSize: 20,
-    sortBy: "displayOrder",
-    sortDir: "ASC",
-    active: true,
-  });
-  const [totalElements, setTotalElements] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [previewVideo, setPreviewVideo] = useState<VideoResponseDto | null>(
-    null
-  );
+  const [previewVideo, setPreviewVideo] = useState<VideoResponseDto | null>(null);
 
-  // Edit, Delete, Status Toggle states
+  // Edit, Delete, Status Toggle dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<VideoResponseDto | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<VideoRequest>>({});
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
@@ -128,7 +130,7 @@ export default function ViralVideosPage() {
   const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
-  // Audit Trail state
+  // Audit Trail state (local)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false);
   const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
   const [auditTrailLoading, setAuditTrailLoading] = useState(false);
@@ -142,6 +144,17 @@ export default function ViralVideosPage() {
   const [currentAuditVideoId, setCurrentAuditVideoId] = useState<string | null>(null);
   const [isTableAudit, setIsTableAudit] = useState(false);
 
+  // Get signal values
+  const videosList = videos.value;
+  const loading = videosLoading.value;
+  const total = totalElements.value;
+  const filters = videoFilters.value;
+  const search = searchQuery.value;
+  const selected = selectedVideo.value;
+  const selectedList = selectedVideos.value;
+  const batchesList = batches.value;
+  const submitting = isSubmitting.value;
+
   useEffect(() => {
     loadVideos();
   }, [filters]);
@@ -150,52 +163,14 @@ export default function ViralVideosPage() {
     loadBatches();
   }, []);
 
-  const loadVideos = async () => {
-    setLoading(true);
-    setFailedImages(new Set()); // Reset failed images on reload
-    try {
-      console.log("[ViralVideosPage] Loading videos with filters:", filters);
-      const response = await fetchViralVideos(filters);
-      console.log("[ViralVideosPage] Videos response:", response);
-
-      setVideos(response.content || []);
-      setTotalElements(response.totalElements || 0);
-
-      console.log(
-        "[ViralVideosPage] Set videos:",
-        response.content?.length || 0,
-        "items"
-      );
-    } catch (error) {
-      console.error("[ViralVideosPage] Failed to load videos:", error);
-      toast.error(
-        "Failed to load videos: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-      setVideos([]);
-      setTotalElements(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadBatches = async () => {
-    try {
-      const batchesRes = await fetchAllBatchesForVideos({ activeFlag: true });
-      setBatches(batchesRes);
-    } catch (error) {
-      console.error("[ViralVideosPage] Failed to load batches:", error);
-    }
-  };
-
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
+    searchQuery.value = query;
     // Filter locally by video code
     if (query.trim()) {
-      const filtered = videos.filter((v) =>
+      const filtered = videosList.filter((v) =>
         v.code.toLowerCase().includes(query.toLowerCase())
       );
-      setVideos(filtered);
+      videos.value = filtered;
     } else {
       loadVideos();
     }
@@ -208,38 +183,38 @@ export default function ViralVideosPage() {
 
   const handleSelectVideo = (video: VideoResponseDto, checked: boolean) => {
     if (checked) {
-      setSelectedVideos((prev) => [...prev, video]);
+      selectedVideos.value = [...selectedList, video];
     } else {
-      setSelectedVideos((prev) => prev.filter((v) => v.id !== video.id));
+      selectedVideos.value = selectedList.filter((v) => v.id !== video.id);
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedVideos([...videos]);
+      selectAllVideos();
     } else {
-      setSelectedVideos([]);
+      clearAllSelections();
     }
   };
 
   const isVideoSelected = (videoId: string) => {
-    return selectedVideos.some((v) => v.id === videoId);
+    return selectedList.some((v) => v.id === videoId);
   };
 
   const isAllSelected =
-    videos.length > 0 && selectedVideos.length === videos.length;
+    videosList.length > 0 && selectedList.length === videosList.length;
   const isIndeterminate =
-    selectedVideos.length > 0 && selectedVideos.length < videos.length;
+    selectedList.length > 0 && selectedList.length < videosList.length;
 
   const handleDuplicateSuccess = () => {
     toast.success("Videos duplicated successfully!");
-    setSelectedVideos([]);
+    clearAllSelections();
     loadVideos();
   };
 
   // Handle Edit Video
   const handleEditClick = (video: VideoResponseDto) => {
-    setSelectedVideo(video);
+    selectedVideo.value = video;
     setEditFormData({
       code: video.code,
       url: video.url,
@@ -254,68 +229,46 @@ export default function ViralVideosPage() {
   };
 
   const handleEditSubmit = async () => {
-    if (!selectedVideo) return;
+    if (!selected) return;
 
-    setIsSubmitting(true);
+    isSubmitting.value = true;
     try {
-      await updateVideo(selectedVideo.id, editFormData);
+      await updateVideo(selected.id, editFormData);
       toast.success("Video updated successfully!");
       setEditDialogOpen(false);
-      setSelectedVideo(null);
+      selectedVideo.value = null;
       loadVideos();
     } catch (error) {
       console.error("Failed to update video:", error);
       toast.error("Failed to update video");
     } finally {
-      setIsSubmitting(false);
+      isSubmitting.value = false;
     }
   };
 
   // Handle Delete Video
   const handleDeleteClick = (video: VideoResponseDto) => {
-    setSelectedVideo(video);
+    selectedVideo.value = video;
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedVideo) return;
-
-    setIsSubmitting(true);
-    try {
-      await deleteVideo(selectedVideo.id);
-      toast.success("Video deleted successfully!");
+    const success = await deleteSelectedVideo();
+    if (success) {
       setDeleteDialogOpen(false);
-      setSelectedVideo(null);
-      loadVideos();
-    } catch (error) {
-      console.error("Failed to delete video:", error);
-      toast.error("Failed to delete video");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // Handle Status Toggle
   const handleStatusClick = (video: VideoResponseDto) => {
-    setSelectedVideo(video);
+    selectedVideo.value = video;
     setStatusDialogOpen(true);
   };
 
   const handleStatusConfirm = async () => {
-    if (!selectedVideo) return;
-
-    setIsSubmitting(true);
-    try {
-      await toggleVideoStatus(selectedVideo.id, !selectedVideo.isActive);
-      toast.success(`Video ${selectedVideo.isActive ? "deactivated" : "activated"} successfully!`);
+    const success = await toggleSelectedVideoStatus();
+    if (success) {
       setStatusDialogOpen(false);
-      setSelectedVideo(null);
-      loadVideos();
-    } catch (error) {
-      console.error("Failed to toggle video status:", error);
-      toast.error("Failed to update video status");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -399,44 +352,38 @@ export default function ViralVideosPage() {
 
   const handleFilterByBatch = (batchId: string) => {
     if (batchId === "all") {
-      setFilters((prev) => {
-        const { batchId: _, ...rest } = prev;
-        return rest;
-      });
+      const { batchId: _, ...rest } = filters;
+      videoFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, batchId: Number(batchId), pageNo: 0 }));
+      updateFilters({ batchId: Number(batchId), pageNo: 0 });
     }
   };
 
   const handleFilterByType = (videoType: string) => {
     if (videoType === "all") {
-      setFilters((prev) => {
-        const { videoType: _, ...rest } = prev;
-        return rest;
-      });
+      const { videoType: _, ...rest } = filters;
+      videoFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, videoType, pageNo: 0 }));
+      updateFilters({ videoType, pageNo: 0 });
     }
   };
 
   const handleFilterByStatus = (active: string) => {
     if (active === "all") {
-      setFilters((prev) => {
-        const { active: _, ...rest } = prev;
-        return rest;
-      });
+      const { active: _, ...rest } = filters;
+      videoFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, active: active === "true", pageNo: 0 }));
+      updateFilters({ active: active === "true", pageNo: 0 });
     }
   };
 
   // Stats calculations
-  const activeVideos = videos.filter((v) => v.isActive).length;
-  const portraitVideos = videos.filter(
+  const activeVideos = videosList.filter((v) => v.isActive).length;
+  const portraitVideos = videosList.filter(
     (v) => v.videoOrientation === "PORTRAIT"
   ).length;
   const uniqueBatches = new Set(
-    videos.flatMap((v) => v.batches?.map((b) => b.batchId) || [])
+    videosList.flatMap((v) => v.batches?.map((b) => b.batchId) || [])
   ).size;
 
   return (
@@ -450,23 +397,23 @@ export default function ViralVideosPage() {
           </h1>
           <p className="text-muted-foreground">
             Manage and upload viral videos for different batches
-            {selectedVideos.length > 0 && (
+            {selectedList.length > 0 && (
               <span className="ml-2 text-rose-600 font-medium">
-                • {selectedVideos.length} video
-                {selectedVideos.length > 1 ? "s" : ""} selected
+                • {selectedList.length} video
+                {selectedList.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {selectedVideos.length > 0 && (
+          {selectedList.length > 0 && (
             <Button
               variant="outline"
               onClick={() => setShowDuplicateDialog(true)}
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
             >
               <Copy className="mr-2 h-4 w-4" />
-              Duplicate ({selectedVideos.length})
+              Duplicate ({selectedList.length})
             </Button>
           )}
           <Button variant="outline" onClick={handleTableAuditClick}>
@@ -510,7 +457,7 @@ export default function ViralVideosPage() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by video code..."
-              value={searchQuery}
+              value={search}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-8"
             />
@@ -527,7 +474,7 @@ export default function ViralVideosPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Batches</SelectItem>
-            {batches.map((batch) => (
+            {batchesList.map((batch) => (
               <SelectItem key={batch.id} value={String(batch.id)}>
                 {batch.name}
               </SelectItem>
@@ -571,14 +518,8 @@ export default function ViralVideosPage() {
         <Button
           variant="outline"
           onClick={() => {
-            setFilters({
-              pageNo: 0,
-              pageSize: 20,
-              sortBy: "displayOrder",
-              sortDir: "ASC",
-              active: true,
-            });
-            setSearchQuery("");
+            resetVideoState();
+            loadVideos();
           }}
         >
           Clear Filters
@@ -592,7 +533,7 @@ export default function ViralVideosPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xl font-semibold text-foreground leading-tight">
-                {totalElements}
+                {total}
               </div>
               <p className="text-xs text-muted-foreground leading-tight">
                 Total Videos
@@ -718,7 +659,7 @@ export default function ViralVideosPage() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : videos.length === 0 ? (
+            ) : videosList.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="h-32 text-center">
                   <div className="flex flex-col items-center justify-center">
@@ -741,7 +682,7 @@ export default function ViralVideosPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              videos.map((video) => (
+              videosList.map((video) => (
                 <TableRow key={video.id} className="hover:bg-muted/30">
                   <TableCell>
                     <Checkbox
@@ -891,7 +832,7 @@ export default function ViralVideosPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            setSelectedVideos([video]);
+                            selectedVideos.value = [video];
                             setShowDuplicateDialog(true);
                           }}
                           className="cursor-pointer"
@@ -926,20 +867,17 @@ export default function ViralVideosPage() {
       </div>
 
       {/* Pagination */}
-      {totalElements > filters.pageSize! && (
+      {total > filters.pageSize! && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {videos.length} of {totalElements} videos
+            Showing {videosList.length} of {total} videos
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  pageNo: Math.max(0, prev.pageNo! - 1),
-                }))
+                updateFilters({ pageNo: Math.max(0, filters.pageNo! - 1) })
               }
               disabled={filters.pageNo === 0}
             >
@@ -947,15 +885,15 @@ export default function ViralVideosPage() {
             </Button>
             <span className="text-sm text-muted-foreground">
               Page {(filters.pageNo || 0) + 1} of{" "}
-              {Math.ceil(totalElements / (filters.pageSize || 20))}
+              {Math.ceil(total / (filters.pageSize || 20))}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
-                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
+                updateFilters({ pageNo: filters.pageNo! + 1 })
               }
-              disabled={videos.length < filters.pageSize!}
+              disabled={videosList.length < filters.pageSize!}
             >
               Next
             </Button>
@@ -981,7 +919,7 @@ export default function ViralVideosPage() {
       <DuplicateVideoDialog
         open={showDuplicateDialog}
         onOpenChange={setShowDuplicateDialog}
-        selectedVideos={selectedVideos}
+        selectedVideos={selectedList}
         onSuccess={handleDuplicateSuccess}
       />
 
@@ -998,7 +936,7 @@ export default function ViralVideosPage() {
           <DialogHeader>
             <DialogTitle>Edit Video</DialogTitle>
             <DialogDescription>
-              Update video details for {selectedVideo?.code}
+              Update video details for {selected?.code}
             </DialogDescription>
           </DialogHeader>
 
@@ -1127,12 +1065,12 @@ export default function ViralVideosPage() {
             <Button
               variant="outline"
               onClick={() => setEditDialogOpen(false)}
-              disabled={isSubmitting}
+              disabled={submitting}
             >
               Cancel
             </Button>
-            <Button onClick={handleEditSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button onClick={handleEditSubmit} disabled={submitting}>
+              {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
@@ -1151,18 +1089,18 @@ export default function ViralVideosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Video</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete video "{selectedVideo?.code}"?
+              Are you sure you want to delete video "{selected?.code}"?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isSubmitting}
+              disabled={submitting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isSubmitting ? (
+              {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
@@ -1180,25 +1118,25 @@ export default function ViralVideosPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedVideo?.isActive ? "Deactivate" : "Activate"} Video
+              {selected?.isActive ? "Deactivate" : "Activate"} Video
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to {selectedVideo?.isActive ? "deactivate" : "activate"}{" "}
-              video "{selectedVideo?.videoCode}"?
+              Are you sure you want to {selected?.isActive ? "deactivate" : "activate"}{" "}
+              video "{selected?.code}"?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleStatusConfirm}
-              disabled={isSubmitting}
+              disabled={submitting}
             >
-              {isSubmitting ? (
+              {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...
                 </>
-              ) : selectedVideo?.isActive ? (
+              ) : selected?.isActive ? (
                 "Deactivate"
               ) : (
                 "Activate"

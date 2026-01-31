@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSignals } from "@preact/signals-react/runtime";
 import {
   Plus,
   Search,
@@ -17,6 +18,27 @@ import {
   GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
+
+// Import signals and actions
+import {
+  carousels,
+  carouselsLoading,
+  totalElements,
+  carouselFilters,
+  searchQuery,
+  selectedCarousel,
+  selectedCarousels,
+  batches,
+  isSubmitting,
+  loadCarousels,
+  loadBatches,
+  deleteSelectedCarousel,
+  toggleSelectedCarouselStatus,
+  toggleCarouselSelection,
+  selectAllCarousels,
+  clearAllSelections,
+  updateFilters,
+} from "@/signals/carouselState";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,46 +84,25 @@ import { CopyCarouselDialog } from "./CopyCarouselDialog";
 import { ViewCarouselDetailsDialog } from "./ViewCarouselDetailsDialog";
 import { AuditTrailPopup } from "@/components/AuditTrailPopup";
 import {
-  fetchCarousels,
-  fetchAllBatchesForCarousels,
-  deleteCarousel,
-  toggleCarouselStatus,
   fetchCarouselAuditTrail,
   fetchCarouselsTableAuditTrail,
 } from "@/services/carousels";
-import type {
-  CarouselListResponse,
-  CarouselFilters,
-  BatchOption,
-} from "@/types/carousels";
+import type { CarouselListResponse } from "@/types/carousels";
 import { VISIBILITY_TYPES } from "@/types/carousels";
 
 export default function AppCarouselsPage() {
-  const [carousels, setCarousels] = useState<CarouselListResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  useSignals();
+
+  // Local UI state (dialogs) - these don't need to be shared
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
   const [viewingCarouselId, setViewingCarouselId] = useState<number | null>(null);
-  const [selectedCarousels, setSelectedCarousels] = useState<CarouselListResponse[]>([]);
-  const [selectedCarousel, setSelectedCarousel] = useState<CarouselListResponse | null>(null);
-  const [batches, setBatches] = useState<BatchOption[]>([]);
-  const [filters, setFilters] = useState<CarouselFilters>({
-    pageNo: 0,
-    pageSize: 20,
-    sortBy: "createdAt",
-    sortDir: "DESC",
-  });
-  const [totalElements, setTotalElements] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Delete and Status Toggle states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Audit Trail state
+  // Audit Trail state (local to this page)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false);
   const [auditTrailData, setAuditTrailData] = useState<any[]>([]);
   const [auditTrailLoading, setAuditTrailLoading] = useState(false);
@@ -115,85 +116,50 @@ export default function AppCarouselsPage() {
   const [currentAuditCarouselId, setCurrentAuditCarouselId] = useState<number | null>(null);
   const [isTableAudit, setIsTableAudit] = useState(false);
 
+  // Load carousels when filters change
   useEffect(() => {
     loadCarousels();
-  }, [filters]);
+  }, [carouselFilters.value]);
 
+  // Load batches on mount
   useEffect(() => {
     loadBatches();
   }, []);
 
-  const loadCarousels = async () => {
-    setLoading(true);
-    try {
-      console.log("[AppCarouselsPage] Loading carousels with filters:", filters);
-      const response = await fetchCarousels(filters);
-      console.log("[AppCarouselsPage] Carousels response:", response);
-
-      setCarousels(response.content || []);
-      setTotalElements(response.totalElements || 0);
-
-      console.log(
-        "[AppCarouselsPage] Set carousels:",
-        response.content?.length || 0,
-        "items"
-      );
-    } catch (error) {
-      console.error("[AppCarouselsPage] Failed to load carousels:", error);
-      toast.error(
-        "Failed to load carousels: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
-      setCarousels([]);
-      setTotalElements(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadBatches = async () => {
-    try {
-      const batchesRes = await fetchAllBatchesForCarousels({ activeFlag: true });
-      setBatches(batchesRes);
-    } catch (error) {
-      console.error("[AppCarouselsPage] Failed to load batches:", error);
-    }
-  };
-
+  // Handlers using signals
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setFilters((prev) => ({ ...prev, search: query || undefined, pageNo: 0 }));
+    searchQuery.value = query;
+    updateFilters({ search: query || undefined, pageNo: 0 });
   };
 
   const handleSuccess = () => {
-    toast.success("Operation completed successfully!");
     loadCarousels();
   };
 
   const handleSelectCarousel = (carousel: CarouselListResponse, checked: boolean) => {
     if (checked) {
-      setSelectedCarousels((prev) => [...prev, carousel]);
+      selectedCarousels.value = [...selectedCarousels.value, carousel];
     } else {
-      setSelectedCarousels((prev) => prev.filter((c) => c.id !== carousel.id));
+      selectedCarousels.value = selectedCarousels.value.filter((c) => c.id !== carousel.id);
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCarousels([...carousels]);
+      selectAllCarousels();
     } else {
-      setSelectedCarousels([]);
+      clearAllSelections();
     }
   };
 
   const isCarouselSelected = (carouselId: number) => {
-    return selectedCarousels.some((c) => c.id === carouselId);
+    return selectedCarousels.value.some((c) => c.id === carouselId);
   };
 
   const isAllSelected =
-    carousels.length > 0 && selectedCarousels.length === carousels.length;
+    carousels.value.length > 0 && selectedCarousels.value.length === carousels.value.length;
   const isIndeterminate =
-    selectedCarousels.length > 0 && selectedCarousels.length < carousels.length;
+    selectedCarousels.value.length > 0 && selectedCarousels.value.length < carousels.value.length;
 
   // Handle View Details
   const handleViewDetailsClick = (carousel: CarouselListResponse) => {
@@ -203,97 +169,77 @@ export default function AppCarouselsPage() {
 
   // Handle Edit Carousel
   const handleEditClick = (carousel: CarouselListResponse) => {
-    setSelectedCarousel(carousel);
+    selectedCarousel.value = carousel;
     setShowEditDialog(true);
   };
 
   // Handle Map Carousel to Batch
   const handleCopyClick = (carousel: CarouselListResponse) => {
-    setSelectedCarousels([carousel]);
+    selectedCarousels.value = [carousel];
     setShowCopyDialog(true);
   };
 
   // Handle Delete Carousel
   const handleDeleteClick = (carousel: CarouselListResponse) => {
-    setSelectedCarousel(carousel);
+    selectedCarousel.value = carousel;
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedCarousel) return;
-
-    setIsSubmitting(true);
-    try {
-      await deleteCarousel(selectedCarousel.id);
-      toast.success("Carousel deleted successfully!");
+    const success = await deleteSelectedCarousel();
+    if (success) {
       setDeleteDialogOpen(false);
-      setSelectedCarousel(null);
-      loadCarousels();
-    } catch (error) {
-      console.error("Failed to delete carousel:", error);
-      toast.error("Failed to delete carousel");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // Handle Status Toggle
   const handleStatusClick = (carousel: CarouselListResponse) => {
-    setSelectedCarousel(carousel);
+    selectedCarousel.value = carousel;
     setStatusDialogOpen(true);
   };
 
   const handleStatusConfirm = async () => {
-    if (!selectedCarousel) return;
-
-    setIsSubmitting(true);
-    try {
-      await toggleCarouselStatus(selectedCarousel.id, !selectedCarousel.isActive);
-      toast.success(
-        `Carousel ${selectedCarousel.isActive ? "deactivated" : "activated"} successfully!`
-      );
+    const success = await toggleSelectedCarouselStatus();
+    if (success) {
       setStatusDialogOpen(false);
-      setSelectedCarousel(null);
-      loadCarousels();
-    } catch (error) {
-      console.error("Failed to toggle carousel status:", error);
-      toast.error("Failed to update carousel status");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleFilterByBatch = (batchId: string) => {
     if (batchId === "all") {
-      setFilters((prev) => {
-        const { batchId: _, ...rest } = prev;
-        return rest;
-      });
+      const { batchId: _, ...rest } = carouselFilters.value;
+      carouselFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, batchId: Number(batchId), pageNo: 0 }));
+      updateFilters({ batchId: Number(batchId), pageNo: 0 });
     }
   };
 
   const handleFilterByStatus = (active: string) => {
     if (active === "all") {
-      setFilters((prev) => {
-        const { active: _, ...rest } = prev;
-        return rest;
-      });
+      const { active: _, ...rest } = carouselFilters.value;
+      carouselFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, active: active === "true", pageNo: 0 }));
+      updateFilters({ active: active === "true", pageNo: 0 });
     }
   };
 
   const handleFilterByScreenType = (screenType: string) => {
     if (screenType === "all") {
-      setFilters((prev) => {
-        const { screenType: _, ...rest } = prev;
-        return rest;
-      });
+      const { screenType: _, ...rest } = carouselFilters.value;
+      carouselFilters.value = rest;
     } else {
-      setFilters((prev) => ({ ...prev, screenType, pageNo: 0 }));
+      updateFilters({ screenType, pageNo: 0 });
     }
+  };
+
+  const handleClearFilters = () => {
+    carouselFilters.value = {
+      pageNo: 0,
+      pageSize: 20,
+      sortBy: "createdAt",
+      sortDir: "DESC",
+    };
+    searchQuery.value = "";
   };
 
   // Audit Trail handlers
@@ -363,9 +309,20 @@ export default function AppCarouselsPage() {
     });
   };
 
-  // Stats calculations
-  const activeCarousels = carousels.filter((c) => c.isActive).length;
-  const allVisibilityCarousels = carousels.filter((c) => c.visibilityType === "ALL").length;
+  // Pagination handlers
+  const handlePrevPage = () => {
+    updateFilters({ pageNo: Math.max(0, (carouselFilters.value.pageNo || 0) - 1) });
+  };
+
+  const handleNextPage = () => {
+    updateFilters({ pageNo: (carouselFilters.value.pageNo || 0) + 1 });
+  };
+
+  // Stats calculations - use .value for signal access
+  const activeCarousels = carousels.value.filter((c) => c.isActive).length;
+  const allVisibilityCarousels = carousels.value.filter((c) => c.visibilityType === "ALL").length;
+  const filters = carouselFilters.value;
+  const loading = carouselsLoading.value;
 
   return (
     <div className="flex h-full flex-col space-y-6">
@@ -378,23 +335,23 @@ export default function AppCarouselsPage() {
           </h1>
           <p className="text-muted-foreground">
             Manage app carousels for different batches
-            {selectedCarousels.length > 0 && (
+            {selectedCarousels.value.length > 0 && (
               <span className="ml-2 text-purple-600 font-medium">
-                • {selectedCarousels.length} carousel
-                {selectedCarousels.length > 1 ? "s" : ""} selected
+                • {selectedCarousels.value.length} carousel
+                {selectedCarousels.value.length > 1 ? "s" : ""} selected
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          {selectedCarousels.length > 0 && (
+          {selectedCarousels.value.length > 0 && (
             <Button
               variant="outline"
               onClick={() => setShowCopyDialog(true)}
               className="text-purple-600 border-purple-200 hover:bg-purple-50"
             >
               <GitBranch className="mr-2 h-4 w-4" />
-              Map ({selectedCarousels.length})
+              Map ({selectedCarousels.value.length})
             </Button>
           )}
           <Button variant="outline" onClick={handleTableAuditClick}>
@@ -418,7 +375,7 @@ export default function AppCarouselsPage() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by carousel code..."
-              value={searchQuery}
+              value={searchQuery.value}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-8"
             />
@@ -435,7 +392,7 @@ export default function AppCarouselsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Batches</SelectItem>
-            {batches.map((batch) => (
+            {batches.value.map((batch) => (
               <SelectItem key={batch.id} value={String(batch.id)}>
                 {batch.name}
               </SelectItem>
@@ -475,18 +432,7 @@ export default function AppCarouselsPage() {
           </SelectContent>
         </Select>
 
-        <Button
-          variant="outline"
-          onClick={() => {
-            setFilters({
-              pageNo: 0,
-              pageSize: 20,
-              sortBy: "createdAt",
-              sortDir: "DESC",
-            });
-            setSearchQuery("");
-          }}
-        >
+        <Button variant="outline" onClick={handleClearFilters}>
           Clear Filters
         </Button>
       </div>
@@ -498,7 +444,7 @@ export default function AppCarouselsPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xl font-semibold text-foreground leading-tight">
-                {totalElements}
+                {totalElements.value}
               </div>
               <p className="text-xs text-muted-foreground leading-tight">
                 Total Carousels
@@ -549,7 +495,7 @@ export default function AppCarouselsPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xl font-semibold text-foreground leading-tight">
-                {carousels.length - activeCarousels}
+                {carousels.value.length - activeCarousels}
               </div>
               <p className="text-xs text-muted-foreground leading-tight">
                 Inactive Carousels
@@ -616,7 +562,7 @@ export default function AppCarouselsPage() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : carousels.length === 0 ? (
+            ) : carousels.value.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-32 text-center">
                   <div className="flex flex-col items-center justify-center">
@@ -639,7 +585,7 @@ export default function AppCarouselsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              carousels.map((carousel) => (
+              carousels.value.map((carousel) => (
                 <TableRow key={carousel.id} className="hover:bg-muted/30">
                   <TableCell>
                     <Checkbox
@@ -791,36 +737,29 @@ export default function AppCarouselsPage() {
       </div>
 
       {/* Pagination */}
-      {totalElements > filters.pageSize! && (
+      {totalElements.value > (filters.pageSize || 20) && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {carousels.length} of {totalElements} carousels
+            Showing {carousels.value.length} of {totalElements.value} carousels
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  pageNo: Math.max(0, prev.pageNo! - 1),
-                }))
-              }
+              onClick={handlePrevPage}
               disabled={filters.pageNo === 0}
             >
               Previous
             </Button>
             <span className="text-sm text-muted-foreground">
               Page {(filters.pageNo || 0) + 1} of{" "}
-              {Math.ceil(totalElements / (filters.pageSize || 20))}
+              {Math.ceil(totalElements.value / (filters.pageSize || 20))}
             </span>
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                setFilters((prev) => ({ ...prev, pageNo: prev.pageNo! + 1 }))
-              }
-              disabled={carousels.length < filters.pageSize!}
+              onClick={handleNextPage}
+              disabled={carousels.value.length < (filters.pageSize || 20)}
             >
               Next
             </Button>
@@ -833,7 +772,7 @@ export default function AppCarouselsPage() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSuccess={handleSuccess}
-        batches={batches}
+        batches={batches.value}
       />
 
       {/* Edit Carousel Dialog */}
@@ -841,8 +780,8 @@ export default function AppCarouselsPage() {
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         onSuccess={handleSuccess}
-        carouselId={selectedCarousel?.id || null}
-        batches={batches}
+        carouselId={selectedCarousel.value?.id || null}
+        batches={batches.value}
       />
 
       {/* Copy Carousel Dialog */}
@@ -850,8 +789,8 @@ export default function AppCarouselsPage() {
         open={showCopyDialog}
         onOpenChange={setShowCopyDialog}
         onSuccess={handleSuccess}
-        carousels={selectedCarousels}
-        batches={batches}
+        carousels={selectedCarousels.value}
+        batches={batches.value}
       />
 
       {/* View Carousel Details Dialog */}
@@ -867,18 +806,18 @@ export default function AppCarouselsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Carousel</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete carousel "{selectedCarousel?.carouselCode}"?
+              Are you sure you want to delete carousel "{selectedCarousel.value?.carouselCode}"?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting.value}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isSubmitting}
+              disabled={isSubmitting.value}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isSubmitting ? (
+              {isSubmitting.value ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
@@ -896,26 +835,26 @@ export default function AppCarouselsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedCarousel?.isActive ? "Deactivate" : "Activate"} Carousel
+              {selectedCarousel.value?.isActive ? "Deactivate" : "Activate"} Carousel
             </AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to{" "}
-              {selectedCarousel?.isActive ? "deactivate" : "activate"} carousel "
-              {selectedCarousel?.carouselCode}"?
+              {selectedCarousel.value?.isActive ? "deactivate" : "activate"} carousel "
+              {selectedCarousel.value?.carouselCode}"?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting.value}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleStatusConfirm}
-              disabled={isSubmitting}
+              disabled={isSubmitting.value}
             >
-              {isSubmitting ? (
+              {isSubmitting.value ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...
                 </>
-              ) : selectedCarousel?.isActive ? (
+              ) : selectedCarousel.value?.isActive ? (
                 "Deactivate"
               ) : (
                 "Activate"

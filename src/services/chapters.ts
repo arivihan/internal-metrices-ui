@@ -740,7 +740,7 @@ export interface AuditTrailPaginatedResponse {
  * GET /secure/api/v1/audit-logs/row?entityName=Chapter&entityId={chapterId}
  */
 export const fetchChapterAuditTrail = async (
-  chapterId: number,
+  chapterId: string | number,
   pageNo: number = 0,
   pageSize: number = 10
 ): Promise<AuditTrailPaginatedResponse> => {
