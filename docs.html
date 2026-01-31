@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Metrics UI - Developer Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #121214;
+            --bg-card: #1a1a1e;
+            --bg-hover: #222228;
+            --bg-code: #0d1117;
+            --text-primary: #f0f0f0;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-color: #2d2d32;
+            --accent-violet: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-pink: #ec4899;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Layout */
+        .layout { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1));
+        }
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .logo-text h1 { font-size: 1.1rem; font-weight: 700; }
+        .logo-text span { font-size: 0.7rem; color: var(--text-secondary); }
+
+        .sidebar-nav { padding: 1rem 0; }
+        .nav-section { margin-bottom: 1.5rem; }
+        .nav-title {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            padding: 0 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .nav-link.active {
+            background: rgba(139,92,246,0.1);
+            color: var(--accent-violet);
+            border-left-color: var(--accent-violet);
+        }
+        .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+        /* Main Content */
+        .main { flex: 1; margin-left: 280px; padding: 2rem 3rem; max-width: 1200px; }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1));
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        .hero h2 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .hero p { color: var(--text-secondary); max-width: 600px; }
+        .hero-badges { display: flex; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap; }
+        .hero-badge {
+            padding: 6px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Section */
+        .section { margin-bottom: 3rem; scroll-margin-top: 2rem; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .section-icon.violet { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+        .section-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .section-icon.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .section-icon.emerald { background: linear-gradient(135deg, #10b981, #059669); }
+        .section-icon.pink { background: linear-gradient(135deg, #ec4899, #db2777); }
+        .section-icon.amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .section-icon.orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .section-title { font-size: 1.4rem; font-weight: 700; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .card-header:hover { background: var(--bg-hover); }
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .card-badge.violet { background: rgba(139,92,246,0.2); color: var(--accent-violet); }
+        .card-badge.blue { background: rgba(59,130,246,0.2); color: var(--accent-blue); }
+        .card-badge.cyan { background: rgba(6,182,212,0.2); color: var(--accent-cyan); }
+        .card-badge.emerald { background: rgba(16,185,129,0.2); color: var(--accent-emerald); }
+        .card-badge.pink { background: rgba(236,72,153,0.2); color: var(--accent-pink); }
+        .card-badge.amber { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+        .card-toggle { color: var(--text-muted); transition: transform 0.2s; }
+        .card-toggle.open { transform: rotate(180deg); }
+        .card-content { padding: 1.25rem; display: none; }
+        .card-content.open { display: block; }
+
+        /* Code blocks */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: var(--bg-code);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-cyan);
+        }
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            line-height: 1.6;
+        }
+        .code-block-title {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Tables */
+        .table-wrapper { overflow-x: auto; margin: 1rem 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th {
+            text-align: left;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+        tr:hover td { background: var(--bg-hover); }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 4px;
+            font-weight: 500;
+        }
+        .tag-get { background: rgba(16,185,129,0.2); color: var(--accent-emerald); }
+        .tag-post { background: rgba(59,130,246,0.2); color: var(--accent-blue); }
+        .tag-put { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+        .tag-delete { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+        .tag-patch { background: rgba(139,92,246,0.2); color: var(--accent-violet); }
+
+        /* File paths */
+        .file-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent-amber);
+            background: rgba(245,158,11,0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        /* Info boxes */
+        .info-box {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+        .info-box.info { background: rgba(59,130,246,0.1); border-color: var(--accent-blue); }
+        .info-box.warning { background: rgba(245,158,11,0.1); border-color: var(--accent-amber); }
+        .info-box.success { background: rgba(16,185,129,0.1); border-color: var(--accent-emerald); }
+        .info-box.danger { background: rgba(239,68,68,0.1); border-color: var(--accent-red); }
+        .info-box-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; }
+        .info-box p { font-size: 0.85rem; color: var(--text-secondary); }
+
+        /* Grid layouts */
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        @media (max-width: 900px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .main { margin-left: 0; padding: 1rem; }
+            .sidebar { display: none; }
+        }
+
+        /* Stat cards */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+        }
+        .stat-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+        .stat-card.violet .stat-value { color: var(--accent-violet); }
+        .stat-card.blue .stat-value { color: var(--accent-blue); }
+        .stat-card.cyan .stat-value { color: var(--accent-cyan); }
+        .stat-card.emerald .stat-value { color: var(--accent-emerald); }
+
+        /* Tree structure */
+        .tree { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.8; }
+        .tree-folder { color: var(--accent-amber); }
+        .tree-file { color: var(--text-secondary); }
+        .tree-comment { color: var(--text-muted); font-style: italic; }
+
+        /* Search */
+        .search-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            width: 100%;
+            outline: none;
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+
+        /* Quick links */
+        .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 1rem 0; }
+        .quick-link {
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .quick-link:hover {
+            background: var(--accent-violet);
+            border-color: var(--accent-violet);
+            color: white;
+        }
+
+        /* Copy button */
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: var(--accent-violet); color: white; }
+        .code-wrapper { position: relative; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">IM</div>
+                    <div class="logo-text">
+                        <h1>Internal Metrics</h1>
+                        <span>Developer Documentation</span>
+                    </div>
+                </div>
+            </div>
+            <div class="search-box">
+                <span>&#128269;</span>
+                <input type="text" id="searchInput" placeholder="Search docs..." onkeyup="searchDocs()">
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-title">Getting Started</div>
+                    <a href="#overview" class="nav-link"><span class="nav-icon">&#127968;</span> Overview</a>
+                    <a href="#quick-start" class="nav-link"><span class="nav-icon">&#9889;</span> Quick Start</a>
+                    <a href="#folder-structure" class="nav-link"><span class="nav-icon">&#128193;</span> Folder Structure</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Configuration</div>
+                    <a href="#env-config" class="nav-link"><span class="nav-icon">&#9881;</span> Environment (.env)</a>
+                    <a href="#proxy-config" class="nav-link"><span class="nav-icon">&#128279;</span> Proxy Setup</a>
+                    <a href="#vite-config" class="nav-link"><span class="nav-icon">&#9889;</span> Vite Config</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Architecture</div>
+                    <a href="#services" class="nav-link"><span class="nav-icon">&#128268;</span> Services & APIs</a>
+                    <a href="#types" class="nav-link"><span class="nav-icon">&#128196;</span> Types & Interfaces</a>
+                    <a href="#state" class="nav-link"><span class="nav-icon">&#128200;</span> State Management</a>
+                    <a href="#routing" class="nav-link"><span class="nav-icon">&#128506;</span> Routing</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Components</div>
+                    <a href="#dynamic-components" class="nav-link"><span class="nav-icon">&#128736;</span> Dynamic Containers</a>
+                    <a href="#carousels" class="nav-link"><span class="nav-icon">&#127904;</span> Carousels</a>
+                    <a href="#reels" class="nav-link"><span class="nav-icon">&#127909;</span> Reels</a>
+                    <a href="#cards" class="nav-link"><span class="nav-icon">&#127183;</span> Home Screen Cards</a>
+                    <a href="#videos" class="nav-link"><span class="nav-icon">&#127916;</span> Viral Videos</a>
+                    <a href="#notes" class="nav-link"><span class="nav-icon">&#128221;</span> Notes</a>
+                    <a href="#tags" class="nav-link"><span class="nav-icon">&#127991;</span> Tags</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Features</div>
+                    <a href="#auth" class="nav-link"><span class="nav-icon">&#128274;</span> Authentication</a>
+                    <a href="#rbac" class="nav-link"><span class="nav-icon">&#128101;</span> RBAC</a>
+                    <a href="#audit" class="nav-link"><span class="nav-icon">&#128203;</span> Audit Trail</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Reference</div>
+                    <a href="#constants" class="nav-link"><span class="nav-icon">&#128218;</span> Constants</a>
+                    <a href="#api-endpoints" class="nav-link"><span class="nav-icon">&#128421;</span> API Endpoints</a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Hero -->
+            <section class="hero">
+                <h2>Internal Metrics UI</h2>
+                <p>Comprehensive developer documentation for the Arivihan Internal Metrics Dashboard - a content management system for managing carousels, reels, videos, notes, and more.</p>
+                <div class="hero-badges">
+                    <span class="hero-badge">React 19</span>
+                    <span class="hero-badge">TypeScript</span>
+                    <span class="hero-badge">Vite</span>
+                    <span class="hero-badge">Tailwind CSS</span>
+                    <span class="hero-badge">Shadcn/UI</span>
+                    <span class="hero-badge">Preact Signals</span>
+                </div>
+            </section>
+
+            <!-- Quick Links -->
+            <div class="quick-links">
+                <a href="#env-config" class="quick-link">&#9881; .env Config</a>
+                <a href="#proxy-config" class="quick-link">&#128279; Proxy</a>
+                <a href="#dynamic-components" class="quick-link">&#128736; Dynamic Containers</a>
+                <a href="#services" class="quick-link">&#128268; Services</a>
+                <a href="#api-endpoints" class="quick-link">&#128421; API Endpoints</a>
+            </div>
+
+            <!-- Overview -->
+            <section id="overview" class="section">
+                <div class="section-header">
+                    <div class="section-icon violet">&#127968;</div>
+                    <h2 class="section-title">Overview</h2>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Internal Metrics UI is an admin dashboard for the Arivihan education platform. It provides tools for content management, user analytics, and system configuration.
+                </p>
+                <div class="grid-4" style="margin-top: 1.5rem;">
+                    <div class="stat-card violet">
+                        <div class="stat-value">18</div>
+                        <div class="stat-label">Service Files</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-value">17</div>
+                        <div class="stat-label">Type Definitions</div>
+                    </div>
+                    <div class="stat-card cyan">
+                        <div class="stat-value">24+</div>
+                        <div class="stat-label">Page Components</div>
+                    </div>
+                    <div class="stat-card emerald">
+                        <div class="stat-value">40+</div>
+                        <div class="stat-label">UI Components</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section id="quick-start" class="section">
+                <div class="section-header">
+                    <div class="section-icon emerald">&#9889;</div>
+                    <h2 class="section-title">Quick Start</h2>
+                </div>
+                <div class="code-wrapper">
+                    <pre><span style="color: var(--text-muted)"># Install dependencies</span>
+npm install
+
+<span style="color: var(--text-muted)"># Start development server (runs on port 3000)</span>
+npm run dev
+
+<span style="color: var(--text-muted)"># Build for production</span>
+npm run build
+
+<span style="color: var(--text-muted)"># Preview production build</span>
+npm run preview</pre>
+                </div>
+            </section>
+
+            <!-- Environment Configuration -->
+            <section id="env-config" class="section">
+                <div class="section-header">
+                    <div class="section-icon amber">&#9881;</div>
+                    <h2 class="section-title">Environment Configuration (.env)</h2>
+                </div>
+
+                <div class="info-box warning">
+                    <div class="info-box-title">&#9888; Important</div>
+                    <p>Never commit real API keys or secrets. Use placeholder values in documentation.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">.env.development</span>
+                            <span class="card-badge emerald">Development</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>Variable</th>
+                                    <th>Description</th>
+                                    <th>Example Value</th>
+                                </tr>
+                                <tr>
+                                    <td><code>VITE_API_BASE_URL</code></td>
+                                    <td>Base URL for all API calls</td>
+                                    <td><code>https://platform-dev.example.com/internal-metrics</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>VITE_SIDEBAR_API_URL</code></td>
+                                    <td>Endpoint for dynamic sidebar configuration</td>
+                                    <td><code>/secure/ui/fetch-component-configs/drawer-items</code></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <pre><span style="color: var(--accent-emerald)"># Development Environment</span>
+VITE_API_BASE_URL=https://platform-dev.example.com/internal-metrics
+VITE_SIDEBAR_API_URL=/secure/ui/fetch-component-configs/drawer-items</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">.env.production</span>
+                            <span class="card-badge blue">Production</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>Variable</th>
+                                    <th>Description</th>
+                                    <th>Example Value</th>
+                                </tr>
+                                <tr>
+                                    <td><code>VITE_API_BASE_URL</code></td>
+                                    <td>Production API base URL</td>
+                                    <td><code>https://platform.example.com/internal-metrics</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>VITE_SIDEBAR_API_URL</code></td>
+                                    <td>Sidebar config endpoint</td>
+                                    <td><code>https://api.example.com/sidebar-data</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>VITE_DASHBOARD_SERVICES_API_URL</code></td>
+                                    <td>Dashboard services API</td>
+                                    <td><code>https://api.example.com/dashboard-services</code></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <pre><span style="color: var(--accent-blue)"># Production Environment</span>
+VITE_API_BASE_URL=https://platform.example.com/internal-metrics
+VITE_SIDEBAR_API_URL=https://api.example.com/sidebar-data
+VITE_DASHBOARD_SERVICES_API_URL=https://api.example.com/dashboard-services</pre>
+                    </div>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">&#128161; How Environment Variables Work</div>
+                    <p>Vite exposes env variables with <code>VITE_</code> prefix to the client. Access them via <code>import.meta.env.VITE_API_BASE_URL</code></p>
+                </div>
+            </section>
+
+            <!-- Proxy Configuration -->
+            <section id="proxy-config" class="section">
+                <div class="section-header">
+                    <div class="section-icon cyan">&#128279;</div>
+                    <h2 class="section-title">Proxy Configuration</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Vite dev server proxies API requests to avoid CORS issues during development.
+                </p>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">vite.config.ts</span>
+                            <span class="card-badge cyan">Proxy Settings</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>Local Path</th>
+                                    <th>Target Server</th>
+                                    <th>Rewrite Rule</th>
+                                    <th>Purpose</th>
+                                </tr>
+                                <tr>
+                                    <td><code>/api/*</code></td>
+                                    <td><code>https://platform-dev.example.com</code></td>
+                                    <td><code>/api</code> → <code>/internal-metrics</code></td>
+                                    <td>Main API requests</td>
+                                </tr>
+                                <tr>
+                                    <td><code>/analytics-api/*</code></td>
+                                    <td><code>https://analytics.example.com</code></td>
+                                    <td><code>/analytics-api</code> → <code>/</code></td>
+                                    <td>Analytics & user activity tracking</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <pre><span style="color: var(--text-muted)">// vite.config.ts</span>
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  server: {
+    port: 3000,
+    proxy: {
+      <span style="color: var(--accent-cyan)">'/api'</span>: {
+        target: <span style="color: var(--accent-emerald)">'https://platform-dev.example.com'</span>,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/internal-metrics'),
+      },
+      <span style="color: var(--accent-cyan)">'/analytics-api'</span>: {
+        target: <span style="color: var(--accent-emerald)">'https://analytics.example.com'</span>,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/analytics-api/, ''),
+      },
+    },
+  },
+})</pre>
+
+                        <div class="info-box info">
+                            <div class="info-box-title">&#128161; How Proxy Works</div>
+                            <p>When you call <code>fetch('/api/users')</code>, Vite intercepts it and forwards to <code>https://platform-dev.example.com/internal-metrics/users</code></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vite Config -->
+            <section id="vite-config" class="section">
+                <div class="section-header">
+                    <div class="section-icon pink">&#9889;</div>
+                    <h2 class="section-title">Vite Configuration</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">vite.config.ts</span>
+                            <span class="card-badge pink">Full Config</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <pre>import path from 'path'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  <span style="color: var(--accent-violet)">plugins</span>: [
+    react(),         <span style="color: var(--text-muted)">// React Fast Refresh</span>
+    tailwindcss()    <span style="color: var(--text-muted)">// Tailwind CSS compilation</span>
+  ],
+  <span style="color: var(--accent-violet)">resolve</span>: {
+    alias: {
+      <span style="color: var(--accent-cyan)">'@'</span>: path.resolve(__dirname, './src'),  <span style="color: var(--text-muted)">// @ alias for src/</span>
+    },
+  },
+  <span style="color: var(--accent-violet)">server</span>: {
+    port: 3000,      <span style="color: var(--text-muted)">// Dev server port</span>
+    proxy: { ... }   <span style="color: var(--text-muted)">// See Proxy Configuration section</span>
+  },
+})</pre>
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Config</th>
+                                    <th>Description</th>
+                                </tr>
+                                <tr>
+                                    <td>Path Alias</td>
+                                    <td><code>@</code> → <code>./src</code></td>
+                                    <td>Import from <code>@/components/Button</code> instead of <code>../../components/Button</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Dev Server</td>
+                                    <td>Port <code>3000</code></td>
+                                    <td>Access app at <code>http://localhost:3000</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Plugins</td>
+                                    <td>React + Tailwind</td>
+                                    <td>Hot reload and CSS processing</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Folder Structure -->
+            <section id="folder-structure" class="section">
+                <div class="section-header">
+                    <div class="section-icon blue">&#128193;</div>
+                    <h2 class="section-title">Folder Structure</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Project Structure</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre class="tree"><span class="tree-folder">internal-metrices-ui/</span>
+├── <span class="tree-folder">src/</span>
+│   ├── <span class="tree-folder">pages/</span>                    <span class="tree-comment"># Page components (route-level)</span>
+│   │   ├── <span class="tree-folder">app-carousels/</span>        <span class="tree-comment"># Carousel CRUD dialogs</span>
+│   │   ├── <span class="tree-folder">home-screen-cards/</span>    <span class="tree-comment"># Card management dialogs</span>
+│   │   ├── <span class="tree-folder">reels/</span>                <span class="tree-comment"># Reels upload & management</span>
+│   │   ├── <span class="tree-folder">viral-videos/</span>         <span class="tree-comment"># Video management</span>
+│   │   ├── <span class="tree-folder">notes-upload/</span>         <span class="tree-comment"># Notes management</span>
+│   │   ├── <span class="tree-folder">users/</span>                <span class="tree-comment"># User list & details</span>
+│   │   ├── <span class="tree-folder">Tags/</span>                 <span class="tree-comment"># Tag generation</span>
+│   │   ├── <span class="tree-folder">rbac/</span>                 <span class="tree-comment"># Role-based access control</span>
+│   │   ├── <span class="tree-folder">dashboard/</span>            <span class="tree-comment"># Main dashboard</span>
+│   │   ├── <span class="tree-folder">sql-playground/</span>       <span class="tree-comment"># SQL query interface</span>
+│   │   ├── <span class="tree-file">Login.tsx</span>             <span class="tree-comment"># Login page</span>
+│   │   └── <span class="tree-file">DynamicContent.tsx</span>    <span class="tree-comment"># Dynamic page renderer</span>
+│   │
+│   ├── <span class="tree-folder">services/</span>                 <span class="tree-comment"># API service layer (18 files)</span>
+│   │   ├── <span class="tree-file">apiClient.ts</span>          <span class="tree-comment"># Core HTTP client</span>
+│   │   ├── <span class="tree-file">auth.ts</span>               <span class="tree-comment"># Authentication APIs</span>
+│   │   ├── <span class="tree-file">carousels.ts</span>          <span class="tree-comment"># Carousel CRUD</span>
+│   │   ├── <span class="tree-file">reels.ts</span>              <span class="tree-comment"># Reels APIs</span>
+│   │   ├── <span class="tree-file">viralVideos.ts</span>        <span class="tree-comment"># Video APIs</span>
+│   │   ├── <span class="tree-file">notes.ts</span>              <span class="tree-comment"># Notes APIs</span>
+│   │   ├── <span class="tree-file">tags.ts</span>               <span class="tree-comment"># Tags APIs</span>
+│   │   ├── <span class="tree-file">users.ts</span>              <span class="tree-comment"># User management</span>
+│   │   ├── <span class="tree-file">sidebar.ts</span>            <span class="tree-comment"># Dynamic sidebar config</span>
+│   │   └── <span class="tree-file">...</span>                   <span class="tree-comment"># Other services</span>
+│   │
+│   ├── <span class="tree-folder">types/</span>                    <span class="tree-comment"># TypeScript interfaces (17 files)</span>
+│   │   ├── <span class="tree-file">auth.ts</span>
+│   │   ├── <span class="tree-file">carousels.ts</span>
+│   │   ├── <span class="tree-file">reels.ts</span>
+│   │   ├── <span class="tree-file">viralVideos.ts</span>
+│   │   ├── <span class="tree-file">sidebar.ts</span>            <span class="tree-comment"># Dynamic sidebar types</span>
+│   │   └── <span class="tree-file">...</span>
+│   │
+│   ├── <span class="tree-folder">components/</span>               <span class="tree-comment"># Reusable UI components</span>
+│   │   ├── <span class="tree-folder">ui/</span>                   <span class="tree-comment"># Shadcn/UI primitives (40+)</span>
+│   │   ├── <span class="tree-folder">layout/</span>               <span class="tree-comment"># Layout wrappers</span>
+│   │   ├── <span class="tree-folder">common/</span>               <span class="tree-comment"># Shared components</span>
+│   │   ├── <span class="tree-file">DynamicTable.tsx</span>      <span class="tree-comment"># Generic data table</span>
+│   │   ├── <span class="tree-file">SearchFilters.tsx</span>     <span class="tree-comment"># Filter widget</span>
+│   │   └── <span class="tree-file">app-sidebar.tsx</span>       <span class="tree-comment"># Main sidebar</span>
+│   │
+│   ├── <span class="tree-folder">signals/</span>                  <span class="tree-comment"># Preact Signals state</span>
+│   │   ├── <span class="tree-file">auth.ts</span>               <span class="tree-comment"># Auth state (token, user)</span>
+│   │   ├── <span class="tree-file">sidebar.ts</span>            <span class="tree-comment"># Sidebar config state</span>
+│   │   └── <span class="tree-file">theme.ts</span>              <span class="tree-comment"># Theme state</span>
+│   │
+│   ├── <span class="tree-folder">hooks/</span>                    <span class="tree-comment"># Custom React hooks</span>
+│   ├── <span class="tree-folder">lib/</span>                      <span class="tree-comment"># Utility functions</span>
+│   ├── <span class="tree-file">App.tsx</span>                   <span class="tree-comment"># Root component with routes</span>
+│   └── <span class="tree-file">main.tsx</span>                  <span class="tree-comment"># Entry point</span>
+│
+├── <span class="tree-file">.env.development</span>             <span class="tree-comment"># Dev environment vars</span>
+├── <span class="tree-file">.env.production</span>              <span class="tree-comment"># Prod environment vars</span>
+├── <span class="tree-file">vite.config.ts</span>               <span class="tree-comment"># Vite configuration</span>
+├── <span class="tree-file">tsconfig.json</span>                <span class="tree-comment"># TypeScript config</span>
+└── <span class="tree-file">package.json</span>                 <span class="tree-comment"># Dependencies</span></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Services & APIs -->
+            <section id="services" class="section">
+                <div class="section-header">
+                    <div class="section-icon violet">&#128268;</div>
+                    <h2 class="section-title">Services & API Layer</h2>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    All API calls are handled through service files in <code>src/services/</code>. Each service corresponds to a domain entity.
+                </p>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">apiClient.ts</span>
+                            <span class="card-badge violet">Core</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Central HTTP client with authentication and error handling.</p>
+                        <pre><span style="color: var(--text-muted)">// Features:</span>
+- Base URL from <span style="color: var(--accent-cyan)">VITE_API_BASE_URL</span>
+- Auto-attaches <span style="color: var(--accent-cyan)">avToken</span> header for auth
+- Handles JSON and text responses
+- Error transformation with validation details
+- Credentials: 'include' for cookies
+
+<span style="color: var(--text-muted)">// Also exports:</span>
+- <span style="color: var(--accent-violet)">analyticsApiClient</span>: For user activity tracking</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Service Files Overview</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>File</th>
+                                    <th>Description</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Auth</strong></td>
+                                    <td><code>auth.ts</code></td>
+                                    <td>OTP login, token verification, user profile</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Carousels</strong></td>
+                                    <td><code>carousels.ts</code></td>
+                                    <td>CRUD, batch mapping, status toggle, audit trail</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Home Cards</strong></td>
+                                    <td><code>homeScreenCards.ts</code></td>
+                                    <td>Card management, batch operations</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Reels</strong></td>
+                                    <td><code>reels.ts</code></td>
+                                    <td>Reel CRUD, bulk upload, targeting (exam/stream/grade)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Videos</strong></td>
+                                    <td><code>viralVideos.ts</code></td>
+                                    <td>Video upload, bulk operations, mapping</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Notes</strong></td>
+                                    <td><code>notes.ts</code></td>
+                                    <td>Notes upload, duplicate to batches</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tags</strong></td>
+                                    <td><code>tags.ts</code></td>
+                                    <td>Tag CRUD, auto-generation</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Users</strong></td>
+                                    <td><code>users.ts</code></td>
+                                    <td>User list, details, activity, subscriptions</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sidebar</strong></td>
+                                    <td><code>sidebar.ts</code></td>
+                                    <td>Dynamic navigation config from backend</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>RBAC</strong></td>
+                                    <td><code>rbac.ts</code></td>
+                                    <td>Role and permission management</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Upload</strong></td>
+                                    <td><code>uploadService.ts</code></td>
+                                    <td>File upload handling with FormData</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dynamic Components -->
+            <section id="dynamic-components" class="section">
+                <div class="section-header">
+                    <div class="section-icon orange">&#128736;</div>
+                    <h2 class="section-title">Dynamic Components / Containers</h2>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">&#128161; What are Dynamic Containers?</div>
+                    <p>Dynamic components render UI based on backend configuration. The sidebar, tables, and forms are all driven by API responses, not hardcoded.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">DynamicContent.tsx</span>
+                            <span class="card-badge orange">Dynamic Page Renderer</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Renders pages dynamically based on sidebar configuration.</p>
+                        <pre><span style="color: var(--text-muted)">// How it works:</span>
+1. User navigates to <span style="color: var(--accent-cyan)">/dashboard/some-page</span>
+2. DynamicContent reads <span style="color: var(--accent-violet)">sidebarData</span> signal
+3. Finds matching <span style="color: var(--accent-cyan)">DrawerItem</span> config
+4. Renders <span style="color: var(--accent-emerald)">DynamicTable</span> with config (columns, filters, actions)
+
+<span style="color: var(--text-muted)">// Location:</span> src/pages/DynamicContent.tsx</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">DynamicTable.tsx</span>
+                            <span class="card-badge cyan">Configurable Table</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Generic data table that accepts configuration for columns, sorting, filtering, and actions.</p>
+                        <pre><span style="color: var(--text-muted)">// Features:</span>
+- Configurable columns via <span style="color: var(--accent-cyan)">TableHeader[]</span>
+- Sortable headers
+- Pagination
+- Row actions (edit, delete, view)
+- Bulk selection
+- Loading & empty states
+
+<span style="color: var(--text-muted)">// Location:</span> src/components/DynamicTable.tsx</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">SearchFilters.tsx</span>
+                            <span class="card-badge blue">Dynamic Filters</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Renders search/filter UI based on configuration.</p>
+                        <pre><span style="color: var(--text-muted)">// Supports:</span>
+- Text search inputs
+- Dropdown selects
+- Date pickers
+- Multi-select filters
+
+<span style="color: var(--text-muted)">// Location:</span> src/components/SearchFilters.tsx</pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">sidebar.ts (types)</span>
+                            <span class="card-badge pink">Sidebar Configuration Schema</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// src/types/sidebar.ts - Key interfaces</span>
+
+interface <span style="color: var(--accent-violet)">DrawerItem</span> {
+  id: string
+  title: string
+  url: string
+  icon: string
+  subMenuItems?: <span style="color: var(--accent-cyan)">SubMenuItem[]</span>
+  tabs?: <span style="color: var(--accent-cyan)">TabItem[]</span>
+}
+
+interface <span style="color: var(--accent-violet)">TabItem</span> {
+  id: string
+  label: string
+  search?: <span style="color: var(--accent-cyan)">Search</span>           <span style="color: var(--text-muted)">// Filter configuration</span>
+  tableHeaders?: <span style="color: var(--accent-cyan)">TableHeader[]</span>  <span style="color: var(--text-muted)">// Column definitions</span>
+  actions?: <span style="color: var(--accent-cyan)">Action[]</span>         <span style="color: var(--text-muted)">// Row actions</span>
+  buttons?: <span style="color: var(--accent-cyan)">Button[]</span>         <span style="color: var(--text-muted)">// Toolbar buttons</span>
+}
+
+interface <span style="color: var(--accent-violet)">TableHeader</span> {
+  key: string
+  label: string
+  sortable?: boolean
+  type?: 'text' | 'date' | 'badge' | 'image'
+}
+
+interface <span style="color: var(--accent-violet)">Action</span> {
+  id: string
+  label: string
+  type: 'edit' | 'delete' | 'view' | 'custom'
+  popup?: <span style="color: var(--accent-cyan)">PopupField[]</span>  <span style="color: var(--text-muted)">// Form fields for popups</span>
+}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Carousels -->
+            <section id="carousels" class="section">
+                <div class="section-header">
+                    <div class="section-icon pink">&#127904;</div>
+                    <h2 class="section-title">Carousels</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <span class="card-title">Components</span>
+                            <span class="card-toggle">&#9660;</span>
+                        </div>
+                        <div class="card-content open">
+                            <ul style="color: var(--text-secondary); padding-left: 1.25rem;">
+                                <li><code>AppCarouselsPage</code> - Main listing</li>
+                                <li><code>CreateCarouselDialog</code> - Create new</li>
+                                <li><code>EditCarouselDialog</code> - Edit existing</li>
+                                <li><code>CopyCarouselDialog</code> - Copy to batches</li>
+                                <li><code>ViewCarouselDetailsDialog</code> - View details</li>
+                            </ul>
+                            <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Location: <code>src/pages/app-carousels/</code></p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <span class="card-title">Key Types</span>
+                            <span class="card-toggle">&#9660;</span>
+                        </div>
+                        <div class="card-content open">
+                            <pre style="font-size: 0.75rem;"><span style="color: var(--accent-violet)">VisibilityType</span>:
+  'SUBSCRIBED' | 'NON_SUBSCRIBED' | 'ALL'
+
+<span style="color: var(--accent-violet)">NavigationType</span>:
+  'EXTERNAL_IMAGE' | 'EXTERNAL_PDF' |
+  'EXTERNAL_LINK' | 'CLASS_PARAMS' |
+  'DEEPLINK' | 'INTERNAL_LINK' | 'INTERNAL_NOTE'
+
+<span style="color: var(--accent-violet)">ScreenType</span>:
+  'HOME_SCREEN' | 'DASHBOARD' |
+  'TOPPER_NOTES' | 'TEST_SERIES' | 'LIVE_CLASS'</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reels -->
+            <section id="reels" class="section">
+                <div class="section-header">
+                    <div class="section-icon emerald">&#127909;</div>
+                    <h2 class="section-title">Reels</h2>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <span class="card-title">Components</span>
+                            <span class="card-toggle">&#9660;</span>
+                        </div>
+                        <div class="card-content open">
+                            <ul style="color: var(--text-secondary); padding-left: 1.25rem;">
+                                <li><code>ReelsPage</code> - Main listing with filters</li>
+                                <li><code>AddReelDialog</code> - Create new reel</li>
+                                <li><code>EditReelDialog</code> - Edit reel</li>
+                                <li><code>BulkUploadReelsDialog</code> - CSV bulk upload</li>
+                            </ul>
+                            <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Location: <code>src/pages/reels/</code></p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <span class="card-title">Targeting Options</span>
+                            <span class="card-toggle">&#9660;</span>
+                        </div>
+                        <div class="card-content open">
+                            <pre style="font-size: 0.75rem;"><span style="color: var(--accent-violet)">Difficulty</span>: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
+<span style="color: var(--accent-violet)">Language</span>: 'ENGLISH' | 'HINDI'
+<span style="color: var(--accent-violet)">Targeting</span>: { examId, streamId, gradeId }
+<span style="color: var(--accent-violet)">Tags</span>: TagResponseDto[] <span style="color: var(--text-muted)">// For categorization</span></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Home Screen Cards -->
+            <section id="cards" class="section">
+                <div class="section-header">
+                    <div class="section-icon blue">&#127183;</div>
+                    <h2 class="section-title">Home Screen Cards</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Card Configuration</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--accent-violet)">IconMediaType</span>: 'IMAGE' | 'GIF' | 'DYNAMIC_IMAGE'
+
+<span style="color: var(--text-muted)">// Cards support same visibility & navigation as carousels</span>
+<span style="color: var(--accent-violet)">VisibilityType</span>: 'SUBSCRIBED' | 'NON_SUBSCRIBED' | 'ALL'
+<span style="color: var(--accent-violet)">NavigationType</span>: 7 types (see Carousels section)
+
+<span style="color: var(--text-muted)">// Location:</span> src/pages/home-screen-cards/
+<span style="color: var(--text-muted)">// Service:</span> src/services/homeScreenCards.ts
+<span style="color: var(--text-muted)">// Types:</span> src/types/homeScreenCards.ts</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Viral Videos -->
+            <section id="videos" class="section">
+                <div class="section-header">
+                    <div class="section-icon cyan">&#127916;</div>
+                    <h2 class="section-title">Viral Videos</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Video Configuration</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--accent-violet)">VIDEO_TYPES</span>: 'CHAMPIONS_OF_ARIVIHAN' | 'VIRAL_VIDEOS'
+
+<span style="color: var(--accent-violet)">VIDEO_ORIENTATIONS</span>: 'PORTRAIT' | 'LANDSCAPE'
+
+<span style="color: var(--accent-violet)">DISPLAY_CONTEXTS</span>:
+  'HOMESCREEN' | 'TOPPER_SCREEN' |
+  'SUBSCRIPTION_SCREEN' | 'ONBOARDING_SCREEN' | 'OTHER'
+
+<span style="color: var(--text-muted)">// Components:</span>
+- UploadVideoDialog      <span style="color: var(--text-muted)">// Single video upload</span>
+- BulkUploadVideoDialog  <span style="color: var(--text-muted)">// CSV bulk upload</span>
+- DuplicateVideoDialog   <span style="color: var(--text-muted)">// Map to batches</span>
+- ViewVideoDetailsDialog <span style="color: var(--text-muted)">// View details</span>
+
+<span style="color: var(--text-muted)">// Location:</span> src/pages/viral-videos/</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notes -->
+            <section id="notes" class="section">
+                <div class="section-header">
+                    <div class="section-icon amber">&#128221;</div>
+                    <h2 class="section-title">Notes</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Notes Management</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// Components:</span>
+- AddNotesDialog         <span style="color: var(--text-muted)">// Upload file</span>
+- CreateNoteDialog       <span style="color: var(--text-muted)">// Create manually</span>
+- EditNotesDialog        <span style="color: var(--text-muted)">// Edit existing</span>
+- DuplicateNotesDialog   <span style="color: var(--text-muted)">// Duplicate to batches</span>
+
+<span style="color: var(--text-muted)">// Features:</span>
+- Batch-based filtering
+- Subject categorization
+- Audit trail tracking
+
+<span style="color: var(--text-muted)">// Location:</span> src/pages/notes-upload/
+<span style="color: var(--text-muted)">// Service:</span> src/services/notes.ts</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tags -->
+            <section id="tags" class="section">
+                <div class="section-header">
+                    <div class="section-icon violet">&#127991;</div>
+                    <h2 class="section-title">Tags</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Tag Generation</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// Features:</span>
+- Manual CRUD operations
+- Auto-generation via <span style="color: var(--accent-cyan)">generateTags()</span> API
+- Used for categorizing reels and content
+
+<span style="color: var(--text-muted)">// Components:</span>
+- TagsPage          <span style="color: var(--text-muted)">// Main listing</span>
+- CreateTagDialog   <span style="color: var(--text-muted)">// Create new</span>
+- EditTagDialog     <span style="color: var(--text-muted)">// Edit existing</span>
+- ViewTagDialog     <span style="color: var(--text-muted)">// View details</span>
+
+<span style="color: var(--text-muted)">// Location:</span> src/pages/Tags/
+<span style="color: var(--text-muted)">// Service:</span> src/services/tags.ts</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Types & Interfaces -->
+            <section id="types" class="section">
+                <div class="section-header">
+                    <div class="section-icon pink">&#128196;</div>
+                    <h2 class="section-title">Types & Interfaces</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Type Files Overview</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Key Interfaces</th>
+                                </tr>
+                                <tr>
+                                    <td><code>auth.ts</code></td>
+                                    <td>User, AuthTokenData, SendOtpRequest, VerifyOtpRequest</td>
+                                </tr>
+                                <tr>
+                                    <td><code>carousels.ts</code></td>
+                                    <td>CarouselListResponse, CarouselCreateRequest, CarouselFilters</td>
+                                </tr>
+                                <tr>
+                                    <td><code>reels.ts</code></td>
+                                    <td>ReelResponseDto, ReelTargeting, ReelBulkUploadResponse</td>
+                                </tr>
+                                <tr>
+                                    <td><code>viralVideos.ts</code></td>
+                                    <td>VideoResponseDto, VideoFilters, MapVideoRequest</td>
+                                </tr>
+                                <tr>
+                                    <td><code>notes.ts</code></td>
+                                    <td>NotesResponseDto, NotesCreateRequest, DuplicateNotesRequest</td>
+                                </tr>
+                                <tr>
+                                    <td><code>homeScreenCards.ts</code></td>
+                                    <td>HomeScreenCardListResponse, CopyCardRequest</td>
+                                </tr>
+                                <tr>
+                                    <td><code>sidebar.ts</code></td>
+                                    <td>DrawerItem, TabItem, TableHeader, Action, PopupField</td>
+                                </tr>
+                                <tr>
+                                    <td><code>user.ts</code></td>
+                                    <td>UserListItem, UserDetail, SubscriptionHistoryItem</td>
+                                </tr>
+                                <tr>
+                                    <td><code>tags.ts</code></td>
+                                    <td>TagResponse, TagRequest, TagFilters</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Common Patterns</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <pre><span style="color: var(--text-muted)">// Generic API Response wrapper</span>
+interface <span style="color: var(--accent-violet)">ApiResponse</span>&lt;T&gt; {
+  success: boolean
+  data: T
+  message?: string
+}
+
+<span style="color: var(--text-muted)">// Paginated response</span>
+interface <span style="color: var(--accent-violet)">PaginatedResponse</span>&lt;T&gt; {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  page: number
+  size: number
+}
+
+<span style="color: var(--text-muted)">// Common filter interface</span>
+interface <span style="color: var(--accent-violet)">BaseFilters</span> {
+  page?: number
+  size?: number
+  search?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- State Management -->
+            <section id="state" class="section">
+                <div class="section-header">
+                    <div class="section-icon emerald">&#128200;</div>
+                    <h2 class="section-title">State Management (Preact Signals)</h2>
+                </div>
+
+                <div class="info-box info">
+                    <div class="info-box-title">&#128161; Why Signals?</div>
+                    <p>Preact Signals provide lightweight, reactive state management without the boilerplate of Redux or Context API. Changes automatically trigger re-renders only in components that use the signal.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">signals/auth.ts</span>
+                            <span class="card-badge emerald">Authentication State</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// Core signals</span>
+<span style="color: var(--accent-violet)">accessToken</span>: signal&lt;string | null&gt;     <span style="color: var(--text-muted)">// JWT token</span>
+<span style="color: var(--accent-violet)">currentUser</span>: signal&lt;User | null&gt;       <span style="color: var(--text-muted)">// User object</span>
+<span style="color: var(--accent-violet)">userLoading</span>: signal&lt;boolean&gt;           <span style="color: var(--text-muted)">// Loading state</span>
+
+<span style="color: var(--text-muted)">// Computed signals (auto-update)</span>
+<span style="color: var(--accent-cyan)">isAuthenticated</span> = computed(() => !!accessToken.value)
+<span style="color: var(--accent-cyan)">isAdmin</span> = computed(() => currentUser.value?.role.includes('ADMIN'))
+<span style="color: var(--accent-cyan)">userRoles</span> = computed(() => currentUser.value?.role ?? [])
+
+<span style="color: var(--text-muted)">// Functions</span>
+setAuth(token)      <span style="color: var(--text-muted)">// Store token in signal + cookie</span>
+clearAuth()         <span style="color: var(--text-muted)">// Logout - clear all auth state</span>
+fetchCurrentUser()  <span style="color: var(--text-muted)">// Get user profile from API</span></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">signals/sidebar.ts</span>
+                            <span class="card-badge blue">Sidebar State</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <pre><span style="color: var(--accent-violet)">sidebarData</span>: signal&lt;SidebarConfig | null&gt;
+<span style="color: var(--accent-violet)">sidebarLoading</span>: signal&lt;boolean&gt;
+<span style="color: var(--accent-violet)">sidebarError</span>: signal&lt;string | null&gt;
+
+<span style="color: var(--text-muted)">// Functions</span>
+loadSidebarData()        <span style="color: var(--text-muted)">// Fetch from API</span>
+refreshSidebarData()     <span style="color: var(--text-muted)">// Force refresh</span>
+getFilteredDrawerItems() <span style="color: var(--text-muted)">// Filter by role</span></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">
+                            <span class="file-path">signals/theme.ts</span>
+                            <span class="card-badge violet">Theme State</span>
+                        </span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <pre><span style="color: var(--accent-violet)">theme</span>: signal&lt;'light' | 'dark' | 'system'&gt;
+
+<span style="color: var(--text-muted)">// Functions</span>
+setTheme(theme)       <span style="color: var(--text-muted)">// Set theme</span>
+toggleTheme()         <span style="color: var(--text-muted)">// Cycle through themes</span>
+getResolvedTheme()    <span style="color: var(--text-muted)">// Resolve 'system' to actual theme</span>
+
+<span style="color: var(--text-muted)">// Effect: auto-applies theme to document.documentElement</span></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Routing -->
+            <section id="routing" class="section">
+                <div class="section-header">
+                    <div class="section-icon cyan">&#128506;</div>
+                    <h2 class="section-title">Routing</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Route Structure</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--accent-cyan)">/</span>                        <span class="tree-comment">→ Redirect to /login or /dashboard</span>
+<span style="color: var(--accent-cyan)">/login</span>                   <span class="tree-comment">→ Login page (OTP)</span>
+<span style="color: var(--accent-cyan)">/select-dashboard</span>        <span class="tree-comment">→ Dashboard selection</span>
+
+<span style="color: var(--accent-emerald)">/dashboard</span>               <span class="tree-comment">→ Protected routes (require auth)</span>
+  ├── <span style="color: var(--accent-cyan)">/</span>                   <span class="tree-comment">→ Main dashboard</span>
+  ├── <span style="color: var(--accent-cyan)">/users</span>              <span class="tree-comment">→ User list</span>
+  ├── <span style="color: var(--accent-cyan)">/users/detail/:id</span>   <span class="tree-comment">→ User details</span>
+  ├── <span style="color: var(--accent-cyan)">/app-carousels</span>      <span class="tree-comment">→ Carousel management</span>
+  ├── <span style="color: var(--accent-cyan)">/homepage</span>           <span class="tree-comment">→ Home screen cards</span>
+  ├── <span style="color: var(--accent-cyan)">/reels-upload</span>       <span class="tree-comment">→ Reels management</span>
+  ├── <span style="color: var(--accent-cyan)">/viral-videos</span>       <span class="tree-comment">→ Viral videos</span>
+  ├── <span style="color: var(--accent-cyan)">/notes</span>              <span class="tree-comment">→ Notes upload</span>
+  ├── <span style="color: var(--accent-cyan)">/tags-genrate</span>       <span class="tree-comment">→ Tags generation</span>
+  ├── <span style="color: var(--accent-cyan)">/rbac</span>               <span class="tree-comment">→ Role management</span>
+  ├── <span style="color: var(--accent-cyan)">/sql-playground</span>     <span class="tree-comment">→ SQL query interface</span>
+  ├── <span style="color: var(--accent-cyan)">/chapters</span>           <span class="tree-comment">→ Chapter management</span>
+  ├── <span style="color: var(--accent-cyan)">/asat-scorecards</span>    <span class="tree-comment">→ ASAT management</span>
+  └── <span style="color: var(--accent-cyan)">/*</span>                  <span class="tree-comment">→ Dynamic content (sidebar-driven)</span>
+
+<span style="color: var(--accent-cyan)">/service-status</span>          <span class="tree-comment">→ Service health monitoring</span></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Protected Route Component</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <pre><span style="color: var(--text-muted)">// src/components/common/ProtectedRoute.tsx</span>
+
+const ProtectedRoute = ({ children }) => {
+  <span style="color: var(--text-muted)">// Check isAuthenticated signal</span>
+  if (!isAuthenticated.value) {
+    return &lt;Navigate to="/login" /&gt;
+  }
+  return children
+}</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Authentication -->
+            <section id="auth" class="section">
+                <div class="section-header">
+                    <div class="section-icon amber">&#128274;</div>
+                    <h2 class="section-title">Authentication</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Auth Flow</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--accent-cyan)">1. User enters phone number</span>
+   → POST /secure/auth/send-otp
+
+<span style="color: var(--accent-cyan)">2. User enters OTP</span>
+   → POST /secure/auth/verify-otp
+   ← Returns { token, user }
+
+<span style="color: var(--accent-cyan)">3. Token stored</span>
+   → Cookie: <span style="color: var(--accent-violet)">avToken</span> (domain: .arivihan.com, 7 days)
+   → Signal: <span style="color: var(--accent-violet)">accessToken.value</span>
+
+<span style="color: var(--accent-cyan)">4. All API requests include</span>
+   → Header: <span style="color: var(--accent-violet)">avToken: {token}</span>
+   → Credentials: include (for cookies)
+
+<span style="color: var(--accent-cyan)">5. On app load</span>
+   → useAuthInit() hook checks for token
+   → Fetches user profile: GET /secure/auth/me</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RBAC -->
+            <section id="rbac" class="section">
+                <div class="section-header">
+                    <div class="section-icon violet">&#128101;</div>
+                    <h2 class="section-title">Role-Based Access Control</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">RBAC System</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// Roles are stored in user object</span>
+currentUser.value.role: string[]  <span style="color: var(--text-muted)">// e.g., ['ADMIN', 'CONTENT_MANAGER']</span>
+
+<span style="color: var(--text-muted)">// Check roles via computed signals</span>
+isAdmin.value        <span style="color: var(--text-muted)">// true if has ADMIN role</span>
+userRoles.value      <span style="color: var(--text-muted)">// array of all roles</span>
+
+<span style="color: var(--text-muted)">// useRole hook for component-level checks</span>
+const { hasRole, hasAnyRole } = useRole()
+if (hasRole('ADMIN')) { ... }
+
+<span style="color: var(--text-muted)">// RBAC management page: /dashboard/rbac</span>
+<span style="color: var(--text-muted)">// Service: src/services/rbac.ts</span></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Audit Trail -->
+            <section id="audit" class="section">
+                <div class="section-header">
+                    <div class="section-icon blue">&#128203;</div>
+                    <h2 class="section-title">Audit Trail</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Audit Trail Feature</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--text-muted)">// Tracks all changes to entities</span>
+<span style="color: var(--text-muted)">// Available for: Carousels, Cards, Reels, Videos, Notes, Tags</span>
+
+<span style="color: var(--text-muted)">// Each service has:</span>
+fetchAuditTrail(entityId)  <span style="color: var(--text-muted)">// Get change history</span>
+
+<span style="color: var(--text-muted)">// AuditTrailPopup component shows:</span>
+- Timestamp
+- Action (CREATE, UPDATE, DELETE)
+- Changed fields
+- Old value → New value
+- User who made change
+
+<span style="color: var(--text-muted)">// Component:</span> src/components/AuditTrailPopup.tsx</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Constants -->
+            <section id="constants" class="section">
+                <div class="section-header">
+                    <div class="section-icon orange">&#128218;</div>
+                    <h2 class="section-title">Constants Reference</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">All Constants</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <pre><span style="color: var(--accent-violet)">// Visibility Types</span> (Carousels, Cards)
+SUBSCRIBED | NON_SUBSCRIBED | ALL
+
+<span style="color: var(--accent-violet)">// Navigation Types</span> (Carousels, Cards)
+EXTERNAL_IMAGE | EXTERNAL_PDF | EXTERNAL_LINK |
+CLASS_PARAMS | DEEPLINK | INTERNAL_LINK | INTERNAL_NOTE
+
+<span style="color: var(--accent-violet)">// Screen Types</span> (Carousels)
+HOME_SCREEN | DASHBOARD | TOPPER_NOTES | TEST_SERIES | LIVE_CLASS
+
+<span style="color: var(--accent-violet)">// Icon Media Types</span> (Cards)
+IMAGE | GIF | DYNAMIC_IMAGE
+
+<span style="color: var(--accent-violet)">// Video Types</span>
+CHAMPIONS_OF_ARIVIHAN | VIRAL_VIDEOS
+
+<span style="color: var(--accent-violet)">// Video Orientations</span>
+PORTRAIT | LANDSCAPE
+
+<span style="color: var(--accent-violet)">// Display Contexts</span> (Videos)
+HOMESCREEN | TOPPER_SCREEN | SUBSCRIPTION_SCREEN |
+ONBOARDING_SCREEN | OTHER
+
+<span style="color: var(--accent-violet)">// Difficulty Levels</span> (Reels)
+BEGINNER | INTERMEDIATE | ADVANCED
+
+<span style="color: var(--accent-violet)">// Languages</span>
+ENGLISH | HINDI</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Endpoints -->
+            <section id="api-endpoints" class="section">
+                <div class="section-header">
+                    <div class="section-icon emerald">&#128421;</div>
+                    <h2 class="section-title">API Endpoints Quick Reference</h2>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Authentication</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content open">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/auth/send-otp</code></td><td>Send OTP to phone</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/auth/verify-otp</code></td><td>Verify OTP & get token</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/auth/me</code></td><td>Get current user profile</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Carousels</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/av-carousels</code></td><td>List carousels</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/av-carousels/{id}</code></td><td>Get carousel by ID</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/av-carousels</code></td><td>Create carousel</td></tr>
+                                <tr><td><span class="tag tag-put">PUT</span></td><td><code>/secure/api/v1/av-carousels/{id}</code></td><td>Update carousel</td></tr>
+                                <tr><td><span class="tag tag-delete">DELETE</span></td><td><code>/secure/api/v1/av-carousels/{id}</code></td><td>Delete carousel</td></tr>
+                                <tr><td><span class="tag tag-patch">PATCH</span></td><td><code>/secure/api/v1/av-carousels/{id}/status</code></td><td>Toggle status</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/av-carousels/map</code></td><td>Copy to batches</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Reels</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/reels</code></td><td>List reels</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/reels/{id}</code></td><td>Get reel by ID</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/reels</code></td><td>Create reel</td></tr>
+                                <tr><td><span class="tag tag-put">PUT</span></td><td><code>/secure/api/v1/reels/{id}</code></td><td>Update reel</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/reels/delete-bulk</code></td><td>Bulk delete</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/reels/bulk-upload-preview</code></td><td>Bulk upload preview</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/reels/bulk-upload-confirm</code></td><td>Confirm bulk upload</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Videos</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/videos</code></td><td>List videos</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/videos/{id}</code></td><td>Get video by ID</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/videos/upload</code></td><td>Upload video</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/videos/bulk-upload</code></td><td>Bulk upload</td></tr>
+                                <tr><td><span class="tag tag-put">PUT</span></td><td><code>/secure/api/v1/videos/{id}</code></td><td>Update video</td></tr>
+                                <tr><td><span class="tag tag-delete">DELETE</span></td><td><code>/secure/api/v1/videos/{id}</code></td><td>Delete video</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/videos/map</code></td><td>Map to batches</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Notes</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/notes</code></td><td>List notes</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/notes/{id}</code></td><td>Get note by ID</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/notes</code></td><td>Create note</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/notes/upload</code></td><td>Upload note file</td></tr>
+                                <tr><td><span class="tag tag-patch">PATCH</span></td><td><code>/secure/api/v1/notes/{id}</code></td><td>Update note</td></tr>
+                                <tr><td><span class="tag tag-delete">DELETE</span></td><td><code>/secure/api/v1/notes/{id}</code></td><td>Delete note</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/notes/duplicate</code></td><td>Duplicate to batches</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Tags</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/tags</code></td><td>List tags</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/tags</code></td><td>Create tag</td></tr>
+                                <tr><td><span class="tag tag-put">PUT</span></td><td><code>/secure/api/v1/tags/{id}</code></td><td>Update tag</td></tr>
+                                <tr><td><span class="tag tag-delete">DELETE</span></td><td><code>/secure/api/v1/tags/{id}</code></td><td>Delete tag</td></tr>
+                                <tr><td><span class="tag tag-post">POST</span></td><td><code>/secure/api/v1/tags/generate</code></td><td>Auto-generate tags</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Users</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/dashboard/master-search</code></td><td>Search users</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/app/users/{id}</code></td><td>User details</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/user/activity/mocktest/tests/{id}</code></td><td>User test activity</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/app/subscription/history/{id}</code></td><td>Subscription history</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <span class="card-title">Configuration</span>
+                        <span class="card-toggle">&#9660;</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="table-wrapper">
+                            <table>
+                                <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/ui/fetch-component-configs/drawer-items</code></td><td>Sidebar config</td></tr>
+                                <tr><td><span class="tag tag-get">GET</span></td><td><code>/secure/api/v1/batch</code></td><td>List all batches</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer style="margin-top: 4rem; padding: 2rem 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted);">
+                <p>Internal Metrics UI Documentation</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;">Last updated: January 2026</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card sections
+        function toggleCard(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.card-toggle');
+            content.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        // Search functionality
+        function searchDocs() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const sections = document.querySelectorAll('.section');
+
+            sections.forEach(section => {
+                const text = section.textContent.toLowerCase();
+                section.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        }
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Highlight active section on scroll
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            let current = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
