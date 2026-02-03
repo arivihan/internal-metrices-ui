@@ -14,7 +14,8 @@ export interface VideoResponseDto {
   isActive: boolean
   type: string
   code: string
-  batches: VideoBatchInfo[]
+  batches: VideoBatchInfo[],
+  videoCode: string
 }
 
 export interface VideoFilters {
