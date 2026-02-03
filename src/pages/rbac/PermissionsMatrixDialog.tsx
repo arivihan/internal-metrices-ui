@@ -97,8 +97,8 @@ export function PermissionsMatrixDialog({
     setIsSubmitting(true)
     try {
       await new Promise((resolve) => setTimeout(resolve, 500))
-      onSave(role.id, permissions)
-      toast.success(`Permissions updated for ${role.name}`)
+  onSave(role.roleId, permissions)
+  toast.success(`Permissions updated for ${role.roleName}`)
       handleClose()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save permissions')
@@ -119,7 +119,7 @@ export function PermissionsMatrixDialog({
               <Shield className="size-5 text-brand" />
             </div>
             <div>
-              <DialogTitle className="text-lg">{role.name}</DialogTitle>
+              <DialogTitle className="text-lg">{role.roleName}</DialogTitle>
               <DialogDescription className="mt-0.5">
                 {role.description || 'Configure module permissions'}
               </DialogDescription>
