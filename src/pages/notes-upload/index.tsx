@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus,
   Search,
@@ -701,9 +701,9 @@ export default function NotesUploadPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">
+                {/* Custom Checkbox with indeterminate state */}
                 <Checkbox
-                  checked={isAllSelected}
-                  indeterminate={isIndeterminate}
+                  checked={isAllSelected ? true : isIndeterminate ? 'indeterminate' : false}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all notes"
                 />

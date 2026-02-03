@@ -1162,8 +1162,7 @@ export default function ReelsPage() {
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={isAllSelected}
-                  indeterminate={isIndeterminate}
+                  checked={isAllSelected ? true : isIndeterminate ? 'indeterminate' : false}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all reels"
                 />

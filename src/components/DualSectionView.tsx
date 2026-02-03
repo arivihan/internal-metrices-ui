@@ -161,8 +161,8 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
         method: "GET",
         params: {
           level: "SYSTEM",
-          pageNo: pageNumber,
-          pageSize: leftPageSize,
+          pageNo: String(pageNumber),
+          pageSize: String(leftPageSize),
         },
       });
       console.log("[DualSectionView] Left options response:", response);
@@ -217,7 +217,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
           searchParams
         );
         for (const [paramKey, objectKey] of Object.entries(searchParams)) {
-          params[paramKey] = String(selectedLeftObject[objectKey] || "");
+          params[paramKey] = String((selectedLeftObject as Record<string, any>)[objectKey as string] || "");
         }
       } else if (rightSection.searchParam && selectedLeft) {
         // Fallback to old searchParam (single param)
@@ -609,7 +609,7 @@ export const DualSectionView: React.FC<DualSectionViewProps> = ({
 
         // Extract examId, gradeId, etc. from the selected left object
         for (const [payloadKey, objectKey] of Object.entries(extractFields)) {
-          const value = (selectedLeftObject as any)[objectKey];
+          const value = (selectedLeftObject as Record<string, any>)[objectKey as string];
           const fieldType = fieldTypes[payloadKey] || "string";
 
           // Convert value based on fieldType

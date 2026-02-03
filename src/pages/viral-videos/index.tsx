@@ -70,7 +70,7 @@ import { Loader2, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
 import { UploadVideoDialog } from "./UploadVideoDialog";
 import { BulkUploadVideoDialog } from "./BulkUploadVideoDialog";
-import { DuplicateVideoDialog } from "./DuplicateVideoDialog";
+import { DuplicateVideoDialog } from "./duplicateVideoDialog";
 import { ViewVideoDetailsDialog } from "./ViewVideoDetailsDialog";
 import {
   fetchViralVideos,

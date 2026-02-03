@@ -1502,7 +1502,7 @@ export default function DynamicContent() {
         currentPage: page,
         totalPages: 1,
         pageSize: 10,
-        totalElements: 0,
+        totalItems: 0,
       };
 
       if (
@@ -1514,21 +1514,21 @@ export default function DynamicContent() {
           currentPage: (responseData as any).pageNumber ?? page,
           totalPages: (responseData as any).totalPages ?? 1,
           pageSize: (responseData as any).pageSize ?? 10,
-          totalElements: (responseData as any).totalElements ?? results.length,
+          totalItems: (responseData as any).totalElements ?? results.length,
         };
       } else if (
         (responseData as any)?.data &&
         Array.isArray((responseData as any).data)
       ) {
         results = (responseData as any).data;
-        paginationInfo.totalElements = results.length;
+  paginationInfo.totalItems = results.length;
       } else if (Array.isArray(responseData)) {
         results = responseData;
-        paginationInfo.totalElements = results.length;
+  paginationInfo.totalItems = results.length;
       }
 
-      setTabsData((prev) => ({ ...prev, [tabId]: results }));
-      setTabPagination((prev) => ({ ...prev, [tabId]: paginationInfo }));
+  setTabsData((prev) => ({ ...prev, [tabId]: results }));
+  setTabPagination((prev) => ({ ...prev, [tabId]: paginationInfo as { currentPage: number; totalPages: number; pageSize: number; totalItems: number } }));
     } catch (error) {
       console.error(`❌ Error fetching tab ${tabId}:`, error);
       const errorMessage =
@@ -2226,7 +2226,7 @@ export default function DynamicContent() {
 
         if (isMappingUpdate) {
           // For mapping updates, ONLY send displayOrder
-          const displayOrderValue = formData?.displayOrder;
+          const displayOrderValue = (formData as any)?.displayOrder;
           if (displayOrderValue === undefined || displayOrderValue === null) {
             throw new Error(
               "displayOrder value is required for mapping update"

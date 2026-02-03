@@ -229,14 +229,10 @@ export function AddChapterDialog({
       setLanguages(languagesRes);
 
       // Set mapping data
-      setExamGradeMappings(
-        examGradeMappingsRes.content || examGradeMappingsRes
-      );
-      setExamGradeStreamMappings(
-        examGradeStreamMappingsRes.content || examGradeStreamMappingsRes
-      );
-      setAllBatches(allBatchesRes.content || allBatchesRes);
-      setAllBatchAddOns(allBatchAddOnsRes.content || allBatchAddOnsRes);
+  setExamGradeMappings(examGradeMappingsRes);
+  setExamGradeStreamMappings(examGradeStreamMappingsRes);
+  setAllBatches(allBatchesRes);
+  setAllBatchAddOns(allBatchAddOnsRes);
     } catch (error) {
       console.error("Failed to load filter options:", error);
       toast.error("Failed to load options");

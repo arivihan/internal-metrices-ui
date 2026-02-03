@@ -41,6 +41,7 @@ interface UploadVideoDialogProps {
 
 interface FormData extends VideoRequest {
   batchId: number | null;
+  displayOrder: number;
 }
 
 export function UploadVideoDialog({
@@ -58,7 +59,7 @@ export function UploadVideoDialog({
     orientation: "PORTRAIT",
     context: "HOMESCREEN",
     type: "VIRAL_VIDEOS",
-    position: 0,
+    displayOrder: 0,
     isActive: true,
     batchId: null,
   });
@@ -78,7 +79,7 @@ export function UploadVideoDialog({
         orientation: "PORTRAIT",
         context: "HOMESCREEN",
         type: "VIRAL_VIDEOS",
-        position: 0,
+        displayOrder: 0,
         isActive: true,
         batchId: null,
       });
@@ -141,7 +142,7 @@ export function UploadVideoDialog({
         orientation: formData.orientation,
         context: formData.context,
         type: formData.type,
-        position: formData.position,
+        displayOrder: formData.displayOrder,
         isActive: formData.isActive,
       };
 
@@ -320,19 +321,19 @@ export function UploadVideoDialog({
               </Select>
             </div>
 
-            {/* Position */}
+            {/* Display Order */}
             <div className="space-y-2">
-              <Label htmlFor="position">Position</Label>
+              <Label htmlFor="displayOrder">Display Order</Label>
               <Input
-                id="position"
+                id="displayOrder"
                 type="number"
                 min={0}
                 placeholder="0"
-                value={formData.position ?? 0}
+                value={formData.displayOrder ?? 0}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    position: parseInt(e.target.value) || 0,
+                    displayOrder: parseInt(e.target.value) || 0,
                   }))
                 }
               />

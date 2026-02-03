@@ -67,11 +67,42 @@ export const MappingSelector: React.FC<Props> = ({
   loadingTabs,
   tabErrors,
 }) => {
+
   const [selectedView, setSelectedView] = useState<string>(
     dropdownSelector.selectOptions[0]?.value || ""
   );
 
   const selectedViewConfig = views[selectedView];
+
+  // Wrapper for onTabChange to match TabsViewer's expected signature
+  const handleTabChange = async (tabId: string, getDataUrl: string, page?: number) => {
+    await Promise.resolve(onTabChange(tabId, getDataUrl, page));
+  };
+
+  // Wrapper for onRowAction to match TabsViewer's expected signature
+  const handleRowAction = (action: any, rowData: any) => {
+    // Try to extract id and tabId from rowData if possible
+    onRowAction(
+      typeof action === 'string' ? action : action?.type || '',
+      rowData?.id ?? '',
+      selectedView
+    );
+  };
+
+  // Wrapper for onButtonClick to match TabsViewer's expected signature
+  const handleButtonClick = (button: any) => {
+    onButtonClick(button, selectedView);
+  };
+
+  // Wrapper for onSearch to match TabsViewer's expected signature
+  const handleSearch = async () => {
+    await Promise.resolve(onSearch(selectedView, (searchData && searchData[selectedView]) || ''));
+  };
+
+  // Wrapper for onClear to match TabsViewer's expected signature
+  const handleClear = () => {
+    onClear(selectedView);
+  };
 
   // Fetch data when selected view changes or component mounts
   useEffect(() => {
@@ -126,15 +157,15 @@ export const MappingSelector: React.FC<Props> = ({
           loadingTabs={loadingTabs}
           tabErrors={tabErrors}
           title={selectedViewConfig.title || dropdownSelector.label}
-          onTabChange={onTabChange}
-          onRowAction={onRowAction}
-          onButtonClick={onButtonClick}
+          onTabChange={handleTabChange}
+          onRowAction={handleRowAction}
+          onButtonClick={handleButtonClick}
           onViewJson={onViewJson}
           CellRenderer={CellRenderer}
           searchData={searchData}
           onSearchDataChange={onSearchDataChange}
-          onSearch={onSearch}
-          onClear={onClear}
+          onSearch={handleSearch}
+          onClear={handleClear}
           isSearching={isSearching}
           tabPagination={tabPagination}
           onPageChange={onPageChange}

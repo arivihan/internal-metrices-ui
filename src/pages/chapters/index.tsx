@@ -426,7 +426,7 @@ export default function Chapters() {
 
   // Handle toggle active/inactive status
   const handleToggleStatus = async (chapter: ChapterDto) => {
-    setIsTogglingStatus(chapter.chapterId)
+  setIsTogglingStatus(Number(chapter.chapterId))
     try {
       const { dynamicRequest } = await import('@/services/apiClient')
       // Toggle: if currently active, set to inactive (false), and vice versa
@@ -465,7 +465,7 @@ export default function Chapters() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedChapters(new Set(data.map(c => c.chapterId)))
+      setSelectedChapters(new Set(data.map(c => Number(c.chapterId))))
     } else {
       setSelectedChapters(new Set())
     }
@@ -480,8 +480,8 @@ export default function Chapters() {
   const handleOpenMappingView = () => {
     // Initialize display orders from selected chapters
     const orders: Record<number, number> = {}
-    data.filter(c => selectedChapters.has(c.chapterId)).forEach((chapter, idx) => {
-      orders[chapter.chapterId] = chapter.pos ?? (idx + 1)
+    data.filter(c => selectedChapters.has(Number(c.chapterId))).forEach((chapter, idx) => {
+      orders[Number(chapter.chapterId)] = chapter.pos ?? (idx + 1)
     })
     setMappingDisplayOrders(orders)
     setShowMappingView(true)
@@ -715,11 +715,11 @@ export default function Chapters() {
   }
 
   const handleRowAuditClick = async (chapter: ChapterDto) => {
-    setCurrentAuditChapterId(chapter.chapterId)
+  setCurrentAuditChapterId(Number(chapter.chapterId))
     setIsTableAudit(false)
     setAuditTrailTitle(`Audit Trail - ${chapter.title || chapter.chapterName || chapter.chapterCode}`)
     setAuditTrailOpen(true)
-    await fetchAuditTrailPage(chapter.chapterId, 0, false)
+  await fetchAuditTrailPage(Number(chapter.chapterId), 0, false)
   }
 
   const handleTableAuditClick = async () => {
@@ -760,7 +760,7 @@ export default function Chapters() {
 
   // If mapping view is open, show full-width mapping UI
   if (showMappingView) {
-    const selectedChaptersList = data.filter(c => selectedChapters.has(c.chapterId))
+  const selectedChaptersList = data.filter(c => selectedChapters.has(Number(c.chapterId)))
 
     return (
       <div className="space-y-6">
@@ -820,7 +820,7 @@ export default function Chapters() {
                       type="number"
                       min="0"
                       value={mappingDisplayOrders[chapter.chapterId] ?? 0}
-                      onChange={(e) => handleDisplayOrderChange(chapter.chapterId, e.target.value)}
+                      onChange={(e) => handleDisplayOrderChange(Number(chapter.chapterId), e.target.value)}
                       className="w-20 h-8 text-center"
                     />
                   </div>
@@ -1221,8 +1221,8 @@ export default function Chapters() {
                     <TableRow key={chapter.chapterId}>
                       <TableCell>
                         <Checkbox
-                          checked={selectedChapters.has(chapter.chapterId)}
-                          onCheckedChange={(checked) => handleSelectChapter(chapter.chapterId, checked as boolean)}
+                          checked={selectedChapters.has(Number(chapter.chapterId))}
+                          onCheckedChange={(checked) => handleSelectChapter(Number(chapter.chapterId), checked as boolean)}
                           className="data-[state=checked]:bg-brand data-[state=checked]:border-brand"
                         />
                       </TableCell>
@@ -1281,7 +1281,7 @@ export default function Chapters() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(chapter)}
-                              disabled={isTogglingStatus === chapter.chapterId}
+                              disabled={isTogglingStatus === Number(chapter.chapterId)}
                               className="gap-2"
                             >
                               {chapter.active ? (
