@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -106,6 +106,9 @@ export default function UserDetail() {
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [boards, setBoards] = useState<BoardOption[]>([])
   const [subjects, setSubjects] = useState<SubjectOption[]>([])
+  const [subjectsPage, setSubjectsPage] = useState(0)
+  const [subjectsTotalPages, setSubjectsTotalPages] = useState(0)
+  const [subjectsLoading, setSubjectsLoading] = useState(false)
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -346,6 +349,7 @@ export default function UserDetail() {
     })
 
     setEditOpen(true)
+    setSubjectsPage(0)
 
     // Load dropdown options
     try {
@@ -354,16 +358,31 @@ export default function UserDetail() {
         fetchClasses(),
         fetchCourses(),
         fetchBoards(),
-        fetchSubjects(),
+        fetchSubjects({ pageNo: 0, pageSize: 10 }),
       ])
       setClasses(classesData)
       setCourses(coursesData)
       setBoards(boardsData)
-      setSubjects(subjectsData)
+      setSubjects(subjectsData.content)
+      setSubjectsTotalPages(subjectsData.totalPages)
     } catch (err) {
       console.error('Failed to load dropdown options:', err)
     } finally {
       setEditLoading(false)
+    }
+  }
+
+  const handleSubjectsPageChange = async (newPage: number) => {
+    try {
+      setSubjectsLoading(true)
+      const subjectsData = await fetchSubjects({ pageNo: newPage, pageSize: 10 })
+      setSubjects(subjectsData.content)
+      setSubjectsPage(newPage)
+      setSubjectsTotalPages(subjectsData.totalPages)
+    } catch (err) {
+      console.error('Failed to load subjects:', err)
+    } finally {
+      setSubjectsLoading(false)
     }
   }
 
@@ -943,7 +962,7 @@ export default function UserDetail() {
 
       {/* Edit User Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -956,9 +975,9 @@ export default function UserDetail() {
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid gap-4 overflow-y-auto py-4 pr-2">
+            <div className="grid flex-1 gap-4 overflow-y-auto py-4 pr-2 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {/* Row 1: Username & Email */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <Input
@@ -967,7 +986,7 @@ export default function UserDetail() {
                     onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -975,7 +994,7 @@ export default function UserDetail() {
                     disabled
                     className="bg-muted"
                   />
-                </div>
+                </div> */}
               </div>
 
               {/* Class & Course */}
@@ -1072,23 +1091,55 @@ export default function UserDetail() {
 
               {/* Row 5: Subjects */}
               <div className="space-y-2">
-                <Label>Subjects</Label>
-                <div className="grid grid-cols-3 gap-2 rounded-lg border p-3">
-                  {subjects.map((subject) => (
-                    <div key={subject.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`subject-${subject.id}`}
-                        checked={editForm.subjectIds.includes(subject.id)}
-                        onCheckedChange={() => toggleSubject(subject.id)}
-                      />
-                      <label
-                        htmlFor={`subject-${subject.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {subject.value}
-                      </label>
+                <div className="flex items-center justify-between">
+                  <Label>Subjects</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => handleSubjectsPageChange(subjectsPage - 1)}
+                      disabled={subjectsPage === 0 || subjectsLoading}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {subjectsPage + 1} / {subjectsTotalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => handleSubjectsPageChange(subjectsPage + 1)}
+                      disabled={subjectsPage >= subjectsTotalPages - 1 || subjectsLoading}
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="relative rounded-lg border p-3">
+                  {subjectsLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
                     </div>
-                  ))}
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {subjects.map((subject) => (
+                      <div key={subject.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`subject-${subject.id}`}
+                          checked={editForm.subjectIds.includes(subject.id)}
+                          onCheckedChange={() => toggleSubject(subject.id)}
+                        />
+                        <label
+                          htmlFor={`subject-${subject.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {subject.displayName}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

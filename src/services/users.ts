@@ -9,6 +9,7 @@ import type {
   CourseOption,
   BoardOption,
   SubjectOption,
+  SubjectPaginatedResponse,
   PlanDuration,
   SubscriptionPlan,
   SubscriptionHistoryResponse,
@@ -91,11 +92,21 @@ export const fetchBoards = async (): Promise<BoardOption[]> => {
   return apiClient<BoardOption[]>('/secure/app/subscription-plan/boards')
 }
 
+export interface FetchSubjectsParams {
+  pageNo?: number
+  pageSize?: number
+}
+
 /**
- * Fetch available subjects for dropdown
+ * Fetch available subjects for dropdown (paginated)
  */
-export const fetchSubjects = async (): Promise<SubjectOption[]> => {
-  return apiClient<SubjectOption[]>('/secure/app/subject/get')
+export const fetchSubjects = async (
+  params: FetchSubjectsParams = {}
+): Promise<SubjectPaginatedResponse> => {
+  const { pageNo = 0, pageSize = 10 } = params
+  return apiClient<SubjectPaginatedResponse>(
+    `/secure/api/v1/subject?pageNo=${pageNo}&pageSize=${pageSize}`
+  )
 }
 
 /**
@@ -108,7 +119,7 @@ export const fetchUserComments = async (userId: string): Promise<UserComment[]> 
 export interface UpdateUserPayload {
   userId: string
   username: string
-  email: string
+  email: string 
   classId: string
   courseId: string
   boardId: string

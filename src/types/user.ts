@@ -150,8 +150,26 @@ export interface BoardOption {
 
 export interface SubjectOption {
   id: string
-  key: string
-  value: string
+  code: string
+  displayName: string
+  displayOrder: number
+  color: string
+  iconUrl: string
+  mainSubject: boolean
+  boardsSubject: boolean
+  progressEligible: boolean
+  isActive: boolean
+  translations: unknown | null
+}
+
+export interface SubjectPaginatedResponse {
+  content: SubjectOption[]
+  pageNumber: number
+  pageSize: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+  entityName: string
 }
 
 // User comments from /secure/user/comment/list/{userId}
