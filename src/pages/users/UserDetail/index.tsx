@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, User, MessageSquare, Bell, Pencil, Loader2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, User, Bell, Pencil, Loader2, ExternalLink, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -87,9 +87,6 @@ export default function UserDetail() {
   const [user, setUser] = useState<UserDetailType | null>(null)
   const [testActivity, setTestActivity] = useState<UserTestActivity | null>(null)
 
-  // Comments dialog state
-  const [commentsOpen, setCommentsOpen] = useState(false)
-
   // Notify dialog state
   const [notifyOpen, setNotifyOpen] = useState(false)
   const [notifyForm, setNotifyForm] = useState({
@@ -165,6 +162,7 @@ export default function UserDetail() {
     transactions: { id: string; amount: number; status: string; orderId: string; createdAt: number }[]
     callbacks: { id: string; status: string; createdAt: number }[]
   } | null>(null)
+  const [expandedLogItems, setExpandedLogItems] = useState<Set<string>>(new Set())
 
   // App Events state
   const [eventsSubTab, setEventsSubTab] = useState('microlecture')
@@ -326,10 +324,6 @@ export default function UserDetail() {
 
   const handleBack = () => {
     navigate('/dashboard/users')
-  }
-
-  const handleOpenComments = () => {
-    setCommentsOpen(true)
   }
 
   const handleOpenEdit = async () => {
@@ -548,7 +542,20 @@ export default function UserDetail() {
       endDate: new Date().toISOString().split('T')[0],
     })
     setSearchLogsResults(null)
+    setExpandedLogItems(new Set())
     setSearchLogsOpen(true)
+  }
+
+  const toggleLogItemExpand = (id: string) => {
+    setExpandedLogItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }
 
   const handleSearchLogs = async () => {
@@ -831,10 +838,6 @@ export default function UserDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleOpenComments}>
-            <MessageSquare className="mr-1.5 size-3.5" />
-            View Comments
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)}>
             <Bell className="mr-1.5 size-3.5" />
             Notify User
@@ -894,21 +897,6 @@ export default function UserDetail() {
           />
         </TabsContent>
       </Tabs>
-
-      {/* Comments Dialog */}
-      <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>User Comments</DialogTitle>
-            <DialogDescription>
-              View and manage comments for this user
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            This feature is yet to be implemented
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Notify User Dialog */}
       <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
@@ -1628,7 +1616,7 @@ export default function UserDetail() {
           </div>
 
           {/* Results */}
-          <div className="flex-1 overflow-y-auto space-y-4 mt-4">
+          <div className="flex-1 overflow-y-auto space-y-4 mt-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {searchLogsResults === null ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 Select a date range and click Search
@@ -1648,13 +1636,32 @@ export default function UserDetail() {
                         <div key={sub.id} className="rounded-lg border p-3 text-sm">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{sub.subscriptionPlan?.planName}</span>
-                            <Badge variant={sub.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                              {sub.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                onClick={() => toggleLogItemExpand(`sub-${sub.id}`)}
+                              >
+                                {expandedLogItems.has(`sub-${sub.id}`) ? (
+                                  <EyeOff className="size-3.5" />
+                                ) : (
+                                  <Eye className="size-3.5" />
+                                )}
+                              </Button>
+                              <Badge variant={sub.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                                {sub.status}
+                              </Badge>
+                            </div>
                           </div>
                           <div className="mt-1 text-muted-foreground">
-                            {formatDate(sub.validFrom)} - {formatDate(sub.validTo)} | ₹{sub.paymentAmount}
+                            {formatDate(sub.validFrom)} - {formatDate(sub.validTo)} | ₹ {sub.paymentAmount > 0 ? sub.paymentAmount : 0}
                           </div>
+                          {expandedLogItems.has(`sub-${sub.id}`) && (
+                            <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                              {JSON.stringify(sub, null, 2)}
+                            </pre>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1676,13 +1683,32 @@ export default function UserDetail() {
                         <div key={txn.id} className="rounded-lg border p-3 text-sm">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">Order: {txn.orderId}</span>
-                            <Badge variant={txn.status === 'SUCCESS' ? 'default' : 'secondary'}>
-                              {txn.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                onClick={() => toggleLogItemExpand(`txn-${txn.id}`)}
+                              >
+                                {expandedLogItems.has(`txn-${txn.id}`) ? (
+                                  <EyeOff className="size-3.5" />
+                                ) : (
+                                  <Eye className="size-3.5" />
+                                )}
+                              </Button>
+                              <Badge variant={txn.status === 'SUCCESS' ? 'default' : 'secondary'}>
+                                {txn.status}
+                              </Badge>
+                            </div>
                           </div>
                           <div className="mt-1 text-muted-foreground">
-                            ₹{txn.amount} | {formatDate(txn.createdAt)}
+                            ₹ {txn.amount > 0 ? txn.amount : 0} | {formatDate(txn.createdAt)}
                           </div>
+                          {expandedLogItems.has(`txn-${txn.id}`) && (
+                            <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                              {JSON.stringify(txn, null, 2)}
+                            </pre>
+                          )}
                         </div>
                       ))}
                     </div>

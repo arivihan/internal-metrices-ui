@@ -116,6 +116,26 @@ export const fetchUserComments = async (userId: string): Promise<UserComment[]> 
   return apiClient<UserComment[]>(`/secure/user/comment/list/${userId}`)
 }
 
+/**
+ * Add a comment to a user
+ */
+export const addUserComment = async (payload: Partial<UserComment>): Promise<boolean> => {
+  return apiClient<boolean>('/secure/user/comment/add', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Edit an existing user comment
+ */
+export const editUserComment = async (payload: Partial<UserComment>): Promise<boolean> => {
+  return apiClient<boolean>('/secure/user/comment/edit', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export interface UpdateUserPayload {
   userId: string
   username: string

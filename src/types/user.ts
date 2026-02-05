@@ -175,9 +175,18 @@ export interface SubjectPaginatedResponse {
 // User comments from /secure/user/comment/list/{userId}
 export interface UserComment {
   id: string
+  userId: string
+  createBy: string
+  contactedBy: string
+  title: string
   comment: string
-  createdAt: string
-  createdBy: string
+  notificationTime: string | null
+  contactedOn: string | null
+  notifyMe: boolean
+  willingToConvert: boolean
+  contactedByCSM: boolean
+  discussionClosed: boolean
+  metricsUserName: string
 }
 
 // Subscription types
